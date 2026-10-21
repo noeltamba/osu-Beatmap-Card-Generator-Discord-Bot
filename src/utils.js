@@ -95,7 +95,10 @@ function parseMods(input) {
   const clean = input.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
   const valid = [
     'NF', 'EZ', 'TD', 'HD', 'HR', 'SD', 'DT', 'HT', 'NC', 'FL',
-    'SO', 'PF', '4K', '5K', '6K', '7K', '8K', '9K', '1K', '2K', '3K', 'MR', 'V2'
+    'SO', 'PF', '4K', '5K', '6K', '7K', '8K', '9K', '1K', '2K', '3K', 'MR', 'V2',
+    'CL', 'DA', 'AC', 'BL', 'AT', 'RX', 'AP', 'SI', 'BR', 'FF', 'WU', 'WD', 'TC',
+    'TR', 'WG', 'SN', 'DF', 'MG', 'RP', 'AS', 'FR', 'MU', 'NS', 'RD', 'DS', 'GR',
+    'AL', 'SG', 'ST'
   ];
   const result = [];
   for (let i = 0; i < clean.length; i += 2) {
@@ -125,11 +128,30 @@ function calculateModdedStats(beatmap = {}, mods = [], mode = 'osu') {
   const hasEZ = cleanMods.includes('EZ');
   const hasFL = cleanMods.includes('FL');
 
-  const speed = hasDT ? 1.5 : (hasHT ? 0.75 : 1.0);
+  // Check for Lazer Difficulty Adjust (DA) settings and custom speed in DT/HT/NC/DC
+  let daSettings = null;
+  let customSpeed = null;
+  if (Array.isArray(mods)) {
+    for (const m of mods) {
+      if (typeof m === 'object' && m !== null) {
+        const acr = (m.acronym || '').toUpperCase();
+        if (acr === 'DA' && m.settings) {
+          daSettings = m.settings;
+        }
+        if (['DT', 'NC', 'HT', 'DC'].includes(acr) && m.settings?.speed_change != null) {
+          customSpeed = Number(m.settings.speed_change);
+        }
+      }
+    }
+  }
+
+  const speed = customSpeed || (hasDT ? 1.5 : (hasHT ? 0.75 : 1.0));
 
   // 1. Circle Size (CS)
   let cs = beatmap.cs ?? 0;
-  if (mode !== 'mania') {
+  if (daSettings && daSettings.circle_size != null) {
+    cs = Number(daSettings.circle_size);
+  } else if (mode !== 'mania') {
     if (hasHR) {
       cs = Math.min(10, cs * 1.3);
     } else if (hasEZ) {
@@ -140,7 +162,9 @@ function calculateModdedStats(beatmap = {}, mods = [], mode = 'osu') {
 
   // 2. HP Drain (HP)
   let hp = beatmap.drain ?? 0;
-  if (hasHR) {
+  if (daSettings && daSettings.drain_rate != null) {
+    hp = Number(daSettings.drain_rate);
+  } else if (hasHR) {
     hp = Math.min(10, hp * 1.4);
   } else if (hasEZ) {
     hp = hp * 0.5;
@@ -149,11 +173,14 @@ function calculateModdedStats(beatmap = {}, mods = [], mode = 'osu') {
 
   // 3. Approach Rate (AR)
   let baseAr = beatmap.ar ?? 0;
-  if (hasHR) {
+  if (daSettings && daSettings.approach_rate != null) {
+    baseAr = Number(daSettings.approach_rate);
+  } else if (hasHR) {
     baseAr = Math.min(10, baseAr * 1.4);
   } else if (hasEZ) {
     baseAr = baseAr * 0.5;
   }
+  baseAr = Math.min(10, Math.max(0, baseAr));
 
   // Calculate base approach window in milliseconds
   let arMs;
@@ -178,11 +205,14 @@ function calculateModdedStats(beatmap = {}, mods = [], mode = 'osu') {
 
   // 4. Overall Difficulty (OD)
   let baseOd = beatmap.accuracy ?? 0;
-  if (hasHR) {
+  if (daSettings && daSettings.overall_difficulty != null) {
+    baseOd = Number(daSettings.overall_difficulty);
+  } else if (hasHR) {
     baseOd = Math.min(10, baseOd * 1.4);
   } else if (hasEZ) {
     baseOd = baseOd * 0.5;
   }
+  baseOd = Math.min(10, Math.max(0, baseOd));
 
   let odMs;
   if (mode === 'taiko') {
@@ -209,7 +239,7 @@ function calculateModdedStats(beatmap = {}, mods = [], mode = 'osu') {
   let sr = beatmap.difficulty_rating || 0;
   if (cleanMods.length > 0) {
     let multiplier = 1.0;
-    if (hasDT) multiplier *= 1.38;
+    if (hasDT) multiplier *= (speed / 1.5) * 1.38;
     if (hasHT) multiplier *= 0.8;
     if (hasHR) multiplier *= 1.1;
     if (hasEZ) multiplier *= 0.85;
@@ -525,6 +555,163 @@ function calculateStandardScore(score, beatmap = {}, cleanMods = []) {
   return Math.round(estimatedHitPart + estimatedComboPart);
 }
 
+function getLazerModBadges(mods) {
+  if (!mods) return [];
+  const rawList = Array.isArray(mods) ? mods : parseMods(mods);
+  const badges = [];
+
+  for (const item of rawList) {
+    let acronym = '';
+    let settings = null;
+
+    if (typeof item === 'string') {
+      acronym = item.toUpperCase();
+    } else if (typeof item === 'object' && item !== null) {
+      acronym = (item.acronym || '').toUpperCase();
+      settings = item.settings || null;
+    }
+
+    if (!acronym || acronym === 'NM') continue;
+
+    let label = acronym;
+    let detail = '';
+    let name = acronym;
+    let color = '#94a3b8';
+    let bg = 'rgba(148, 163, 184, 0.15)';
+    let border = 'rgba(148, 163, 184, 0.35)';
+
+    switch (acronym) {
+      case 'CL':
+        name = 'Classic';
+        color = '#38bdf8'; // Cyan
+        bg = 'rgba(56, 189, 248, 0.18)';
+        border = '#38bdf8';
+        break;
+      case 'DA':
+        name = 'Difficulty Adjust';
+        color = '#c084fc'; // Purple
+        bg = 'rgba(192, 132, 252, 0.2)';
+        border = '#c084fc';
+        if (settings) {
+          const parts = [];
+          if (settings.circle_size != null) parts.push(`CS${settings.circle_size}`);
+          if (settings.approach_rate != null) parts.push(`AR${settings.approach_rate}`);
+          if (settings.overall_difficulty != null) parts.push(`OD${settings.overall_difficulty}`);
+          if (settings.drain_rate != null) parts.push(`HP${settings.drain_rate}`);
+          detail = parts.join(' ');
+        }
+        break;
+      case 'DT':
+        name = 'Double Time';
+        color = '#f43f5e'; // Crimson
+        bg = 'rgba(244, 63, 94, 0.2)';
+        border = '#f43f5e';
+        if (settings?.speed_change && settings.speed_change !== 1.5) {
+          detail = `${settings.speed_change}x`;
+        }
+        break;
+      case 'NC':
+        name = 'Nightcore';
+        color = '#f43f5e';
+        bg = 'rgba(244, 63, 94, 0.2)';
+        border = '#f43f5e';
+        if (settings?.speed_change && settings.speed_change !== 1.5) {
+          detail = `${settings.speed_change}x`;
+        }
+        break;
+      case 'HT':
+        name = 'Half Time';
+        color = '#06b6d4'; // Cyan-teal
+        bg = 'rgba(6, 182, 212, 0.2)';
+        border = '#06b6d4';
+        if (settings?.speed_change && settings.speed_change !== 0.75) {
+          detail = `${settings.speed_change}x`;
+        }
+        break;
+      case 'DC':
+        name = 'Daycore';
+        color = '#06b6d4';
+        bg = 'rgba(6, 182, 212, 0.2)';
+        border = '#06b6d4';
+        break;
+      case 'HD':
+        name = 'Hidden';
+        color = '#fbbf24'; // Amber
+        bg = 'rgba(251, 191, 36, 0.2)';
+        border = '#fbbf24';
+        break;
+      case 'HR':
+        name = 'Hard Rock';
+        color = '#ef4444'; // Red
+        bg = 'rgba(239, 68, 68, 0.2)';
+        border = '#ef4444';
+        break;
+      case 'EZ':
+        name = 'Easy';
+        color = '#22c55e'; // Green
+        bg = 'rgba(34, 197, 94, 0.2)';
+        border = '#22c55e';
+        break;
+      case 'FL':
+        name = 'Flashlight';
+        color = '#f59e0b';
+        bg = 'rgba(245, 158, 11, 0.2)';
+        border = '#f59e0b';
+        break;
+      case 'NF':
+        name = 'No Fail';
+        color = '#a855f7';
+        bg = 'rgba(168, 85, 247, 0.2)';
+        border = '#a855f7';
+        break;
+      case 'SO':
+        name = 'Spun Out';
+        color = '#94a3b8';
+        bg = 'rgba(148, 163, 184, 0.15)';
+        border = '#94a3b8';
+        break;
+      case 'AC':
+        name = 'Accuracy Challenge';
+        color = '#10b981';
+        bg = 'rgba(16, 185, 129, 0.2)';
+        border = '#10b981';
+        if (settings?.minimum_accuracy != null) {
+          detail = `>${settings.minimum_accuracy}%`;
+        }
+        break;
+      case 'MR':
+        name = 'Mirror';
+        color = '#ec4899';
+        bg = 'rgba(236, 72, 153, 0.2)';
+        border = '#ec4899';
+        break;
+      case 'BL':
+        name = 'Blinds';
+        color = '#64748b';
+        bg = 'rgba(100, 116, 139, 0.2)';
+        border = '#64748b';
+        break;
+      default:
+        color = '#cbd5e1';
+        bg = 'rgba(203, 213, 225, 0.15)';
+        border = 'rgba(203, 213, 225, 0.35)';
+        break;
+    }
+
+    badges.push({
+      acronym,
+      label,
+      detail,
+      name,
+      color,
+      bg,
+      border
+    });
+  }
+
+  return badges;
+}
+
 module.exports = {
   parseBeatmapInput,
   extractAllOsuUrls,
@@ -541,6 +728,7 @@ module.exports = {
   getRankGradeStyle,
   formatRelativeTime,
   formatMods,
+  getLazerModBadges,
   getCanonicalBeatmapUrl,
   getCanonicalScoreUrl,
   detectScoreClient,

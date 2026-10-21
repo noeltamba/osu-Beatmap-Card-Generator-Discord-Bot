@@ -11,9 +11,8 @@ const {
   parseMods,
   calculateModdedStats,
   isFullCombo,
-  detectScoreClient,
-  calculateLazerScore,
-  calculateStandardScore
+  getLazerModBadges,
+  calculateLazerScore
 } = require('./utils');
 
 // Register Torus Font family
@@ -208,24 +207,6 @@ async function generateScoreCard(score, user) {
   ctx.fillText(idText, currentBadgeX + (idW / 2), topY + 17);
   currentBadgeX += idW + 10;
 
-  // Client badge (LAZER vs STABLE)
-  const clientType = detectScoreClient(score);
-  const isLazer = clientType === 'lazer';
-  const clientText = isLazer ? '⚡ LAZER' : 'STABLE';
-  ctx.font = `bold 12px ${FONT_STACK}`;
-  const clientW = ctx.measureText(clientText).width + 22;
-
-  ctx.fillStyle = isLazer ? 'rgba(168, 85, 247, 0.25)' : 'rgba(56, 189, 248, 0.2)';
-  ctx.beginPath();
-  ctx.roundRect(currentBadgeX, topY, clientW, 26, 13);
-  ctx.fill();
-  ctx.strokeStyle = isLazer ? '#c084fc' : '#38bdf8';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.fillStyle = isLazer ? '#e9d5ff' : '#7dd3fc';
-  ctx.fillText(clientText, currentBadgeX + (clientW / 2), topY + 17);
-  currentBadgeX += clientW + 10;
-
   // Time played on right top
   if (timeText) {
     ctx.textAlign = 'right';
@@ -349,24 +330,67 @@ async function generateScoreCard(score, user) {
   const rankText = globalRank ? `#${globalRank.toLocaleString()} Global` : 'osu! player';
   ctx.fillText(rankText, playerTextX, playerY + 44);
 
-  // Mods Badge on the right of player header
-  const modsText = formatMods(score.mods);
-  ctx.font = `bold 16px ${FONT_STACK}`;
-  const modsW = ctx.measureText(modsText).width + 24;
-  const modsX = heroX + heroW - modsW - 22;
+  // Lazer Mod Badges on the right of player header
+  const modBadges = getLazerModBadges(score.mods);
   const modsY = playerY + 8;
+  const badgeH = 28;
+  let currentBadgeRightX = heroX + heroW - 22;
 
-  ctx.fillStyle = modsText === '+NM' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(244, 63, 94, 0.2)';
-  ctx.beginPath();
-  ctx.roundRect(modsX, modsY, modsW, 30, 15);
-  ctx.fill();
-  ctx.strokeStyle = modsText === '+NM' ? 'rgba(255, 255, 255, 0.15)' : '#f43f5e';
-  ctx.lineWidth = 1.2;
-  ctx.stroke();
+  if (modBadges.length === 0) {
+    ctx.font = `bold 14px ${FONT_STACK}`;
+    const nmW = ctx.measureText('+NM').width + 22;
+    const nmX = currentBadgeRightX - nmW;
 
-  ctx.fillStyle = modsText === '+NM' ? '#94a3b8' : '#fda4af';
-  ctx.textAlign = 'center';
-  ctx.fillText(modsText, modsX + (modsW / 2), modsY + 21);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.beginPath();
+    ctx.roundRect(nmX, modsY, nmW, badgeH, 14);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.textAlign = 'center';
+    ctx.fillText('+NM', nmX + (nmW / 2), modsY + 19);
+  } else {
+    // Render each mod badge from right to left
+    for (let i = modBadges.length - 1; i >= 0; i--) {
+      const b = modBadges[i];
+      ctx.font = `bold 14px ${FONT_STACK}`;
+      const labelW = ctx.measureText(b.label).width;
+
+      let detailW = 0;
+      if (b.detail) {
+        ctx.font = `600 12px ${FONT_STACK}`;
+        detailW = ctx.measureText(` • ${b.detail}`).width;
+      }
+
+      const totalPillW = labelW + detailW + 22;
+      const pillX = currentBadgeRightX - totalPillW;
+
+      ctx.fillStyle = b.bg;
+      ctx.beginPath();
+      ctx.roundRect(pillX, modsY, totalPillW, badgeH, 14);
+      ctx.fill();
+      ctx.strokeStyle = b.border;
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      // Text inside pill
+      ctx.textAlign = 'left';
+      ctx.font = `bold 14px ${FONT_STACK}`;
+      ctx.fillStyle = b.color;
+      ctx.fillText(b.label, pillX + 11, modsY + 19);
+
+      if (b.detail) {
+        ctx.font = `600 12px ${FONT_STACK}`;
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillText(` • ${b.detail}`, pillX + 11 + labelW, modsY + 19);
+      }
+
+      currentBadgeRightX = pillX - 8;
+    }
+  }
 
   // Subtle separator line inside hero
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
@@ -415,7 +439,6 @@ async function generateScoreCard(score, user) {
     ppColor = '#f87171';
   }
 
-  const scoreNum = (score.score || score.classic_score || 0).toLocaleString();
   const accVal = `${((score.accuracy || 0) * 100).toFixed(2)}%`;
 
   const mapMaxCombo = beatmap.max_combo || beatmap.count_max_combo || 0;
@@ -430,8 +453,11 @@ async function generateScoreCard(score, user) {
   }
 
   const cleanMods = parseMods(score.mods);
-  const lazerScore = calculateLazerScore(score, mapMaxCombo, cleanMods);
-  const stdScore = calculateStandardScore(score, beatmap, cleanMods);
+  const rawScore = (score.total_score != null && Number(score.total_score) > 0)
+    ? Number(score.total_score)
+    : (score.score != null && Number(score.score) > 0
+        ? Number(score.score)
+        : calculateLazerScore(score, mapMaxCombo, cleanMods));
 
   // Big PP
   ctx.textAlign = 'left';
@@ -439,31 +465,31 @@ async function generateScoreCard(score, user) {
   ctx.fillStyle = ppColor;
   ctx.fillText(ppVal, midColX, scoreStatsY + 36);
 
-  // Total Score below PP (with STD vs Lazer calculation)
+  // Total Score below PP (Lazer standardized format matching osu! web)
   ctx.font = `600 17px ${FONT_STACK}`;
   ctx.fillStyle = '#94a3b8';
-  const mainScoreLabel = isLazer ? 'Score (Lazer): ' : 'Score (STD): ';
-  ctx.fillText(mainScoreLabel, midColX, scoreStatsY + 68);
-  const scoreLabelW = ctx.measureText(mainScoreLabel).width;
+  ctx.fillText('Score: ', midColX, scoreStatsY + 68);
+  const scoreLabelW = ctx.measureText('Score: ').width;
 
-  const mainScoreVal = isLazer ? lazerScore.toLocaleString() : stdScore.toLocaleString();
+  const scoreFormatted = rawScore.toLocaleString();
   ctx.fillStyle = '#ffffff';
   ctx.font = `bold 17px ${FONT_STACK}`;
-  ctx.fillText(mainScoreVal, midColX + scoreLabelW, scoreStatsY + 68);
-  const mainScoreValW = ctx.measureText(mainScoreVal).width;
+  ctx.fillText(scoreFormatted, midColX + scoreLabelW, scoreStatsY + 68);
+  const scoreFormattedW = ctx.measureText(scoreFormatted).width;
 
-  // Counterpart score display
-  const subScoreLabel = isLazer ? '  • Classic: ' : '  • Lazer: ';
-  const subScoreVal = isLazer ? `${stdScore.toLocaleString()}` : `${lazerScore.toLocaleString()}`;
+  // Classic score reference if available and distinct
+  const classicScoreVal = score.classic_total_score ?? score.classic_score ?? score.legacy_total_score;
+  if (classicScoreVal != null && Number(classicScoreVal) > 0 && Number(classicScoreVal) !== rawScore) {
+    const classicLabel = '  • Classic: ';
+    ctx.font = `600 13px ${FONT_STACK}`;
+    ctx.fillStyle = '#64748b';
+    ctx.fillText(classicLabel, midColX + scoreLabelW + scoreFormattedW, scoreStatsY + 68);
+    const classicLabelW = ctx.measureText(classicLabel).width;
 
-  ctx.font = `600 13px ${FONT_STACK}`;
-  ctx.fillStyle = '#64748b';
-  ctx.fillText(subScoreLabel, midColX + scoreLabelW + mainScoreValW, scoreStatsY + 68);
-  const subScoreLabelW = ctx.measureText(subScoreLabel).width;
-
-  ctx.fillStyle = isLazer ? '#cbd5e1' : '#c084fc';
-  ctx.font = `bold 13px ${FONT_STACK}`;
-  ctx.fillText(subScoreVal, midColX + scoreLabelW + mainScoreValW + subScoreLabelW, scoreStatsY + 68);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = `bold 13px ${FONT_STACK}`;
+    ctx.fillText(Number(classicScoreVal).toLocaleString(), midColX + scoreLabelW + scoreFormattedW + classicLabelW, scoreStatsY + 68);
+  }
 
   // Accuracy & Combo row
   ctx.font = `600 16px ${FONT_STACK}`;

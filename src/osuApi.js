@@ -47,6 +47,14 @@ class OsuApi {
     return this.token;
   }
 
+  getDefaultHeaders(token) {
+    return {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/json',
+      'x-api-version': '20240101'
+    };
+  }
+
   async getBeatmap(beatmapId) {
     if (this.beatmapCache.has(beatmapId)) {
       return this.beatmapCache.get(beatmapId);
@@ -55,10 +63,7 @@ class OsuApi {
     const token = await this.getAccessToken();
 
     const response = await fetch(`https://osu.ppy.sh/api/v2/beatmaps/${beatmapId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json'
-      }
+      headers: this.getDefaultHeaders(token)
     });
 
     if (response.status === 404) {
@@ -78,10 +83,7 @@ class OsuApi {
     const token = await this.getAccessToken();
 
     const response = await fetch(`https://osu.ppy.sh/api/v2/beatmapsets/${setId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json'
-      }
+      headers: this.getDefaultHeaders(token)
     });
 
     if (response.status === 404) {
@@ -108,9 +110,8 @@ class OsuApi {
       const response = await fetch(`https://osu.ppy.sh/api/v2/beatmaps/${beatmapId}/attributes`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          ...this.getDefaultHeaders(token),
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           mods: cleanMods,
@@ -165,10 +166,7 @@ class OsuApi {
     const query = isId ? '' : '?key=username';
 
     const response = await fetch(`https://osu.ppy.sh/api/v2/users/${encodeURIComponent(cleanUser)}/osu${query}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json'
-      }
+      headers: this.getDefaultHeaders(token)
     });
 
     if (response.status === 404) {
@@ -186,10 +184,7 @@ class OsuApi {
     const token = await this.getAccessToken();
 
     const response = await fetch(`https://osu.ppy.sh/api/v2/users/${userId}/scores/recent?include_fails=${includeFails}&limit=${limit}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json'
-      }
+      headers: this.getDefaultHeaders(token)
     });
 
     if (!response.ok) {
@@ -203,10 +198,7 @@ class OsuApi {
     const token = await this.getAccessToken();
 
     const response = await fetch(`https://osu.ppy.sh/api/v2/users/${userId}/scores/best?limit=${limit}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json'
-      }
+      headers: this.getDefaultHeaders(token)
     });
 
     if (!response.ok) {
@@ -218,43 +210,46 @@ class OsuApi {
 
   async getScore(scoreId, mode = null) {
     const token = await this.getAccessToken();
-    const endpoint = mode
-      ? `https://osu.ppy.sh/api/v2/scores/${mode}/${scoreId}`
-      : `https://osu.ppy.sh/api/v2/scores/${scoreId}`;
+    const modernHeaders = this.getDefaultHeaders(token);
 
-    const response = await fetch(endpoint, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json'
-      }
-    });
-
-    // If root endpoint 404s and no mode was given, attempt fallback to rulesets
-    if (response.status === 404 && !mode) {
+    // Try modern score lookup:
+    // If mode is specified, try /scores/{mode}/{scoreId} first, then /scores/{scoreId}
+    // If mode not specified, try /scores/{scoreId} first, then iterate fallback modes
+    const endpointsToTry = [];
+    if (mode) {
+      endpointsToTry.push(`https://osu.ppy.sh/api/v2/scores/${mode}/${scoreId}`);
+      endpointsToTry.push(`https://osu.ppy.sh/api/v2/scores/${scoreId}`);
+    } else {
+      endpointsToTry.push(`https://osu.ppy.sh/api/v2/scores/${scoreId}`);
       for (const fallbackMode of ['osu', 'taiko', 'fruits', 'mania']) {
-        try {
-          const fallbackRes = await fetch(`https://osu.ppy.sh/api/v2/scores/${fallbackMode}/${scoreId}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Accept': 'application/json'
-            }
-          });
-          if (fallbackRes.ok) {
-            return await fallbackRes.json();
-          }
-        } catch (_) {}
+        endpointsToTry.push(`https://osu.ppy.sh/api/v2/scores/${fallbackMode}/${scoreId}`);
       }
     }
 
-    if (response.status === 404) {
-      throw new Error(`Skor osu! dengan ID ${scoreId} tidak ditemukan.`);
+    for (const ep of endpointsToTry) {
+      try {
+        const response = await fetch(ep, { headers: modernHeaders });
+        if (response.ok) {
+          return await response.json();
+        }
+      } catch (_) {}
     }
 
-    if (!response.ok) {
-      throw new Error(`Gagal mengambil data skor osu!: HTTP ${response.status}`);
+    // Fallback without x-api-version header if modern lookup failed (legacy score fallback)
+    const legacyHeaders = {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/json'
+    };
+    for (const ep of endpointsToTry) {
+      try {
+        const response = await fetch(ep, { headers: legacyHeaders });
+        if (response.ok) {
+          return await response.json();
+        }
+      } catch (_) {}
     }
 
-    return await response.json();
+    throw new Error(`Skor osu! dengan ID ${scoreId} tidak ditemukan.`);
   }
 
   async enrichScoreWithBeatmapAndMods(score) {
