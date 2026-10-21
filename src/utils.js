@@ -40,6 +40,31 @@ function extractAllOsuUrls(text) {
   return matches ? [...new Set(matches)] : [];
 }
 
+function parseScoreInput(input) {
+  if (!input || typeof input !== 'string') return null;
+  const trimmed = input.trim();
+
+  // Pattern: https://osu.ppy.sh/scores/7265198407 or https://osu.ppy.sh/scores/osu/7265198407
+  const match = trimmed.match(/scores\/(?:(?:osu|taiko|fruits|mania)\/)?(\d+)/i);
+  if (match) {
+    return parseInt(match[1], 10);
+  }
+
+  // Raw numeric ID
+  if (/^\d+$/.test(trimmed)) {
+    return parseInt(trimmed, 10);
+  }
+
+  return null;
+}
+
+function extractAllScoreUrls(text) {
+  if (!text) return [];
+  const regex = /https?:\/\/osu\.ppy\.sh\/scores\/(?:(?:osu|taiko|fruits|mania)\/)?\d+/gi;
+  const matches = text.match(regex);
+  return matches ? [...new Set(matches)] : [];
+}
+
 function formatDuration(seconds) {
   if (isNaN(seconds) || seconds < 0) return '0:00';
   const mins = Math.floor(seconds / 60);
@@ -131,6 +156,8 @@ function formatMods(mods) {
 module.exports = {
   parseBeatmapInput,
   extractAllOsuUrls,
+  parseScoreInput,
+  extractAllScoreUrls,
   formatDuration,
   getStarRatingColor,
   getStatusBadge,

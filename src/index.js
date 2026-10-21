@@ -14,7 +14,12 @@ const OsuApi = require('./osuApi');
 const { generateBeatmapCard } = require('./cardGenerator');
 const { generateScoreCard } = require('./scoreCardGenerator');
 const { getLinkedUser, linkUser, unlinkUser } = require('./database');
-const { parseBeatmapInput, extractAllOsuUrls } = require('./utils');
+const {
+  parseBeatmapInput,
+  extractAllOsuUrls,
+  parseScoreInput,
+  extractAllScoreUrls
+} = require('./utils');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const OSU_CLIENT_ID = process.env.OSU_CLIENT_ID || '72172';
@@ -94,6 +99,16 @@ const recentCommand = new SlashCommandBuilder()
       .setRequired(false)
   );
 
+const scorecardCommand = new SlashCommandBuilder()
+  .setName('scorecard')
+  .setDescription('Tampilkan kartu skor osu! dari link skor atau Score ID')
+  .addStringOption(option =>
+    option
+      .setName('link')
+      .setDescription('Link skor osu! (cth: https://osu.ppy.sh/scores/7265198407) atau Score ID')
+      .setRequired(true)
+  );
+
 client.once('ready', async () => {
   console.log(`\n===========================================`);
   console.log(`✨ Bot Berhasil Online sebagai: ${client.user.tag}`);
@@ -102,13 +117,14 @@ client.once('ready', async () => {
 
   // Register Global Slash Commands
   try {
-    console.log('Mendaftarkan Slash Commands (/link, /unlink, /recent, /beatmap, /showcase)...');
+    console.log('Mendaftarkan Slash Commands (/link, /unlink, /recent, /beatmap, /showcase, /scorecard)...');
     await client.application.commands.set([
       linkCommand,
       unlinkCommand,
       recentCommand,
       beatmapCommand,
-      showcaseCommand
+      showcaseCommand,
+      scorecardCommand
     ]);
     console.log('✅ Semua Slash Commands berhasil didaftarkan!\n');
   } catch (err) {
@@ -257,17 +273,92 @@ client.on('interactionCreate', async interaction => {
         content: `❌ Gagal mengambil beatmap: ${err.message}`
       });
     }
+    return;
+  }
+
+  // 5. Command /scorecard
+  if (interaction.commandName === 'scorecard') {
+    const input = interaction.options.getString('link') || interaction.options.getString('input');
+    const scoreId = parseScoreInput(input);
+
+    if (!scoreId) {
+      return interaction.reply({
+        content: '❌ Format link atau Score ID tidak valid! Masukkan link skor osu! yang sah (cth: `https://osu.ppy.sh/scores/7265198407`) atau angka Score ID.',
+        ephemeral: true
+      });
+    }
+
+    await interaction.deferReply();
+
+    try {
+      const score = await osuApi.getScore(scoreId);
+      const user = score.user || (score.user_id ? await osuApi.getUser(score.user_id) : {});
+      const imageBuffer = await generateScoreCard(score, user);
+      const attachment = new AttachmentBuilder(imageBuffer, { name: `score_${score.id}.png` });
+
+      const scoreUrl = `https://osu.ppy.sh/scores/${score.id}`;
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel('Buka Skor di osu!')
+          .setStyle(ButtonStyle.Link)
+          .setURL(scoreUrl)
+      );
+
+      await interaction.editReply({
+        files: [attachment],
+        components: [row]
+      });
+    } catch (err) {
+      console.error('Error saat memproses command /scorecard:', err);
+      await interaction.editReply({
+        content: `❌ Gagal mengambil data skor: ${err.message}`
+      });
+    }
+    return;
   }
 });
 
-// Auto-detect osu! URLs in chat messages
+// Auto-detect osu! URLs in chat messages (Score links & Beatmap links)
 client.on('messageCreate', async message => {
   if (message.author.bot) return;
 
+  // 1. Prioritaskan pengecekan link skor osu! (cth: https://osu.ppy.sh/scores/7265198407)
+  const scoreUrls = extractAllScoreUrls(message.content);
+  if (scoreUrls.length > 0) {
+    const targetUrl = scoreUrls[0];
+    const scoreId = parseScoreInput(targetUrl);
+    if (!scoreId) return;
+
+    try {
+      await message.channel.sendTyping();
+
+      const score = await osuApi.getScore(scoreId);
+      const user = score.user || (score.user_id ? await osuApi.getUser(score.user_id) : {});
+      const imageBuffer = await generateScoreCard(score, user);
+      const attachment = new AttachmentBuilder(imageBuffer, { name: `score_${score.id}.png` });
+
+      const scoreUrl = `https://osu.ppy.sh/scores/${score.id}`;
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel('Buka Skor di osu!')
+          .setStyle(ButtonStyle.Link)
+          .setURL(scoreUrl)
+      );
+
+      await message.reply({
+        files: [attachment],
+        components: [row]
+      });
+    } catch (err) {
+      console.error(`Error auto-detect score dari link ${targetUrl}:`, err.message);
+    }
+    return;
+  }
+
+  // 2. Pengecekan link beatmap osu!
   const urls = extractAllOsuUrls(message.content);
   if (urls.length === 0) return;
 
-  // Process the first osu! url found
   const targetUrl = urls[0];
   const parsed = parseBeatmapInput(targetUrl);
   if (!parsed) return;

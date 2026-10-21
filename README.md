@@ -106,11 +106,22 @@ Hasil gambar kartu akan disimpan sebagai `test_output.png`.
    ```
    *(Nama pemain otomatis terisi dari akun linked Anda jika parameter `player` tidak diisi)*
 
-4. **Command Standar Beatmap (`/beatmap`)**:
+4. **Kartu Skor Tertentu (`/scorecard`)** *(Baru!)*:
+   Menampilkan kartu grafis skor dari link skor atau Score ID:
+   ```
+   /scorecard link:https://osu.ppy.sh/scores/7265198407
+   ```
+   atau dengan angka Score ID saja:
+   ```
+   /scorecard link:7265198407
+   ```
+
+5. **Command Standar Beatmap (`/beatmap`)**:
    Menampilkan informasi beatmap lengkap termasuk Plays & Favorites:
    ```
    /beatmap input:129891
    ```
 
-5. **Auto Detect Link (Otomatis di Chat)**:
-   Cukup paste link osu! di chat Discord, bot otomatis mengirim kartu beatmap tersebut!
+6. **Auto Detect Link (Otomatis di Chat)**:
+   * **Link Skor**: Kirim link seperti `https://osu.ppy.sh/scores/7265198407` di chat, bot akan otomatis membalas dengan **Score Card**!
+   * **Link Beatmap**: Kirim link seperti `https://osu.ppy.sh/beatmapsets/742961#osu/1816113`, bot otomatis membalas dengan **Beatmap Card**!

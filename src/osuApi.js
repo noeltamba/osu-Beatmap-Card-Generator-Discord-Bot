@@ -168,6 +168,30 @@ class OsuApi {
 
     return await response.json();
   }
+
+  async getScore(scoreId, mode = null) {
+    const token = await this.getAccessToken();
+    const endpoint = mode
+      ? `https://osu.ppy.sh/api/v2/scores/${mode}/${scoreId}`
+      : `https://osu.ppy.sh/api/v2/scores/${scoreId}`;
+
+    const response = await fetch(endpoint, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (response.status === 404) {
+      throw new Error(`Skor osu! dengan ID ${scoreId} tidak ditemukan.`);
+    }
+
+    if (!response.ok) {
+      throw new Error(`Gagal mengambil data skor osu!: HTTP ${response.status}`);
+    }
+
+    return await response.json();
+  }
 }
 
 module.exports = OsuApi;
