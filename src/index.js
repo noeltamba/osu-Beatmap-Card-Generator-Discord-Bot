@@ -12,23 +12,19 @@ const {
 
 const OsuApi = require('./osuApi');
 const { generateBeatmapCard } = require('./cardGenerator');
+const { generateScoreCard } = require('./scoreCardGenerator');
+const { getLinkedUser, linkUser, unlinkUser } = require('./database');
 const { parseBeatmapInput, extractAllOsuUrls } = require('./utils');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
-const OSU_CLIENT_ID = process.env.OSU_CLIENT_ID;
+const OSU_CLIENT_ID = process.env.OSU_CLIENT_ID || '72172';
 const OSU_CLIENT_SECRET = process.env.OSU_CLIENT_SECRET;
 
 // Validate environment variables
 if (!DISCORD_TOKEN || DISCORD_TOKEN === 'your_discord_bot_token_here' || DISCORD_TOKEN === 'ISI_DISCORD_BOT_TOKEN_DISINI') {
   console.error('\n❌ [ERROR] DISCORD_TOKEN belum diisi di file .env!');
-  console.error('Silakan buka file .env dan masukkan Token bot Discord Anda.');
-  console.error('Tutorial cara mendapatkan bot token ada di README.md\n');
+  console.error('Silakan buka file .env dan masukkan Token bot Discord Anda.\n');
   process.exit(1);
-}
-
-if (!OSU_CLIENT_ID || OSU_CLIENT_ID === 'your_osu_client_id_here') {
-  console.warn('\n⚠️ [PERINGATAN] OSU_CLIENT_ID belum diisi di file .env!');
-  console.warn('Silakan masukkan Client ID dari osu! OAuth Anda di file .env agar bot bisa mengambil data osu!.\n');
 }
 
 if (!OSU_CLIENT_SECRET || OSU_CLIENT_SECRET === 'your_osu_client_secret_here' || OSU_CLIENT_SECRET === 'ISI_CLIENT_SECRET_KAMU_DISINI') {
@@ -48,6 +44,20 @@ const client = new Client({
 });
 
 // Slash Command Definitions
+const linkCommand = new SlashCommandBuilder()
+  .setName('link')
+  .setDescription('Tautkan akun Discord kamu ke akun osu! kamu untuk mempermudah /recent dan /showcase')
+  .addStringOption(option =>
+    option
+      .setName('username')
+      .setDescription('Username osu! kamu')
+      .setRequired(true)
+  );
+
+const unlinkCommand = new SlashCommandBuilder()
+  .setName('unlink')
+  .setDescription('Lepas tautan akun osu! dari akun Discord kamu');
+
 const beatmapCommand = new SlashCommandBuilder()
   .setName('beatmap')
   .setDescription('Tampilkan kartu informasi beatmap osu! dengan visual modern')
@@ -70,8 +80,18 @@ const showcaseCommand = new SlashCommandBuilder()
   .addStringOption(option =>
     option
       .setName('player')
-      .setDescription('Nama player / pemain yang memainkan map ini')
-      .setRequired(true)
+      .setDescription('Nama player (opsional jika sudah menautkan akun dengan /link)')
+      .setRequired(false)
+  );
+
+const recentCommand = new SlashCommandBuilder()
+  .setName('recent')
+  .setDescription('Tampilkan kartu skor terbaru (recent score) dari pemain osu!')
+  .addStringOption(option =>
+    option
+      .setName('player')
+      .setDescription('Nama pemain osu! (opsional jika sudah /link)')
+      .setRequired(false)
   );
 
 client.once('ready', async () => {
@@ -82,9 +102,15 @@ client.once('ready', async () => {
 
   // Register Global Slash Commands
   try {
-    console.log('Mendaftarkan Slash Commands (/beatmap & /showcase)...');
-    await client.application.commands.set([beatmapCommand, showcaseCommand]);
-    console.log('✅ Slash Commands berhasil didaftarkan!\n');
+    console.log('Mendaftarkan Slash Commands (/link, /unlink, /recent, /beatmap, /showcase)...');
+    await client.application.commands.set([
+      linkCommand,
+      unlinkCommand,
+      recentCommand,
+      beatmapCommand,
+      showcaseCommand
+    ]);
+    console.log('✅ Semua Slash Commands berhasil didaftarkan!\n');
   } catch (err) {
     console.error('Gagal mendaftarkan slash command:', err.message);
   }
@@ -94,10 +120,109 @@ client.once('ready', async () => {
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
+  // 1. Command /link
+  if (interaction.commandName === 'link') {
+    const username = interaction.options.getString('username');
+    await interaction.deferReply({ ephemeral: true });
+
+    try {
+      const user = await osuApi.getUser(username);
+      linkUser(interaction.user.id, user.id, user.username);
+      const rankStr = user.statistics?.global_rank ? ` (Rank: #${user.statistics.global_rank.toLocaleString()})` : '';
+
+      await interaction.editReply({
+        content: `✅ Berhasil menautkan akun osu! **${user.username}**${rankStr} ke akun Discord kamu!\nSekarang kamu bisa langsung ketik \`/recent\` atau \`/showcase\` tanpa perlu mengisi nama pemain lagi.`
+      });
+    } catch (err) {
+      await interaction.editReply({
+        content: `❌ Gagal menautkan akun: ${err.message}`
+      });
+    }
+    return;
+  }
+
+  // 2. Command /unlink
+  if (interaction.commandName === 'unlink') {
+    const success = unlinkUser(interaction.user.id);
+    if (success) {
+      return interaction.reply({
+        content: '✅ Tautan akun osu! kamu berhasil dihapus.',
+        ephemeral: true
+      });
+    } else {
+      return interaction.reply({
+        content: 'ℹ️ Akun Discord kamu belum menautkan akun osu! mana pun.',
+        ephemeral: true
+      });
+    }
+  }
+
+  // 3. Command /recent (Score Card Generator)
+  if (interaction.commandName === 'recent') {
+    let targetPlayer = interaction.options.getString('player');
+
+    if (!targetPlayer) {
+      const linked = getLinkedUser(interaction.user.id);
+      if (!linked) {
+        return interaction.reply({
+          content: '❌ Kamu belum menautkan akun osu!\nGunakan `/link username:<nama_osu>` terlebih dahulu, atau masukkan nama pemain dengan opsi `/recent player:<nama>`.',
+          ephemeral: true
+        });
+      }
+      targetPlayer = linked.osuUsername;
+    }
+
+    await interaction.deferReply();
+
+    try {
+      const user = await osuApi.getUser(targetPlayer);
+      const scores = await osuApi.getUserRecentScore(user.id, 1, 1);
+
+      if (!scores || scores.length === 0) {
+        return interaction.editReply({
+          content: `ℹ️ Tidak ada permainan / skor terbaru yang ditemukan untuk pemain **${user.username}** dalam 24 jam terakhir.`
+        });
+      }
+
+      const score = scores[0];
+      const imageBuffer = await generateScoreCard(score, user);
+      const attachment = new AttachmentBuilder(imageBuffer, { name: `recent_${user.username}_${score.id || 'score'}.png` });
+
+      const beatmapUrl = score.beatmap?.url || `https://osu.ppy.sh/beatmaps/${score.beatmap?.id || ''}`;
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel('Buka Beatmap di osu!')
+          .setStyle(ButtonStyle.Link)
+          .setURL(beatmapUrl)
+      );
+
+      await interaction.editReply({
+        files: [attachment],
+        components: [row]
+      });
+    } catch (err) {
+      console.error('Error saat memproses command /recent:', err);
+      await interaction.editReply({
+        content: `❌ Gagal mengambil score: ${err.message}`
+      });
+    }
+    return;
+  }
+
+  // 4. Command /beatmap & /showcase
   if (interaction.commandName === 'beatmap' || interaction.commandName === 'showcase') {
     const isShowcase = interaction.commandName === 'showcase';
     const input = interaction.options.getString('link') || interaction.options.getString('input');
-    const playerName = interaction.options.getString('player') || null;
+    let playerName = interaction.options.getString('player') || null;
+
+    // If showcase and no player provided, check if user is linked
+    if (isShowcase && !playerName) {
+      const linked = getLinkedUser(interaction.user.id);
+      if (linked) {
+        playerName = linked.osuUsername;
+      }
+    }
+
     const parsed = parseBeatmapInput(input);
 
     if (!parsed) {
@@ -148,7 +273,6 @@ client.on('messageCreate', async message => {
   if (!parsed) return;
 
   try {
-    // Send typing indicator
     await message.channel.sendTyping();
 
     const beatmap = await osuApi.resolveBeatmap(parsed);

@@ -110,6 +110,64 @@ class OsuApi {
 
     throw new Error('Format beatmap tidak didukung.');
   }
+
+  async getUser(usernameOrId) {
+    const token = await this.getAccessToken();
+    const cleanUser = String(usernameOrId).trim();
+    const isId = /^\d+$/.test(cleanUser);
+    const query = isId ? '' : '?key=username';
+
+    const response = await fetch(`https://osu.ppy.sh/api/v2/users/${encodeURIComponent(cleanUser)}/osu${query}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (response.status === 404) {
+      throw new Error(`Pemain osu! "${usernameOrId}" tidak ditemukan.`);
+    }
+
+    if (!response.ok) {
+      throw new Error(`Gagal mengambil data user osu!: HTTP ${response.status}`);
+    }
+
+    return await response.json();
+  }
+
+  async getUserRecentScore(userId, limit = 1, includeFails = 1) {
+    const token = await this.getAccessToken();
+
+    const response = await fetch(`https://osu.ppy.sh/api/v2/users/${userId}/scores/recent?include_fails=${includeFails}&limit=${limit}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gagal mengambil recent score: HTTP ${response.status}`);
+    }
+
+    return await response.json();
+  }
+
+  async getUserBestScore(userId, limit = 5) {
+    const token = await this.getAccessToken();
+
+    const response = await fetch(`https://osu.ppy.sh/api/v2/users/${userId}/scores/best?limit=${limit}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gagal mengambil top score: HTTP ${response.status}`);
+    }
+
+    return await response.json();
+  }
 }
 
 module.exports = OsuApi;

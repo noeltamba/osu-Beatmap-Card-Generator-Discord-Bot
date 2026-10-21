@@ -79,23 +79,38 @@ Hasil gambar kartu akan disimpan sebagai `test_output.png`.
 
 ## 💬 Cara Penggunaan di Discord
 
-1. **Command Khusus Showcase (`/showcase`)**:
-   Menghasilkan kartu showcase berfokus gameplay dengan nama pemain & mahkota emas, tanpa *Plays* & *Favorites*:
+1. **Tautkan Akun (`/link`) & Lepas Akun (`/unlink`)**:
+   Tautkan akun Discord Anda ke akun osu! sekali saja agar tidak perlu mengetik nama lagi:
    ```
-   /showcase link:https://osu.ppy.sh/beatmapsets/2624187#osu/5894468 player:Hyzity
+   /link username:Hyzity
    ```
-   * **Parameter 1 (`link`)**: URL Beatmap atau Beatmap ID angka.
-   * **Parameter 2 (`player`)**: Nama pemain yang memainkan beatmap tersebut.
+   Untuk melepas tautan akun:
+   ```
+   /unlink
+   ```
 
-2. **Command Standar (`/beatmap`)**:
-   Ketik perintah untuk menampilkan informasi lengkap termasuk Plays & Favorites:
+2. **Kartu Skor Terbaru (`/recent`)** *(Baru!)*:
+   Menampilkan kartu grafis skor / permainan terbaru pemain:
+   ```
+   /recent
+   ```
+   *(Otomatis mengambil skor akun Anda jika sudah `/link`)*, atau mengecek pemain lain:
+   ```
+   /recent player:mrekk
+   ```
+
+3. **Command Khusus Showcase (`/showcase`)**:
+   Menghasilkan kartu showcase gameplay dengan nama pemain & mahkota emas:
+   ```
+   /showcase link:https://osu.ppy.sh/beatmapsets/2624187#osu/5894468
+   ```
+   *(Nama pemain otomatis terisi dari akun linked Anda jika parameter `player` tidak diisi)*
+
+4. **Command Standar Beatmap (`/beatmap`)**:
+   Menampilkan informasi beatmap lengkap termasuk Plays & Favorites:
    ```
    /beatmap input:129891
    ```
 
-3. **Auto Detect Link (Otomatis di Chat)**:
-   Cukup paste link osu! di chat Discord, contoh:
-   ```
-   https://osu.ppy.sh/beatmapsets/39804#osu/129891
-   ```
-   Bot akan otomatis merespons dengan kartu grafis beatmap tersebut!
+5. **Auto Detect Link (Otomatis di Chat)**:
+   Cukup paste link osu! di chat Discord, bot otomatis mengirim kartu beatmap tersebut!
