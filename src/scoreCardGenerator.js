@@ -530,10 +530,10 @@ async function generateScoreCard(score, user) {
 
   // 7C. HIT JUDGEMENTS (300 / 100 / 50 / Miss) (Right Column)
   const stats = score.statistics || {};
-  const c300 = stats.count_300 ?? 0;
-  const c100 = stats.count_100 ?? 0;
-  const c50 = stats.count_50 ?? 0;
-  const cMiss = stats.count_miss ?? 0;
+  const c300 = stats.great ?? stats.count_300 ?? (score.mode === 'mania' ? stats.perfect ?? 0 : 0);
+  const c100 = stats.ok ?? stats.count_100 ?? (score.mode === 'fruits' ? stats.large_tick_hit ?? 0 : 0);
+  const c50 = stats.meh ?? stats.count_50 ?? (score.mode === 'fruits' ? stats.small_tick_hit ?? 0 : 0);
+  const cMiss = stats.miss ?? stats.count_miss ?? 0;
 
   const hits = [
     { label: '300', val: c300.toLocaleString(), color: '#38bdf8' },

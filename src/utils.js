@@ -267,18 +267,18 @@ function isFullCombo(score, beatmap = {}, mapMaxCombo = null) {
   if (score.rank === 'F') return false;
 
   const stats = score.statistics || {};
-  const missCount = stats.count_miss ?? 0;
+  const missCount = stats.miss ?? stats.count_miss ?? 0;
 
   // 2. Any miss means combo was broken
   if (missCount > 0) return false;
 
   // 3. API explicitly confirmed full/perfect combo
-  if (score.perfect === true || score.legacy_perfect === true) {
+  if (score.perfect === true || score.legacy_perfect === true || score.is_perfect_combo === true) {
     return true;
   }
 
   // 4. Compare with beatmap max combo if known
-  const targetMax = mapMaxCombo || beatmap.max_combo || 0;
+  const targetMax = mapMaxCombo || beatmap.max_combo || beatmap.count_max_combo || 0;
   if (targetMax > 0) {
     if ((score.max_combo || 0) >= targetMax) {
       return true;
@@ -322,10 +322,10 @@ function getStatusBadge(status) {
 
 function getModeName(mode) {
   const modes = {
-    osu: 'osu! Standard',
-    taiko: 'osu! Taiko',
-    fruits: 'osu! Catch',
-    mania: 'osu! Mania'
+    osu: 'osu!',
+    taiko: 'osu!taiko',
+    fruits: 'osu!catch',
+    mania: 'osu!mania'
   };
   return modes[mode] || 'osu!';
 }
