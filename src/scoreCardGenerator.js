@@ -7,7 +7,9 @@ const {
   getModeName,
   getRankGradeStyle,
   formatRelativeTime,
-  formatMods
+  formatMods,
+  calculateModdedStats,
+  isFullCombo
 } = require('./utils');
 
 // Register Torus Font family
@@ -213,7 +215,10 @@ async function generateScoreCard(score, user) {
   const title = set.title || set.title_unicode || 'Untitled';
   const artist = set.artist || set.artist_unicode || 'Unknown Artist';
   const version = beatmap.version || 'Normal';
-  const sr = beatmap.difficulty_rating || 0;
+
+  // Calculate modded statistics (CS, AR, OD, HP, BPM, Length, and fallback SR)
+  const modStats = calculateModdedStats(beatmap, score.mods, score.mode || beatmap.mode);
+  const sr = score.beatmap?.modded_difficulty_rating || modStats.sr || beatmap.difficulty_rating || 0;
   const srColor = getStarRatingColor(sr);
 
   const titleY = 130;
@@ -389,8 +394,17 @@ async function generateScoreCard(score, user) {
 
   const scoreNum = (score.score || score.classic_score || 0).toLocaleString();
   const accVal = `${((score.accuracy || 0) * 100).toFixed(2)}%`;
-  const maxCombo = `${(score.max_combo || 0).toLocaleString()}x`;
-  const isFc = Boolean(score.perfect || (score.statistics?.count_miss === 0 && (score.max_combo || 0) > 0));
+
+  const mapMaxCombo = beatmap.max_combo || beatmap.count_max_combo || 0;
+  const isFc = isFullCombo(score, beatmap, mapMaxCombo);
+
+  const scoreComboNum = score.max_combo || 0;
+  let comboDisplayText;
+  if (!isFc && mapMaxCombo > 0) {
+    comboDisplayText = `${scoreComboNum.toLocaleString()}x / ${mapMaxCombo.toLocaleString()}x`;
+  } else {
+    comboDisplayText = `${scoreComboNum.toLocaleString()}x`;
+  }
 
   // Big PP
   ctx.textAlign = 'left';
@@ -423,13 +437,13 @@ async function generateScoreCard(score, user) {
   ctx.fillStyle = '#94a3b8';
   ctx.fillText(`Combo: `, comboStartX, scoreStatsY + 100);
   const comboLabelW = ctx.measureText('Combo: ').width;
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = isFc ? '#4ade80' : '#ffffff';
   ctx.font = `bold 16px ${FONT_STACK}`;
-  ctx.fillText(maxCombo, comboStartX + comboLabelW, scoreStatsY + 100);
+  ctx.fillText(comboDisplayText, comboStartX + comboLabelW, scoreStatsY + 100);
 
-  // FC Badge if full combo
+  // FC Badge ONLY if full combo
   if (isFc) {
-    const comboW = comboLabelW + ctx.measureText(maxCombo).width;
+    const comboW = comboLabelW + ctx.measureText(comboDisplayText).width;
     const fcX = comboStartX + comboW + 10;
     ctx.fillStyle = 'rgba(74, 222, 128, 0.2)';
     ctx.beginPath();
@@ -497,12 +511,12 @@ async function generateScoreCard(score, user) {
   ctx.stroke();
 
   const mapStats = [
-    { title: 'CS', val: beatmap.cs?.toFixed(1) ?? '-' },
-    { title: 'AR', val: beatmap.ar?.toFixed(1) ?? '-' },
-    { title: 'OD', val: beatmap.accuracy?.toFixed(1) ?? '-' },
-    { title: 'HP', val: beatmap.drain?.toFixed(1) ?? '-' },
-    { title: 'BPM', val: `${Math.round(beatmap.bpm || set.bpm || 0)}` },
-    { title: 'LENGTH', val: formatDuration(beatmap.total_length) }
+    { title: 'CS', val: modStats.cs != null ? modStats.cs.toFixed(1) : (beatmap.cs?.toFixed(1) ?? '-') },
+    { title: 'AR', val: modStats.ar != null ? modStats.ar.toFixed(1) : (beatmap.ar?.toFixed(1) ?? '-') },
+    { title: 'OD', val: modStats.od != null ? modStats.od.toFixed(1) : (beatmap.accuracy?.toFixed(1) ?? '-') },
+    { title: 'HP', val: modStats.hp != null ? modStats.hp.toFixed(1) : (beatmap.drain?.toFixed(1) ?? '-') },
+    { title: 'BPM', val: `${modStats.bpm || Math.round(beatmap.bpm || set.bpm || 0)}` },
+    { title: 'LENGTH', val: formatDuration(modStats.total_length || beatmap.total_length) }
   ];
 
   const colW = bottomW / mapStats.length;

@@ -45,14 +45,20 @@ function parseScoreInput(input) {
   const trimmed = input.trim();
 
   // Pattern: https://osu.ppy.sh/scores/7265198407 or https://osu.ppy.sh/scores/osu/7265198407
-  const match = trimmed.match(/scores\/(?:(?:osu|taiko|fruits|mania)\/)?(\d+)/i);
+  const match = trimmed.match(/scores\/(?:([a-z]+)\/)?(\d+)/i);
   if (match) {
-    return parseInt(match[1], 10);
+    return {
+      id: parseInt(match[2], 10),
+      mode: match[1] ? match[1].toLowerCase() : null
+    };
   }
 
   // Raw numeric ID
   if (/^\d+$/.test(trimmed)) {
-    return parseInt(trimmed, 10);
+    return {
+      id: parseInt(trimmed, 10),
+      mode: null
+    };
   }
 
   return null;
@@ -63,6 +69,182 @@ function extractAllScoreUrls(text) {
   const regex = /https?:\/\/osu\.ppy\.sh\/scores\/(?:(?:osu|taiko|fruits|mania)\/)?\d+/gi;
   const matches = text.match(regex);
   return matches ? [...new Set(matches)] : [];
+}
+
+function parseMods(input) {
+  if (!input) return [];
+  if (Array.isArray(input)) {
+    return input
+      .map(m => (typeof m === 'string' ? m : m?.acronym || '').toUpperCase())
+      .filter(m => m && m !== 'NM');
+  }
+  if (typeof input !== 'string') return [];
+  const clean = input.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+  const valid = [
+    'NF', 'EZ', 'TD', 'HD', 'HR', 'SD', 'DT', 'HT', 'NC', 'FL',
+    'SO', 'PF', '4K', '5K', '6K', '7K', '8K', '9K', '1K', '2K', '3K', 'MR', 'V2'
+  ];
+  const result = [];
+  for (let i = 0; i < clean.length; i += 2) {
+    const pair = clean.substr(i, 2);
+    if (valid.includes(pair)) {
+      result.push(pair);
+    }
+  }
+  return result;
+}
+
+function extractModsFromText(text) {
+  if (!text || typeof text !== 'string') return [];
+  const match = text.match(/\+([a-zA-Z0-9]+)/);
+  if (match) {
+    return parseMods(match[1]);
+  }
+  return [];
+}
+
+function calculateModdedStats(beatmap = {}, mods = [], mode = 'osu') {
+  const cleanMods = parseMods(mods);
+
+  const hasDT = cleanMods.includes('DT') || cleanMods.includes('NC');
+  const hasHT = cleanMods.includes('HT') || cleanMods.includes('DC');
+  const hasHR = cleanMods.includes('HR');
+  const hasEZ = cleanMods.includes('EZ');
+  const hasFL = cleanMods.includes('FL');
+
+  const speed = hasDT ? 1.5 : (hasHT ? 0.75 : 1.0);
+
+  // 1. Circle Size (CS)
+  let cs = beatmap.cs ?? 0;
+  if (mode !== 'mania') {
+    if (hasHR) {
+      cs = Math.min(10, cs * 1.3);
+    } else if (hasEZ) {
+      cs = cs * 0.5;
+    }
+  }
+  cs = Math.min(10, Math.max(0, cs));
+
+  // 2. HP Drain (HP)
+  let hp = beatmap.drain ?? 0;
+  if (hasHR) {
+    hp = Math.min(10, hp * 1.4);
+  } else if (hasEZ) {
+    hp = hp * 0.5;
+  }
+  hp = Math.min(10, Math.max(0, hp));
+
+  // 3. Approach Rate (AR)
+  let baseAr = beatmap.ar ?? 0;
+  if (hasHR) {
+    baseAr = Math.min(10, baseAr * 1.4);
+  } else if (hasEZ) {
+    baseAr = baseAr * 0.5;
+  }
+
+  // Calculate base approach window in milliseconds
+  let arMs;
+  if (baseAr < 5) {
+    arMs = 1800 - (120 * baseAr);
+  } else if (baseAr === 5) {
+    arMs = 1200;
+  } else {
+    arMs = 1200 - (150 * (baseAr - 5));
+  }
+
+  // Scale approach time with clock rate
+  arMs = arMs / speed;
+
+  // Convert milliseconds back to effective AR
+  let ar;
+  if (arMs < 1200) {
+    ar = 5 + ((1200 - arMs) / 150);
+  } else {
+    ar = (1800 - arMs) / 120;
+  }
+
+  // 4. Overall Difficulty (OD)
+  let baseOd = beatmap.accuracy ?? 0;
+  if (hasHR) {
+    baseOd = Math.min(10, baseOd * 1.4);
+  } else if (hasEZ) {
+    baseOd = baseOd * 0.5;
+  }
+
+  let odMs;
+  if (mode === 'taiko') {
+    odMs = 50 - (3 * baseOd);
+  } else {
+    odMs = 80 - (6 * baseOd);
+  }
+
+  odMs = odMs / speed;
+
+  let od;
+  if (mode === 'taiko') {
+    od = (50 - odMs) / 3;
+  } else {
+    od = (80 - odMs) / 6;
+  }
+
+  // 5. BPM and Length
+  const bpm = Math.round((beatmap.bpm || 0) * speed);
+  const totalLength = Math.round((beatmap.total_length || 0) / speed);
+  const hitLength = Math.round((beatmap.hit_length || 0) / speed);
+
+  // 6. Star Rating fallback approximation
+  let sr = beatmap.difficulty_rating || 0;
+  if (cleanMods.length > 0) {
+    let multiplier = 1.0;
+    if (hasDT) multiplier *= 1.38;
+    if (hasHT) multiplier *= 0.8;
+    if (hasHR) multiplier *= 1.1;
+    if (hasEZ) multiplier *= 0.85;
+    if (hasFL) multiplier *= 1.15;
+    sr = Math.round(sr * multiplier * 100) / 100;
+  }
+
+  return {
+    cs: Math.round(cs * 10) / 10,
+    hp: Math.round(hp * 10) / 10,
+    ar: Math.round(ar * 10) / 10,
+    od: Math.round(od * 10) / 10,
+    bpm,
+    total_length: totalLength,
+    hit_length: hitLength,
+    speed,
+    sr
+  };
+}
+
+function isFullCombo(score, beatmap = {}, mapMaxCombo = null) {
+  if (!score) return false;
+
+  // 1. Failed plays can never be an FC
+  if (score.rank === 'F') return false;
+
+  const stats = score.statistics || {};
+  const missCount = stats.count_miss ?? 0;
+
+  // 2. Any miss means combo was broken
+  if (missCount > 0) return false;
+
+  // 3. API explicitly confirmed full/perfect combo
+  if (score.perfect === true || score.legacy_perfect === true) {
+    return true;
+  }
+
+  // 4. Compare with beatmap max combo if known
+  const targetMax = mapMaxCombo || beatmap.max_combo || 0;
+  if (targetMax > 0) {
+    if ((score.max_combo || 0) >= targetMax) {
+      return true;
+    }
+    return false;
+  }
+
+  // 5. Fallback: if mapMaxCombo is unknown, only trust score.perfect
+  return false;
 }
 
 function formatDuration(seconds) {
@@ -148,8 +330,7 @@ function formatRelativeTime(dateString) {
 }
 
 function formatMods(mods) {
-  if (!mods || mods.length === 0) return '+NM';
-  const cleanMods = mods.map(m => typeof m === 'string' ? m : m.acronym || '').filter(Boolean);
+  const cleanMods = parseMods(mods);
   return cleanMods.length > 0 ? `+${cleanMods.join('')}` : '+NM';
 }
 
@@ -158,6 +339,10 @@ module.exports = {
   extractAllOsuUrls,
   parseScoreInput,
   extractAllScoreUrls,
+  parseMods,
+  extractModsFromText,
+  calculateModdedStats,
+  isFullCombo,
   formatDuration,
   getStarRatingColor,
   getStatusBadge,

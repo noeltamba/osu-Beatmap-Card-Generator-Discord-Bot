@@ -18,7 +18,9 @@ const {
   parseBeatmapInput,
   extractAllOsuUrls,
   parseScoreInput,
-  extractAllScoreUrls
+  extractAllScoreUrls,
+  parseMods,
+  extractModsFromText
 } = require('./utils');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
@@ -71,6 +73,12 @@ const beatmapCommand = new SlashCommandBuilder()
       .setName('input')
       .setDescription('Link osu! (cth: https://osu.ppy.sh/b/12345) atau Beatmap ID')
       .setRequired(true)
+  )
+  .addStringOption(option =>
+    option
+      .setName('mods')
+      .setDescription('Mods osu! yang ingin diterapkan (cth: DT, HR, HDDT, EZ)')
+      .setRequired(false)
   );
 
 const showcaseCommand = new SlashCommandBuilder()
@@ -86,6 +94,12 @@ const showcaseCommand = new SlashCommandBuilder()
     option
       .setName('player')
       .setDescription('Nama player (opsional jika sudah menautkan akun dengan /link)')
+      .setRequired(false)
+  )
+  .addStringOption(option =>
+    option
+      .setName('mods')
+      .setDescription('Mods osu! yang ingin diterapkan (cth: DT, HR, HDDT, EZ)')
       .setRequired(false)
   );
 
@@ -201,6 +215,7 @@ client.on('interactionCreate', async interaction => {
       }
 
       const score = scores[0];
+      await osuApi.enrichScoreWithBeatmapAndMods(score);
       const imageBuffer = await generateScoreCard(score, user);
       const attachment = new AttachmentBuilder(imageBuffer, { name: `recent_${user.username}_${score.id || 'score'}.png` });
 
@@ -229,6 +244,7 @@ client.on('interactionCreate', async interaction => {
   if (interaction.commandName === 'beatmap' || interaction.commandName === 'showcase') {
     const isShowcase = interaction.commandName === 'showcase';
     const input = interaction.options.getString('link') || interaction.options.getString('input');
+    const modsInput = interaction.options.getString('mods') || null;
     let playerName = interaction.options.getString('player') || null;
 
     // If showcase and no player provided, check if user is linked
@@ -252,7 +268,22 @@ client.on('interactionCreate', async interaction => {
 
     try {
       const beatmap = await osuApi.resolveBeatmap(parsed);
-      const imageBuffer = await generateBeatmapCard(beatmap, { showcase: isShowcase, player: playerName });
+      const cleanMods = parseMods(modsInput);
+
+      if (cleanMods.length > 0 && beatmap.id) {
+        try {
+          const attrs = await osuApi.getBeatmapAttributes(beatmap.id, cleanMods, beatmap.mode);
+          if (attrs?.star_rating) {
+            beatmap.modded_difficulty_rating = attrs.star_rating;
+          }
+        } catch (_) {}
+      }
+
+      const imageBuffer = await generateBeatmapCard(beatmap, {
+        showcase: isShowcase,
+        player: playerName,
+        mods: cleanMods
+      });
       const attachment = new AttachmentBuilder(imageBuffer, { name: `${isShowcase ? 'showcase' : 'beatmap'}_${beatmap.id}.png` });
 
       const beatmapUrl = beatmap.url || `https://osu.ppy.sh/beatmapsets/${beatmap.beatmapset_id}#osu/${beatmap.id}`;
@@ -279,19 +310,23 @@ client.on('interactionCreate', async interaction => {
   // 5. Command /scorecard
   if (interaction.commandName === 'scorecard') {
     const input = interaction.options.getString('link') || interaction.options.getString('input');
-    const scoreId = parseScoreInput(input);
+    const parsedScore = parseScoreInput(input);
 
-    if (!scoreId) {
+    if (!parsedScore) {
       return interaction.reply({
         content: '❌ Format link atau Score ID tidak valid! Masukkan link skor osu! yang sah (cth: `https://osu.ppy.sh/scores/7265198407`) atau angka Score ID.',
         ephemeral: true
       });
     }
 
+    const scoreId = typeof parsedScore === 'object' ? parsedScore.id : parsedScore;
+    const scoreMode = typeof parsedScore === 'object' ? parsedScore.mode : null;
+
     await interaction.deferReply();
 
     try {
-      const score = await osuApi.getScore(scoreId);
+      const score = await osuApi.getScore(scoreId, scoreMode);
+      await osuApi.enrichScoreWithBeatmapAndMods(score);
       const user = score.user || (score.user_id ? await osuApi.getUser(score.user_id) : {});
       const imageBuffer = await generateScoreCard(score, user);
       const attachment = new AttachmentBuilder(imageBuffer, { name: `score_${score.id}.png` });
@@ -326,13 +361,17 @@ client.on('messageCreate', async message => {
   const scoreUrls = extractAllScoreUrls(message.content);
   if (scoreUrls.length > 0) {
     const targetUrl = scoreUrls[0];
-    const scoreId = parseScoreInput(targetUrl);
-    if (!scoreId) return;
+    const parsedScore = parseScoreInput(targetUrl);
+    if (!parsedScore) return;
+
+    const scoreId = typeof parsedScore === 'object' ? parsedScore.id : parsedScore;
+    const scoreMode = typeof parsedScore === 'object' ? parsedScore.mode : null;
 
     try {
       await message.channel.sendTyping();
 
-      const score = await osuApi.getScore(scoreId);
+      const score = await osuApi.getScore(scoreId, scoreMode);
+      await osuApi.enrichScoreWithBeatmapAndMods(score);
       const user = score.user || (score.user_id ? await osuApi.getUser(score.user_id) : {});
       const imageBuffer = await generateScoreCard(score, user);
       const attachment = new AttachmentBuilder(imageBuffer, { name: `score_${score.id}.png` });
@@ -363,11 +402,23 @@ client.on('messageCreate', async message => {
   const parsed = parseBeatmapInput(targetUrl);
   if (!parsed) return;
 
+  const detectedMods = extractModsFromText(message.content);
+
   try {
     await message.channel.sendTyping();
 
     const beatmap = await osuApi.resolveBeatmap(parsed);
-    const imageBuffer = await generateBeatmapCard(beatmap);
+
+    if (detectedMods.length > 0 && beatmap.id) {
+      try {
+        const attrs = await osuApi.getBeatmapAttributes(beatmap.id, detectedMods, beatmap.mode);
+        if (attrs?.star_rating) {
+          beatmap.modded_difficulty_rating = attrs.star_rating;
+        }
+      } catch (_) {}
+    }
+
+    const imageBuffer = await generateBeatmapCard(beatmap, { mods: detectedMods });
     const attachment = new AttachmentBuilder(imageBuffer, { name: `beatmap_${beatmap.id}.png` });
 
     const beatmapUrl = beatmap.url || `https://osu.ppy.sh/beatmapsets/${beatmap.beatmapset_id}#osu/${beatmap.id}`;

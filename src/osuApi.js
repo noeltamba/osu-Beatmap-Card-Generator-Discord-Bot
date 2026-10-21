@@ -8,6 +8,8 @@ class OsuApi {
     this.clientSecret = clientSecret;
     this.token = null;
     this.tokenExpiresAt = 0;
+    this.beatmapCache = new Map();
+    this.attributesCache = new Map();
   }
 
   async getAccessToken() {
@@ -46,6 +48,10 @@ class OsuApi {
   }
 
   async getBeatmap(beatmapId) {
+    if (this.beatmapCache.has(beatmapId)) {
+      return this.beatmapCache.get(beatmapId);
+    }
+
     const token = await this.getAccessToken();
 
     const response = await fetch(`https://osu.ppy.sh/api/v2/beatmaps/${beatmapId}`, {
@@ -63,7 +69,9 @@ class OsuApi {
       throw new Error(`Gagal mengambil data beatmap: HTTP ${response.status}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    this.beatmapCache.set(beatmapId, data);
+    return data;
   }
 
   async getBeatmapset(setId) {
@@ -85,6 +93,45 @@ class OsuApi {
     }
 
     return await response.json();
+  }
+
+  async getBeatmapAttributes(beatmapId, mods = [], ruleset = 'osu') {
+    const cleanMods = (mods || []).map(m => typeof m === 'string' ? m.toUpperCase() : (m.acronym || '').toUpperCase()).filter(Boolean);
+    const cacheKey = `${beatmapId}:${cleanMods.sort().join('')}:${ruleset}`;
+
+    if (this.attributesCache.has(cacheKey)) {
+      return this.attributesCache.get(cacheKey);
+    }
+
+    try {
+      const token = await this.getAccessToken();
+      const response = await fetch(`https://osu.ppy.sh/api/v2/beatmaps/${beatmapId}/attributes`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          mods: cleanMods,
+          ruleset: ruleset || 'osu'
+        })
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = await response.json();
+      const result = data?.attributes || null;
+      if (result) {
+        this.attributesCache.set(cacheKey, result);
+      }
+      return result;
+    } catch (e) {
+      console.warn(`Gagal mengambil attributes untuk beatmap ${beatmapId}:`, e.message);
+      return null;
+    }
   }
 
   async resolveBeatmap(parsed) {
@@ -182,6 +229,23 @@ class OsuApi {
       }
     });
 
+    // If root endpoint 404s and no mode was given, attempt fallback to rulesets
+    if (response.status === 404 && !mode) {
+      for (const fallbackMode of ['osu', 'taiko', 'fruits', 'mania']) {
+        try {
+          const fallbackRes = await fetch(`https://osu.ppy.sh/api/v2/scores/${fallbackMode}/${scoreId}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/json'
+            }
+          });
+          if (fallbackRes.ok) {
+            return await fallbackRes.json();
+          }
+        } catch (_) {}
+      }
+    }
+
     if (response.status === 404) {
       throw new Error(`Skor osu! dengan ID ${scoreId} tidak ditemukan.`);
     }
@@ -191,6 +255,39 @@ class OsuApi {
     }
 
     return await response.json();
+  }
+
+  async enrichScoreWithBeatmapAndMods(score) {
+    if (!score) return score;
+
+    // 1. Ensure full beatmap details exist (especially max_combo and all base stats)
+    if (score.beatmap && score.beatmap.id) {
+      if (!score.beatmap.max_combo) {
+        try {
+          const fullBm = await this.getBeatmap(score.beatmap.id);
+          score.beatmap = { ...fullBm, ...score.beatmap, max_combo: fullBm.max_combo };
+        } catch (_) {}
+      }
+    }
+
+    // 2. Fetch official modded attributes (star rating & max combo) if mods exist
+    const mods = score.mods || [];
+    const mode = score.mode || score.beatmap?.mode || 'osu';
+    if (score.beatmap?.id && mods.length > 0) {
+      try {
+        const attrs = await this.getBeatmapAttributes(score.beatmap.id, mods, mode);
+        if (attrs) {
+          if (attrs.star_rating) {
+            score.beatmap.modded_difficulty_rating = attrs.star_rating;
+          }
+          if (!score.beatmap.max_combo && attrs.max_combo > 0) {
+            score.beatmap.max_combo = attrs.max_combo;
+          }
+        }
+      } catch (_) {}
+    }
+
+    return score;
   }
 }
 

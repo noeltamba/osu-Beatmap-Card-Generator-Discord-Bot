@@ -1,6 +1,14 @@
 const path = require('path');
 const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
-const { formatDuration, getStarRatingColor, getStatusBadge, getModeName } = require('./utils');
+const {
+  formatDuration,
+  getStarRatingColor,
+  getStatusBadge,
+  getModeName,
+  formatMods,
+  parseMods,
+  calculateModdedStats
+} = require('./utils');
 
 // Register Torus Font family
 const fontsDir = path.join(__dirname, '..', 'assets', 'fonts');
@@ -114,6 +122,9 @@ function drawVectorCrown(ctx, cx, cy, size, color) {
 async function generateBeatmapCard(beatmap, options = {}) {
   const isShowcase = Boolean(options.showcase);
   const playerName = options.player ? String(options.player).trim() : null;
+  const rawMods = options.mods || beatmap.mods || [];
+  const cleanMods = parseMods(rawMods);
+  const modStats = calculateModdedStats(beatmap, cleanMods, beatmap.mode);
   const width = 1080;
   const height = 580;
   const radius = 28;
@@ -204,16 +215,18 @@ async function generateBeatmapCard(beatmap, options = {}) {
   const modeText = getModeName(beatmap.mode).toUpperCase();
   const statusInfo = getStatusBadge(beatmap.status);
   const idText = `b/${beatmap.id || '-'} • s/${beatmap.beatmapset_id || '-'}`;
+  const modsText = cleanMods.length > 0 ? formatMods(cleanMods) : '';
 
   ctx.font = `bold 12px ${FONT_STACK}`;
   const modeW = ctx.measureText(modeText).width + 24;
   const statusW = ctx.measureText(statusInfo.label).width + 24;
   const showcaseW = isShowcase ? (ctx.measureText('SHOWCASE').width + 24) : 0;
+  const modsW = modsText ? (ctx.measureText(modsText).width + 24) : 0;
   ctx.font = `600 12px ${FONT_STACK}`;
   const idW = ctx.measureText(idText).width + 22;
 
   const gap = 12;
-  const totalTopW = modeW + statusW + (isShowcase ? (showcaseW + gap) : 0) + idW + (gap * 2);
+  const totalTopW = modeW + statusW + (isShowcase ? (showcaseW + gap) : 0) + (modsText ? (modsW + gap) : 0) + idW + (gap * 2);
   let badgeX = centerX - (totalTopW / 2);
   const topY = 62;
 
@@ -256,6 +269,21 @@ async function generateBeatmapCard(beatmap, options = {}) {
     ctx.font = `bold 12px ${FONT_STACK}`;
     ctx.fillText('SHOWCASE', badgeX + (showcaseW / 2), topY + 17);
     badgeX += showcaseW + gap;
+  }
+
+  // Mods badge (if mods provided)
+  if (modsText) {
+    ctx.fillStyle = 'rgba(244, 63, 94, 0.2)';
+    ctx.beginPath();
+    ctx.roundRect(badgeX, topY, modsW, 26, 13);
+    ctx.fill();
+    ctx.strokeStyle = '#f43f5e';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#fda4af';
+    ctx.font = `bold 12px ${FONT_STACK}`;
+    ctx.fillText(modsText, badgeX + (modsW / 2), topY + 17);
+    badgeX += modsW + gap;
   }
 
   // ID badge
@@ -304,7 +332,7 @@ async function generateBeatmapCard(beatmap, options = {}) {
 
   // 7. STAR RATING, DIFFICULTY, & PLAYER ROW (Centered)
   const diffY = 222;
-  const sr = beatmap.difficulty_rating || 0;
+  const sr = beatmap.modded_difficulty_rating || modStats.sr || beatmap.difficulty_rating || 0;
   const srColor = getStarRatingColor(sr);
   const version = beatmap.version || 'Normal';
 
@@ -400,10 +428,10 @@ async function generateBeatmapCard(beatmap, options = {}) {
   // 8. SIMPLE & CLEAN CS, AR, OD, HP SYSTEM (Centered Compact Cards)
   const statsY = 285;
   const stats = [
-    { label: 'CS', name: 'Circle Size', val: beatmap.cs ?? 0, color: '#38bdf8' },
-    { label: 'AR', name: 'Approach Rate', val: beatmap.ar ?? 0, color: '#fb923c' },
-    { label: 'OD', name: 'Overall Diff', val: beatmap.accuracy ?? 0, color: '#4ade80' },
-    { label: 'HP', name: 'HP Drain', val: beatmap.drain ?? 0, color: '#f43f5e' }
+    { label: 'CS', name: 'Circle Size', val: modStats.cs ?? beatmap.cs ?? 0, color: '#38bdf8' },
+    { label: 'AR', name: 'Approach Rate', val: modStats.ar ?? beatmap.ar ?? 0, color: '#fb923c' },
+    { label: 'OD', name: 'Overall Diff', val: modStats.od ?? beatmap.accuracy ?? 0, color: '#4ade80' },
+    { label: 'HP', name: 'HP Drain', val: modStats.hp ?? beatmap.drain ?? 0, color: '#f43f5e' }
   ];
 
   const chipW = 152;
@@ -473,15 +501,19 @@ async function generateBeatmapCard(beatmap, options = {}) {
   ctx.stroke();
 
   // Metadata items: in showcase mode, Plays & Favorites are removed
+  const totalLen = modStats.total_length || beatmap.total_length || 0;
+  const hitLen = modStats.hit_length || beatmap.hit_length || 0;
+  const bpmVal = modStats.bpm || Math.round(beatmap.bpm || set.bpm || 0);
+
   const metaItems = isShowcase
     ? [
-        { title: 'LENGTH', val: `${formatDuration(beatmap.total_length)} (${formatDuration(beatmap.hit_length)})` },
-        { title: 'BPM', val: `${Math.round(beatmap.bpm || set.bpm || 0)}` },
+        { title: 'LENGTH', val: `${formatDuration(totalLen)} (${formatDuration(hitLen)})` },
+        { title: 'BPM', val: `${bpmVal}` },
         { title: 'MAX COMBO', val: beatmap.max_combo ? `${beatmap.max_combo.toLocaleString()}x` : '-' }
       ]
     : [
-        { title: 'LENGTH', val: `${formatDuration(beatmap.total_length)} (${formatDuration(beatmap.hit_length)})` },
-        { title: 'BPM', val: `${Math.round(beatmap.bpm || set.bpm || 0)}` },
+        { title: 'LENGTH', val: `${formatDuration(totalLen)} (${formatDuration(hitLen)})` },
+        { title: 'BPM', val: `${bpmVal}` },
         { title: 'COMBO', val: beatmap.max_combo ? `${beatmap.max_combo.toLocaleString()}x` : '-' },
         { title: 'PLAYS', val: `${formatNumber(beatmap.playcount)}` },
         { title: 'FAVORITES', val: `${formatNumber(set.favourite_count)}`, hasHeart: true }
