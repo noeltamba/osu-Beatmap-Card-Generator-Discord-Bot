@@ -20,7 +20,9 @@ const {
   parseScoreInput,
   extractAllScoreUrls,
   parseMods,
-  extractModsFromText
+  extractModsFromText,
+  getCanonicalBeatmapUrl,
+  getCanonicalScoreUrl
 } = require('./utils');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
@@ -219,7 +221,7 @@ client.on('interactionCreate', async interaction => {
       const imageBuffer = await generateScoreCard(score, user);
       const attachment = new AttachmentBuilder(imageBuffer, { name: `recent_${user.username}_${score.id || 'score'}.png` });
 
-      const beatmapUrl = score.beatmap?.url || `https://osu.ppy.sh/beatmaps/${score.beatmap?.id || ''}`;
+      const beatmapUrl = getCanonicalBeatmapUrl(score.beatmap);
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setLabel('Buka Beatmap di osu!')
@@ -286,7 +288,7 @@ client.on('interactionCreate', async interaction => {
       });
       const attachment = new AttachmentBuilder(imageBuffer, { name: `${isShowcase ? 'showcase' : 'beatmap'}_${beatmap.id}.png` });
 
-      const beatmapUrl = beatmap.url || `https://osu.ppy.sh/beatmapsets/${beatmap.beatmapset_id}#osu/${beatmap.id}`;
+      const beatmapUrl = getCanonicalBeatmapUrl(beatmap, input);
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setLabel('Buka di osu!')
@@ -331,7 +333,7 @@ client.on('interactionCreate', async interaction => {
       const imageBuffer = await generateScoreCard(score, user);
       const attachment = new AttachmentBuilder(imageBuffer, { name: `score_${score.id}.png` });
 
-      const scoreUrl = `https://osu.ppy.sh/scores/${score.id}`;
+      const scoreUrl = getCanonicalScoreUrl(score, input);
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setLabel('Buka Skor di osu!')
@@ -376,7 +378,7 @@ client.on('messageCreate', async message => {
       const imageBuffer = await generateScoreCard(score, user);
       const attachment = new AttachmentBuilder(imageBuffer, { name: `score_${score.id}.png` });
 
-      const scoreUrl = `https://osu.ppy.sh/scores/${score.id}`;
+      const scoreUrl = getCanonicalScoreUrl(score, targetUrl);
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setLabel('Buka Skor di osu!')
@@ -421,7 +423,7 @@ client.on('messageCreate', async message => {
     const imageBuffer = await generateBeatmapCard(beatmap, { mods: detectedMods });
     const attachment = new AttachmentBuilder(imageBuffer, { name: `beatmap_${beatmap.id}.png` });
 
-    const beatmapUrl = beatmap.url || `https://osu.ppy.sh/beatmapsets/${beatmap.beatmapset_id}#osu/${beatmap.id}`;
+    const beatmapUrl = getCanonicalBeatmapUrl(beatmap, targetUrl);
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setLabel('Buka di osu!')

@@ -8,8 +8,12 @@ const {
   getRankGradeStyle,
   formatRelativeTime,
   formatMods,
+  parseMods,
   calculateModdedStats,
-  isFullCombo
+  isFullCombo,
+  detectScoreClient,
+  calculateLazerScore,
+  calculateStandardScore
 } = require('./utils');
 
 // Register Torus Font family
@@ -202,6 +206,25 @@ async function generateScoreCard(score, user) {
   ctx.fill();
   ctx.fillStyle = '#cbd5e1';
   ctx.fillText(idText, currentBadgeX + (idW / 2), topY + 17);
+  currentBadgeX += idW + 10;
+
+  // Client badge (LAZER vs STABLE)
+  const clientType = detectScoreClient(score);
+  const isLazer = clientType === 'lazer';
+  const clientText = isLazer ? '⚡ LAZER' : 'STABLE';
+  ctx.font = `bold 12px ${FONT_STACK}`;
+  const clientW = ctx.measureText(clientText).width + 22;
+
+  ctx.fillStyle = isLazer ? 'rgba(168, 85, 247, 0.25)' : 'rgba(56, 189, 248, 0.2)';
+  ctx.beginPath();
+  ctx.roundRect(currentBadgeX, topY, clientW, 26, 13);
+  ctx.fill();
+  ctx.strokeStyle = isLazer ? '#c084fc' : '#38bdf8';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = isLazer ? '#e9d5ff' : '#7dd3fc';
+  ctx.fillText(clientText, currentBadgeX + (clientW / 2), topY + 17);
+  currentBadgeX += clientW + 10;
 
   // Time played on right top
   if (timeText) {
@@ -406,20 +429,41 @@ async function generateScoreCard(score, user) {
     comboDisplayText = `${scoreComboNum.toLocaleString()}x`;
   }
 
+  const cleanMods = parseMods(score.mods);
+  const lazerScore = calculateLazerScore(score, mapMaxCombo, cleanMods);
+  const stdScore = calculateStandardScore(score, beatmap, cleanMods);
+
   // Big PP
   ctx.textAlign = 'left';
   ctx.font = `bold ${ppVal === 'FAILED' ? '28px' : '38px'} ${FONT_STACK}`;
   ctx.fillStyle = ppColor;
   ctx.fillText(ppVal, midColX, scoreStatsY + 36);
 
-  // Total Score below PP
-  ctx.font = `600 18px ${FONT_STACK}`;
+  // Total Score below PP (with STD vs Lazer calculation)
+  ctx.font = `600 17px ${FONT_STACK}`;
   ctx.fillStyle = '#94a3b8';
-  ctx.fillText(`Score: `, midColX, scoreStatsY + 68);
-  const scoreLabelW = ctx.measureText('Score: ').width;
+  const mainScoreLabel = isLazer ? 'Score (Lazer): ' : 'Score (STD): ';
+  ctx.fillText(mainScoreLabel, midColX, scoreStatsY + 68);
+  const scoreLabelW = ctx.measureText(mainScoreLabel).width;
+
+  const mainScoreVal = isLazer ? lazerScore.toLocaleString() : stdScore.toLocaleString();
   ctx.fillStyle = '#ffffff';
-  ctx.font = `bold 18px ${FONT_STACK}`;
-  ctx.fillText(scoreNum, midColX + scoreLabelW, scoreStatsY + 68);
+  ctx.font = `bold 17px ${FONT_STACK}`;
+  ctx.fillText(mainScoreVal, midColX + scoreLabelW, scoreStatsY + 68);
+  const mainScoreValW = ctx.measureText(mainScoreVal).width;
+
+  // Counterpart score display
+  const subScoreLabel = isLazer ? '  • Classic: ' : '  • Lazer: ';
+  const subScoreVal = isLazer ? `${stdScore.toLocaleString()}` : `${lazerScore.toLocaleString()}`;
+
+  ctx.font = `600 13px ${FONT_STACK}`;
+  ctx.fillStyle = '#64748b';
+  ctx.fillText(subScoreLabel, midColX + scoreLabelW + mainScoreValW, scoreStatsY + 68);
+  const subScoreLabelW = ctx.measureText(subScoreLabel).width;
+
+  ctx.fillStyle = isLazer ? '#cbd5e1' : '#c084fc';
+  ctx.font = `bold 13px ${FONT_STACK}`;
+  ctx.fillText(subScoreVal, midColX + scoreLabelW + mainScoreValW + subScoreLabelW, scoreStatsY + 68);
 
   // Accuracy & Combo row
   ctx.font = `600 16px ${FONT_STACK}`;

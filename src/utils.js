@@ -7,10 +7,22 @@ function parseBeatmapInput(input) {
 
   const trimmed = input.trim();
 
-  // Pattern 1: https://osu.ppy.sh/beatmapsets/123456#osu/789012 or #mania/789012 etc.
-  const diffMatch = trimmed.match(/beatmapsets\/\d+#(?:osu|taiko|fruits|mania)\/(\d+)/i);
-  if (diffMatch) {
-    return { type: 'beatmap', id: parseInt(diffMatch[1], 10) };
+  // Pattern 1: https://osu.ppy.sh/beatmapsets/123456#osu/789012 or #taiko/789012 etc.
+  const diffMatchWithMode = trimmed.match(/beatmapsets\/\d+#(?:osu|taiko|fruits|mania)\/(\d+)/i);
+  if (diffMatchWithMode) {
+    return { type: 'beatmap', id: parseInt(diffMatchWithMode[1], 10) };
+  }
+
+  // Pattern 1b: https://osu.ppy.sh/beatmapsets/123456#789012 (without mode in hash)
+  const diffMatchHash = trimmed.match(/beatmapsets\/\d+#(\d+)/i);
+  if (diffMatchHash) {
+    return { type: 'beatmap', id: parseInt(diffMatchHash[1], 10) };
+  }
+
+  // Pattern 1c: https://osu.ppy.sh/beatmapsets/123456/789012 (slash instead of hash)
+  const diffMatchSlash = trimmed.match(/beatmapsets\/\d+\/(\d+)/i);
+  if (diffMatchSlash) {
+    return { type: 'beatmap', id: parseInt(diffMatchSlash[1], 10) };
   }
 
   // Pattern 2: https://osu.ppy.sh/b/789012 or https://osu.ppy.sh/beatmaps/789012
@@ -19,8 +31,8 @@ function parseBeatmapInput(input) {
     return { type: 'beatmap', id: parseInt(bMatch[1], 10) };
   }
 
-  // Pattern 3: https://osu.ppy.sh/beatmapsets/123456 (tanpa diff tertentu)
-  const setMatch = trimmed.match(/beatmapsets\/(\d+)/i);
+  // Pattern 3: https://osu.ppy.sh/beatmapsets/123456 or https://osu.ppy.sh/s/123456 (set without diff)
+  const setMatch = trimmed.match(/(?:beatmapsets|s)\/(\d+)/i);
   if (setMatch) {
     return { type: 'beatmapset', id: parseInt(setMatch[1], 10) };
   }
@@ -35,7 +47,8 @@ function parseBeatmapInput(input) {
 
 function extractAllOsuUrls(text) {
   if (!text) return [];
-  const regex = /https?:\/\/osu\.ppy\.sh\/(?:beatmapsets\/\d+(?:#(?:osu|taiko|fruits|mania)\/\d+)?|b\/\d+|beatmaps\/\d+)/gi;
+  // Match full osu! URLs including beatmapsets with specific diff, /b/, /s/, /beatmaps/
+  const regex = /https?:\/\/osu\.ppy\.sh\/(?:beatmapsets\/\d+(?:#(?:[a-zA-Z0-9_-]+\/)?\d+|\/\d+)?|b\/\d+|s\/\d+|beatmaps\/\d+)(?:[^\s<>'"`]+)?/gi;
   const matches = text.match(regex);
   return matches ? [...new Set(matches)] : [];
 }
@@ -334,6 +347,184 @@ function formatMods(mods) {
   return cleanMods.length > 0 ? `+${cleanMods.join('')}` : '+NM';
 }
 
+function getCanonicalBeatmapUrl(beatmap, preferredUrl = null) {
+  if (preferredUrl && typeof preferredUrl === 'string' && /^https?:\/\//i.test(preferredUrl.trim())) {
+    return preferredUrl.trim();
+  }
+  if (!beatmap) return 'https://osu.ppy.sh';
+  const setId = beatmap.beatmapset_id || beatmap.beatmapset?.id;
+  const mode = beatmap.mode || 'osu';
+  const id = beatmap.id;
+  if (setId && id) {
+    return `https://osu.ppy.sh/beatmapsets/${setId}#${mode}/${id}`;
+  }
+  if (setId && !id) {
+    return `https://osu.ppy.sh/beatmapsets/${setId}`;
+  }
+  if (id) {
+    return `https://osu.ppy.sh/b/${id}`;
+  }
+  return beatmap.url || 'https://osu.ppy.sh';
+}
+
+function getCanonicalScoreUrl(score, preferredUrl = null) {
+  if (preferredUrl && typeof preferredUrl === 'string' && /^https?:\/\//i.test(preferredUrl.trim())) {
+    return preferredUrl.trim();
+  }
+  if (!score || !score.id) return 'https://osu.ppy.sh';
+  const mode = score.mode || (typeof score.ruleset_id === 'string' ? score.ruleset_id : null);
+  if (mode) {
+    return `https://osu.ppy.sh/scores/${mode}/${score.id}`;
+  }
+  return `https://osu.ppy.sh/scores/${score.id}`;
+}
+
+function detectScoreClient(score) {
+  if (!score) return 'stable';
+
+  // 1. Explicit build_id
+  if (score.build_id != null && Number(score.build_id) > 0) {
+    return 'lazer';
+  }
+
+  // 2. Lazer-exclusive mods
+  const lazerOnlyMods = [
+    'CL', 'DA', 'AC', 'BL', 'MR', 'TP', 'MU', 'NS', 'MG', 'RP',
+    'AT', 'DF', 'WU', 'WD', 'TC', 'BR', 'SG', 'ST', 'RD', 'AL', 'FF'
+  ];
+  const mods = score.mods || [];
+  const hasLazerMod = mods.some(m => {
+    const acronym = (typeof m === 'string' ? m : m?.acronym || '').toUpperCase();
+    return lazerOnlyMods.includes(acronym) || (typeof m === 'object' && m?.settings != null);
+  });
+  if (hasLazerMod) {
+    return 'lazer';
+  }
+
+  // 3. Lazer-specific slider/tick statistics
+  const stats = score.statistics || {};
+  if (
+    stats.slider_tail_hit != null ||
+    stats.large_tick_hit != null ||
+    stats.small_tick_hit != null ||
+    stats.legacy_combo_increase != null
+  ) {
+    return 'lazer';
+  }
+
+  // 4. legacy_score_id explicitly null while score id exists
+  if (score.legacy_score_id === null && score.id != null) {
+    return 'lazer';
+  }
+
+  // 5. Standardized 1M score scale
+  const rawScore = Number(score.total_score ?? score.score ?? 0);
+  if (score.total_score != null && rawScore > 0 && rawScore <= 1250000 && (score.classic_total_score || 0) > 1500000) {
+    return 'lazer';
+  }
+
+  return 'stable';
+}
+
+function calculateLazerScore(score, mapMaxCombo = null, cleanMods = []) {
+  if (!score) return 0;
+
+  // If already given a standardized total_score (<= 1.25M), use it
+  if (score.total_score != null && Number(score.total_score) > 0 && Number(score.total_score) <= 1250000) {
+    return Math.round(Number(score.total_score));
+  }
+
+  const acc = Math.max(0, Math.min(1, score.accuracy || 0));
+  const combo = score.max_combo || 0;
+  const maxCombo = mapMaxCombo || score.beatmap?.max_combo || combo || 1;
+
+  // 1. Accuracy portion (500,000 max, acc^5)
+  const accPortion = 500000 * Math.pow(acc, 5);
+
+  // 2. Combo portion (500,000 max, sqrt curve scaled by acc)
+  const comboRatio = maxCombo > 0 ? Math.min(1, Math.sqrt(combo) / Math.sqrt(maxCombo)) : 1;
+  const comboPortion = 500000 * comboRatio * acc;
+
+  // 3. Mod multiplier in Lazer
+  let modMultiplier = 1.0;
+  const mods = Array.isArray(cleanMods) && cleanMods.length > 0 ? cleanMods : parseMods(score.mods);
+  const hasDT = mods.includes('DT') || mods.includes('NC');
+  const hasHR = mods.includes('HR');
+  const hasHD = mods.includes('HD');
+  const hasFL = mods.includes('FL');
+  const hasEZ = mods.includes('EZ');
+  const hasHT = mods.includes('HT') || mods.includes('DC');
+  const hasNF = mods.includes('NF');
+  const hasSO = mods.includes('SO');
+
+  if (hasDT) modMultiplier *= 1.20;
+  if (hasHR) modMultiplier *= 1.06;
+  if (hasHD) modMultiplier *= 1.06;
+  if (hasFL) modMultiplier *= 1.12;
+  if (hasEZ) modMultiplier *= 0.50;
+  if (hasHT) modMultiplier *= 0.30;
+  if (hasNF) modMultiplier *= 0.50;
+  if (hasSO) modMultiplier *= 0.90;
+
+  return Math.round((accPortion + comboPortion) * modMultiplier);
+}
+
+function calculateStandardScore(score, beatmap = {}, cleanMods = []) {
+  if (!score) return 0;
+
+  // If already given a legacy Score V1, use it
+  if (score.legacy_total_score != null && Number(score.legacy_total_score) > 0) {
+    return Math.round(Number(score.legacy_total_score));
+  }
+  if (score.classic_total_score != null && Number(score.classic_total_score) > 0) {
+    return Math.round(Number(score.classic_total_score));
+  }
+  if (score.classic_score != null && Number(score.classic_score) > 0) {
+    return Math.round(Number(score.classic_score));
+  }
+  if (score.score != null && Number(score.score) > 1250000) {
+    return Math.round(Number(score.score));
+  }
+  if (score.score != null && Number(score.score) > 0 && detectScoreClient(score) === 'stable') {
+    return Math.round(Number(score.score));
+  }
+
+  // Fallback approximation of Score V1
+  const bm = score.beatmap || beatmap || {};
+  const hp = bm.drain ?? 5;
+  const cs = bm.cs ?? 4;
+  const od = bm.accuracy ?? 8;
+  const countObjects = (bm.count_circles || 0) + (bm.count_sliders || 0) + (bm.count_spinners || 0) || 500;
+  const diffMultiplier = Math.max(1, Math.round((hp + cs + od + Math.min(Math.max(countObjects, 0), 1000)) / 10));
+
+  let modMultiplier = 1.0;
+  const mods = Array.isArray(cleanMods) && cleanMods.length > 0 ? cleanMods : parseMods(score.mods);
+  const hasDT = mods.includes('DT') || mods.includes('NC');
+  const hasHR = mods.includes('HR');
+  const hasHD = mods.includes('HD');
+  const hasFL = mods.includes('FL');
+  const hasEZ = mods.includes('EZ');
+  const hasHT = mods.includes('HT') || mods.includes('DC');
+  const hasNF = mods.includes('NF');
+  const hasSO = mods.includes('SO');
+
+  if (hasDT) modMultiplier *= 1.12;
+  if (hasHR) modMultiplier *= 1.06;
+  if (hasHD) modMultiplier *= 1.06;
+  if (hasFL) modMultiplier *= 1.12;
+  if (hasEZ) modMultiplier *= 0.50;
+  if (hasHT) modMultiplier *= 0.30;
+  if (hasNF) modMultiplier *= 0.50;
+  if (hasSO) modMultiplier *= 0.90;
+
+  const maxCombo = score.max_combo || bm.max_combo || 100;
+  const acc = score.accuracy || 1.0;
+  const estimatedComboPart = ((maxCombo * (maxCombo + 1)) / 2) * diffMultiplier * modMultiplier * 12;
+  const estimatedHitPart = maxCombo * 300 * acc;
+
+  return Math.round(estimatedHitPart + estimatedComboPart);
+}
+
 module.exports = {
   parseBeatmapInput,
   extractAllOsuUrls,
@@ -349,5 +540,11 @@ module.exports = {
   getModeName,
   getRankGradeStyle,
   formatRelativeTime,
-  formatMods
+  formatMods,
+  getCanonicalBeatmapUrl,
+  getCanonicalScoreUrl,
+  detectScoreClient,
+  calculateLazerScore,
+  calculateStandardScore
 };
+
