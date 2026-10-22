@@ -369,11 +369,12 @@ async function generateTopPlaysCard(user, scores) {
     const artist = `${set.artist || bm.artist || ''}`;
     const fullSongText = artist ? `${artist} - ${songTitle}` : songTitle;
 
-    // Line 1: Title
+    // Line 1: Title (Strictly bounded so it never collides with MODS column)
+    const maxTitleW = 430;
     ctx.textAlign = 'left';
     ctx.font = `bold 13px ${FONT_STACK}`;
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(truncate(ctx, fullSongText, 490), colMapX, rowY + 21);
+    ctx.fillText(truncate(ctx, fullSongText, maxTitleW), colMapX, rowY + 21);
 
     // Line 2: Modded Star Rating Pill + Difficulty Name
     const sr = getEffectiveStarRating(score, bm);
@@ -396,10 +397,11 @@ async function generateTopPlaysCard(user, scores) {
     ctx.fillStyle = srInfo.text;
     ctx.fillText(srText, colMapX + 4, rowY + 41);
 
-    // Difficulty name
+    // Difficulty name (Strictly bounded within same max width)
+    const maxDiffW = Math.max(120, maxTitleW - srPillW - 8);
     ctx.font = `600 11px ${FONT_STACK}`;
     ctx.fillStyle = '#94a3b8';
-    ctx.fillText(`[${truncate(ctx, diffName, 380)}]`, colMapX + srPillW + 6, rowY + 41);
+    ctx.fillText(`[${truncate(ctx, diffName, maxDiffW)}]`, colMapX + srPillW + 6, rowY + 41);
 
     // 4. Column: Mods (Separated Lazer style badges)
     const rawMods = parseMods(score.mods);
