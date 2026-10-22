@@ -14,6 +14,7 @@ const {
   getLazerModBadges,
   calculateLazerScore
 } = require('./utils');
+const { calculateScorePp } = require('./ppCalculator');
 
 // Register Torus Font family
 const fontsDir = path.join(__dirname, '..', 'assets', 'fonts');
@@ -102,6 +103,21 @@ async function generateScoreCard(score, user) {
   // 2. Load Blurred Beatmap Cover
   const beatmap = score.beatmap || {};
   const set = score.beatmapset || beatmap.beatmapset || {};
+
+  const mapStatus = String(beatmap.status || score.beatmap?.status || '').toLowerCase();
+  const isRanked = mapStatus === 'ranked' || mapStatus === 'approved';
+
+  // If score does not have PP yet, or beatmap is unranked, calculate PP locally
+  if ((score.pp == null || score.pp === 0 || !isRanked) && beatmap.id) {
+    try {
+      const calc = await calculateScorePp(score, beatmap);
+      if (calc && calc.pp != null) {
+        score.pp = calc.pp;
+        score.is_unranked_pp = calc.isUnranked;
+      }
+    } catch (_) {}
+  }
+
   const coverUrl = (set.covers && (set.covers['cover@2x'] || set.covers.cover || set.covers['card@2x'])) ||
     `https://assets.ppy.sh/beatmaps/${beatmap.beatmapset_id}/covers/cover@2x.jpg`;
 
@@ -429,14 +445,21 @@ async function generateScoreCard(score, user) {
 
   // PP & Core Numbers (Middle Column)
   const midColX = gradeBoxX + gradeBoxW + 28;
+  const isUnrankedPp = Boolean(score.is_unranked_pp || (!isRanked && score.pp));
+
   let ppVal = '-';
   let ppColor = '#f8fafc';
-  if (score.pp) {
-    ppVal = `${Math.round(score.pp)}pp`;
-    ppColor = '#f8fafc';
-  } else if (score.rank === 'F') {
+  if (score.rank === 'F') {
     ppVal = 'FAILED';
     ppColor = '#f87171';
+  } else if (score.pp != null && Number(score.pp) > 0) {
+    ppVal = `${Math.round(score.pp)}pp`;
+    if (isUnrankedPp) {
+      // Disabled / dimmed styling for unranked PP
+      ppColor = 'rgba(148, 163, 184, 0.70)';
+    } else {
+      ppColor = '#f8fafc';
+    }
   }
 
   const accVal = `${((score.accuracy || 0) * 100).toFixed(2)}%`;
@@ -464,6 +487,37 @@ async function generateScoreCard(score, user) {
   ctx.font = `bold ${ppVal === 'FAILED' ? '28px' : '38px'} ${FONT_STACK}`;
   ctx.fillStyle = ppColor;
   ctx.fillText(ppVal, midColX, scoreStatsY + 36);
+
+  // If unranked PP, draw sleek disabled pill badge next to the PP value
+  if (isUnrankedPp && ppVal !== 'FAILED' && ppVal !== '-') {
+    const ppTextWidth = ctx.measureText(ppVal).width;
+    const badgeX = midColX + ppTextWidth + 10;
+    const badgeY = scoreStatsY + 16;
+    const badgeH = 20;
+
+    ctx.save();
+    ctx.font = `bold 10px ${FONT_STACK}`;
+    const badgeText = 'UNRANKED';
+    const badgeTextWidth = ctx.measureText(badgeText).width;
+    const badgeW = badgeTextWidth + 14;
+
+    // Disabled pill background
+    ctx.fillStyle = 'rgba(100, 116, 139, 0.22)';
+    ctx.beginPath();
+    ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 10);
+    ctx.fill();
+
+    // Disabled pill border
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Badge text
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.85)';
+    ctx.textAlign = 'center';
+    ctx.fillText(badgeText, badgeX + (badgeW / 2), badgeY + 14);
+    ctx.restore();
+  }
 
   // Total Score below PP (Lazer standardized format matching osu! web)
   ctx.font = `600 17px ${FONT_STACK}`;

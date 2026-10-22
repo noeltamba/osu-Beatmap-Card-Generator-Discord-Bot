@@ -1,3 +1,5 @@
+const { calculateScorePp } = require('./ppCalculator');
+
 /**
  * osu! API v2 Client with automatic OAuth token management
  */
@@ -280,6 +282,25 @@ class OsuApi {
           }
         }
       } catch (_) {}
+    }
+
+    // 3. Check rank/status and calculate PP locally if missing or unranked
+    const mapStatus = String(score.beatmap?.status || '').toLowerCase();
+    const isRanked = mapStatus === 'ranked' || mapStatus === 'approved';
+
+    if (score.beatmap?.id && (score.pp == null || score.pp === 0 || !isRanked)) {
+      try {
+        const ppResult = await calculateScorePp(score);
+        if (ppResult && ppResult.pp != null) {
+          score.pp = ppResult.pp;
+          score.is_unranked_pp = ppResult.isUnranked;
+          if (ppResult.stars && !score.beatmap.modded_difficulty_rating) {
+            score.beatmap.modded_difficulty_rating = ppResult.stars;
+          }
+        }
+      } catch (err) {
+        console.warn(`[osuApi] Tidak dapat mengkalkulasi PP:`, err.message);
+      }
     }
 
     return score;
