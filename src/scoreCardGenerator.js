@@ -107,13 +107,21 @@ async function generateScoreCard(score, user) {
   const mapStatus = String(beatmap.status || score.beatmap?.status || '').toLowerCase();
   const isRanked = mapStatus === 'ranked' || mapStatus === 'approved';
 
-  // If score does not have PP yet, or beatmap is unranked, calculate PP locally
-  if ((score.pp == null || score.pp === 0 || !isRanked) && beatmap.id) {
+  // If score does not have PP or ifFc/breakdown yet, calculate PP locally
+  if (beatmap.id && (!score.pp || score.if_fc_pp == null || !score.pp_breakdown)) {
     try {
       const calc = await calculateScorePp(score, beatmap);
-      if (calc && calc.pp != null) {
-        score.pp = calc.pp;
+      if (calc) {
+        if (calc.pp != null && (!score.pp || !isRanked)) {
+          score.pp = calc.pp;
+        }
         score.is_unranked_pp = calc.isUnranked;
+        if (calc.ifFcPp != null) {
+          score.if_fc_pp = calc.ifFcPp;
+        }
+        if (calc.breakdown) {
+          score.pp_breakdown = calc.breakdown;
+        }
       }
     } catch (_) {}
   }
@@ -339,6 +347,36 @@ async function generateScoreCard(score, user) {
   ctx.font = `bold 22px ${FONT_STACK}`;
   ctx.fillStyle = '#ffffff';
   ctx.fillText(playerUser.username || 'Player', playerTextX, playerY + 24);
+  const userTextW = ctx.measureText(playerUser.username || 'Player').width;
+
+  // Top Play Badge or Map Rank Badge next to username if applicable
+  const topRankNum = score.topRank || score.top_rank;
+  const mapRankNum = score.rank_on_map || score.leaderboard_rank;
+
+  if (topRankNum != null || mapRankNum != null) {
+    const badgeLabel = topRankNum != null ? `⭐ TOP #${topRankNum} PLAY` : `👑 #${mapRankNum} ON MAP`;
+    ctx.save();
+    ctx.font = `bold 11px ${FONT_STACK}`;
+    const badgeW = ctx.measureText(badgeLabel).width + 16;
+    const badgeH = 22;
+    const badgeX = playerTextX + userTextW + 12;
+    const badgeY = playerY + 7;
+
+    const isTopOne = topRankNum === 1 || mapRankNum === 1;
+    ctx.fillStyle = isTopOne ? 'rgba(234, 179, 8, 0.20)' : 'rgba(168, 85, 247, 0.20)';
+    ctx.beginPath();
+    ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 11);
+    ctx.fill();
+
+    ctx.strokeStyle = isTopOne ? 'rgba(234, 179, 8, 0.50)' : 'rgba(168, 85, 247, 0.50)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = isTopOne ? '#facc15' : '#c084fc';
+    ctx.textAlign = 'center';
+    ctx.fillText(badgeLabel, badgeX + (badgeW / 2), badgeY + 15);
+    ctx.restore();
+  }
 
   const globalRank = playerUser.statistics?.global_rank;
   ctx.font = `600 14px ${FONT_STACK}`;
@@ -424,7 +462,7 @@ async function generateScoreCard(score, user) {
   const gradeBoxX = heroX + 22;
   const gradeBoxY = scoreStatsY;
   const gradeBoxW = 110;
-  const gradeBoxH = 115;
+  const gradeBoxH = 124;
 
   ctx.save();
   ctx.fillStyle = gradeInfo.bg;
@@ -440,7 +478,7 @@ async function generateScoreCard(score, user) {
   ctx.fillStyle = gradeInfo.color;
   ctx.font = `bold 64px ${FONT_STACK}`;
   ctx.textAlign = 'center';
-  ctx.fillText(gradeInfo.label, gradeBoxX + (gradeBoxW / 2), gradeBoxY + 76);
+  ctx.fillText(gradeInfo.label, gradeBoxX + (gradeBoxW / 2), gradeBoxY + 80);
   ctx.restore();
 
   // PP & Core Numbers (Middle Column)
@@ -488,23 +526,22 @@ async function generateScoreCard(score, user) {
   ctx.fillStyle = ppColor;
   ctx.fillText(ppVal, midColX, scoreStatsY + 36);
 
+  let ppBadgeX = midColX + ctx.measureText(ppVal).width + 10;
+
   // If unranked PP, draw sleek disabled pill badge next to the PP value
   if (isUnrankedPp && ppVal !== 'FAILED' && ppVal !== '-') {
-    const ppTextWidth = ctx.measureText(ppVal).width;
-    const badgeX = midColX + ppTextWidth + 10;
-    const badgeY = scoreStatsY + 16;
-    const badgeH = 20;
-
     ctx.save();
     ctx.font = `bold 10px ${FONT_STACK}`;
     const badgeText = 'UNRANKED';
     const badgeTextWidth = ctx.measureText(badgeText).width;
     const badgeW = badgeTextWidth + 14;
+    const badgeY = scoreStatsY + 16;
+    const badgeH = 20;
 
     // Disabled pill background
     ctx.fillStyle = 'rgba(100, 116, 139, 0.22)';
     ctx.beginPath();
-    ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 10);
+    ctx.roundRect(ppBadgeX, badgeY, badgeW, badgeH, 10);
     ctx.fill();
 
     // Disabled pill border
@@ -515,8 +552,43 @@ async function generateScoreCard(score, user) {
     // Badge text
     ctx.fillStyle = 'rgba(148, 163, 184, 0.85)';
     ctx.textAlign = 'center';
-    ctx.fillText(badgeText, badgeX + (badgeW / 2), badgeY + 14);
+    ctx.fillText(badgeText, ppBadgeX + (badgeW / 2), badgeY + 14);
     ctx.restore();
+
+    ppBadgeX += badgeW + 8;
+  }
+
+  // If not FC and we have If-FC PP, draw stylish If-FC pill badge
+  if (!isFc && score.if_fc_pp && score.rank !== 'F') {
+    const ifFcVal = Math.round(score.if_fc_pp);
+    if (ifFcVal > Math.round(score.pp || 0)) {
+      ctx.save();
+      ctx.font = `bold 10px ${FONT_STACK}`;
+      const ifFcText = `~${ifFcVal}pp if FC`;
+      const ifFcTextW = ctx.measureText(ifFcText).width;
+      const ifFcBadgeW = ifFcTextW + 16;
+      const ifFcBadgeH = 20;
+      const ifFcBadgeY = scoreStatsY + 16;
+
+      // Subtle cyan/sky glass background
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+      ctx.beginPath();
+      ctx.roundRect(ppBadgeX, ifFcBadgeY, ifFcBadgeW, ifFcBadgeH, 10);
+      ctx.fill();
+
+      // Border
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.40)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Text
+      ctx.fillStyle = '#38bdf8';
+      ctx.textAlign = 'center';
+      ctx.fillText(ifFcText, ppBadgeX + (ifFcBadgeW / 2), ifFcBadgeY + 14);
+      ctx.restore();
+
+      ppBadgeX += ifFcBadgeW + 8;
+    }
   }
 
   // Total Score below PP (Lazer standardized format matching osu! web)
@@ -548,22 +620,22 @@ async function generateScoreCard(score, user) {
   // Accuracy & Combo row
   ctx.font = `600 16px ${FONT_STACK}`;
   ctx.fillStyle = '#94a3b8';
-  ctx.fillText(`Acc: `, midColX, scoreStatsY + 100);
+  ctx.fillText(`Acc: `, midColX, scoreStatsY + 98);
   const accLabelW = ctx.measureText('Acc: ').width;
   ctx.fillStyle = '#38bdf8';
   ctx.font = `bold 16px ${FONT_STACK}`;
-  ctx.fillText(accVal, midColX + accLabelW, scoreStatsY + 100);
+  ctx.fillText(accVal, midColX + accLabelW, scoreStatsY + 98);
 
   const accFullW = accLabelW + ctx.measureText(accVal).width;
   const comboStartX = midColX + accFullW + 20;
 
   ctx.font = `600 16px ${FONT_STACK}`;
   ctx.fillStyle = '#94a3b8';
-  ctx.fillText(`Combo: `, comboStartX, scoreStatsY + 100);
+  ctx.fillText(`Combo: `, comboStartX, scoreStatsY + 98);
   const comboLabelW = ctx.measureText('Combo: ').width;
   ctx.fillStyle = isFc ? '#4ade80' : '#ffffff';
   ctx.font = `bold 16px ${FONT_STACK}`;
-  ctx.fillText(comboDisplayText, comboStartX + comboLabelW, scoreStatsY + 100);
+  ctx.fillText(comboDisplayText, comboStartX + comboLabelW, scoreStatsY + 98);
 
   // FC Badge ONLY if full combo
   if (isFc) {
@@ -571,7 +643,7 @@ async function generateScoreCard(score, user) {
     const fcX = comboStartX + comboW + 10;
     ctx.fillStyle = 'rgba(74, 222, 128, 0.2)';
     ctx.beginPath();
-    ctx.roundRect(fcX, scoreStatsY + 84, 38, 20, 10);
+    ctx.roundRect(fcX, scoreStatsY + 82, 38, 20, 10);
     ctx.fill();
     ctx.strokeStyle = '#4ade80';
     ctx.lineWidth = 1;
@@ -579,7 +651,68 @@ async function generateScoreCard(score, user) {
     ctx.fillStyle = '#4ade80';
     ctx.font = `bold 12px ${FONT_STACK}`;
     ctx.textAlign = 'center';
-    ctx.fillText('FC', fcX + 19, scoreStatsY + 98);
+    ctx.fillText('FC', fcX + 19, scoreStatsY + 96);
+  }
+
+  // Row 4: PP Breakdown (Aim / Speed / Accuracy)
+  if (score.pp_breakdown && score.rank !== 'F') {
+    const bd = score.pp_breakdown;
+    const aimPp = Math.round(bd.aim || 0);
+    const spdPp = Math.round(bd.speed || 0);
+    const accPp = Math.round(bd.acc || 0);
+
+    let bdX = midColX;
+    ctx.save();
+    ctx.textAlign = 'left';
+    ctx.font = `600 12px ${FONT_STACK}`;
+
+    // Aim segment
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillText('AIM ', bdX, scoreStatsY + 124);
+    bdX += ctx.measureText('AIM ').width;
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillText(`${aimPp}pp`, bdX, scoreStatsY + 124);
+    bdX += ctx.measureText(`${aimPp}pp`).width;
+
+    // Dot separator
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.fillText('   •   ', bdX, scoreStatsY + 124);
+    bdX += ctx.measureText('   •   ').width;
+
+    // Speed segment
+    ctx.fillStyle = '#a78bfa';
+    ctx.fillText('SPD ', bdX, scoreStatsY + 124);
+    bdX += ctx.measureText('SPD ').width;
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillText(`${spdPp}pp`, bdX, scoreStatsY + 124);
+    bdX += ctx.measureText(`${spdPp}pp`).width;
+
+    // Dot separator
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.fillText('   •   ', bdX, scoreStatsY + 124);
+    bdX += ctx.measureText('   •   ').width;
+
+    // Acc segment
+    ctx.fillStyle = '#4ade80';
+    ctx.fillText('ACC ', bdX, scoreStatsY + 124);
+    bdX += ctx.measureText('ACC ').width;
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillText(`${accPp}pp`, bdX, scoreStatsY + 124);
+    bdX += ctx.measureText(`${accPp}pp`).width;
+
+    if (bd.flashlight && Math.round(bd.flashlight) > 0) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.fillText('   •   ', bdX, scoreStatsY + 124);
+      bdX += ctx.measureText('   •   ').width;
+
+      ctx.fillStyle = '#facc15';
+      ctx.fillText('FL ', bdX, scoreStatsY + 124);
+      bdX += ctx.measureText('FL ').width;
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillText(`${Math.round(bd.flashlight)}pp`, bdX, scoreStatsY + 124);
+    }
+
+    ctx.restore();
   }
 
   // 7C. HIT JUDGEMENTS (300 / 100 / 50 / Miss) (Right Column)

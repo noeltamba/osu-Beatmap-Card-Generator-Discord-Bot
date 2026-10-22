@@ -115,6 +115,24 @@ const recentCommand = new SlashCommandBuilder()
       .setRequired(false)
   );
 
+const topCommand = new SlashCommandBuilder()
+  .setName('top')
+  .setDescription('Tampilkan kartu skor terbaik (top play) dari pemain osu!')
+  .addStringOption(option =>
+    option
+      .setName('player')
+      .setDescription('Nama pemain osu! (opsional jika sudah /link)')
+      .setRequired(false)
+  )
+  .addIntegerOption(option =>
+    option
+      .setName('index')
+      .setDescription('Peringkat top play (1 - 100, default: 1)')
+      .setMinValue(1)
+      .setMaxValue(100)
+      .setRequired(false)
+  );
+
 const scorecardCommand = new SlashCommandBuilder()
   .setName('scorecard')
   .setDescription('Tampilkan kartu skor osu! dari link skor atau Score ID')
@@ -125,6 +143,65 @@ const scorecardCommand = new SlashCommandBuilder()
       .setRequired(true)
   );
 
+function createScoreButtons(score, originalInput = null) {
+  const row = new ActionRowBuilder();
+  const beatmap = score.beatmap || {};
+  const setId = beatmap.beatmapset_id || score.beatmapset?.id || beatmap.beatmapset?.id;
+  const beatmapUrl = getCanonicalBeatmapUrl(beatmap);
+  const scoreUrl = getCanonicalScoreUrl(score, originalInput);
+
+  if (score && score.id) {
+    row.addComponents(
+      new ButtonBuilder()
+        .setLabel('Buka Skor di osu!')
+        .setStyle(ButtonStyle.Link)
+        .setURL(scoreUrl)
+    );
+  }
+
+  row.addComponents(
+    new ButtonBuilder()
+      .setLabel('Buka Beatmap')
+      .setStyle(ButtonStyle.Link)
+      .setURL(beatmapUrl)
+  );
+
+  if (setId) {
+    row.addComponents(
+      new ButtonBuilder()
+        .setLabel('Download (Beatconnect)')
+        .setStyle(ButtonStyle.Link)
+        .setURL(`https://beatconnect.io/b/${setId}`)
+    );
+  }
+
+  return row;
+}
+
+function createBeatmapButtons(beatmap, originalInput = null) {
+  const row = new ActionRowBuilder();
+  const setId = beatmap.beatmapset_id || beatmap.beatmapset?.id;
+  const beatmapUrl = getCanonicalBeatmapUrl(beatmap, originalInput);
+
+  row.addComponents(
+    new ButtonBuilder()
+      .setLabel('Buka di osu!')
+      .setStyle(ButtonStyle.Link)
+      .setURL(beatmapUrl)
+  );
+
+  if (setId) {
+    row.addComponents(
+      new ButtonBuilder()
+        .setLabel('Download (Beatconnect)')
+        .setStyle(ButtonStyle.Link)
+        .setURL(`https://beatconnect.io/b/${setId}`)
+    );
+  }
+
+  return row;
+}
+
 client.once('ready', async () => {
   console.log(`\n===========================================`);
   console.log(`✨ Bot Berhasil Online sebagai: ${client.user.tag}`);
@@ -133,11 +210,12 @@ client.once('ready', async () => {
 
   // Register Global Slash Commands
   try {
-    console.log('Mendaftarkan Slash Commands (/link, /unlink, /recent, /beatmap, /showcase, /scorecard)...');
+    console.log('Mendaftarkan Slash Commands (/link, /unlink, /recent, /top, /beatmap, /showcase, /scorecard)...');
     await client.application.commands.set([
       linkCommand,
       unlinkCommand,
       recentCommand,
+      topCommand,
       beatmapCommand,
       showcaseCommand,
       scorecardCommand
@@ -221,13 +299,7 @@ client.on('interactionCreate', async interaction => {
       const imageBuffer = await generateScoreCard(score, user);
       const attachment = new AttachmentBuilder(imageBuffer, { name: `recent_${user.username}_${score.id || 'score'}.png` });
 
-      const beatmapUrl = getCanonicalBeatmapUrl(score.beatmap);
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setLabel('Buka Beatmap di osu!')
-          .setStyle(ButtonStyle.Link)
-          .setURL(beatmapUrl)
-      );
+      const row = createScoreButtons(score);
 
       await interaction.editReply({
         files: [attachment],
@@ -237,6 +309,55 @@ client.on('interactionCreate', async interaction => {
       console.error('Error saat memproses command /recent:', err);
       await interaction.editReply({
         content: `❌ Gagal mengambil score: ${err.message}`
+      });
+    }
+    return;
+  }
+
+  // 3b. Command /top (Top Best Play Card Generator)
+  if (interaction.commandName === 'top') {
+    let targetPlayer = interaction.options.getString('player');
+    const index = interaction.options.getInteger('index') || 1;
+
+    if (!targetPlayer) {
+      const linked = getLinkedUser(interaction.user.id);
+      if (!linked) {
+        return interaction.reply({
+          content: '❌ Kamu belum menautkan akun osu!\nGunakan `/link username:<nama_osu>` terlebih dahulu, atau masukkan nama pemain dengan opsi `/top player:<nama>`.',
+          ephemeral: true
+        });
+      }
+      targetPlayer = linked.osuUsername;
+    }
+
+    await interaction.deferReply();
+
+    try {
+      const user = await osuApi.getUser(targetPlayer);
+      const scores = await osuApi.getUserBestScore(user.id, index);
+
+      if (!scores || scores.length < index) {
+        return interaction.editReply({
+          content: `ℹ️ Skor top #${index} tidak ditemukan untuk pemain **${user.username}**.`
+        });
+      }
+
+      const score = scores[index - 1];
+      score.topRank = index;
+      await osuApi.enrichScoreWithBeatmapAndMods(score);
+      const imageBuffer = await generateScoreCard(score, user);
+      const attachment = new AttachmentBuilder(imageBuffer, { name: `top${index}_${user.username}_${score.id || 'score'}.png` });
+
+      const row = createScoreButtons(score);
+
+      await interaction.editReply({
+        files: [attachment],
+        components: [row]
+      });
+    } catch (err) {
+      console.error('Error saat memproses command /top:', err);
+      await interaction.editReply({
+        content: `❌ Gagal mengambil top score: ${err.message}`
       });
     }
     return;
@@ -288,13 +409,7 @@ client.on('interactionCreate', async interaction => {
       });
       const attachment = new AttachmentBuilder(imageBuffer, { name: `${isShowcase ? 'showcase' : 'beatmap'}_${beatmap.id}.png` });
 
-      const beatmapUrl = getCanonicalBeatmapUrl(beatmap, input);
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setLabel('Buka di osu!')
-          .setStyle(ButtonStyle.Link)
-          .setURL(beatmapUrl)
-      );
+      const row = createBeatmapButtons(beatmap, input);
 
       await interaction.editReply({
         files: [attachment],
@@ -333,13 +448,7 @@ client.on('interactionCreate', async interaction => {
       const imageBuffer = await generateScoreCard(score, user);
       const attachment = new AttachmentBuilder(imageBuffer, { name: `score_${score.id}.png` });
 
-      const scoreUrl = getCanonicalScoreUrl(score, input);
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setLabel('Buka Skor di osu!')
-          .setStyle(ButtonStyle.Link)
-          .setURL(scoreUrl)
-      );
+      const row = createScoreButtons(score, input);
 
       await interaction.editReply({
         files: [attachment],
@@ -378,13 +487,7 @@ client.on('messageCreate', async message => {
       const imageBuffer = await generateScoreCard(score, user);
       const attachment = new AttachmentBuilder(imageBuffer, { name: `score_${score.id}.png` });
 
-      const scoreUrl = getCanonicalScoreUrl(score, targetUrl);
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setLabel('Buka Skor di osu!')
-          .setStyle(ButtonStyle.Link)
-          .setURL(scoreUrl)
-      );
+      const row = createScoreButtons(score, targetUrl);
 
       await message.reply({
         files: [attachment],
@@ -423,13 +526,7 @@ client.on('messageCreate', async message => {
     const imageBuffer = await generateBeatmapCard(beatmap, { mods: detectedMods });
     const attachment = new AttachmentBuilder(imageBuffer, { name: `beatmap_${beatmap.id}.png` });
 
-    const beatmapUrl = getCanonicalBeatmapUrl(beatmap, targetUrl);
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setLabel('Buka di osu!')
-        .setStyle(ButtonStyle.Link)
-        .setURL(beatmapUrl)
-    );
+    const row = createBeatmapButtons(beatmap, targetUrl);
 
     await message.reply({
       files: [attachment],

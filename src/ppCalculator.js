@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { Beatmap, Performance, GameMode } = require('rosu-pp-js');
-const { detectScoreClient } = require('./utils');
+const { detectScoreClient, isFullCombo } = require('./utils');
 
 // In-memory cache for .osu file text content to avoid re-reading disk
 const osuContentCache = new Map();
@@ -107,17 +107,19 @@ async function calculateScorePp(score, beatmap = null) {
   const mapStatus = String(bm.status || score.beatmap?.status || '').toLowerCase();
   const isRanked = mapStatus === 'ranked' || mapStatus === 'approved';
 
-  // If score already has official pp from API on a ranked map, return it directly
-  if (isRanked && score.pp != null && Number(score.pp) > 0) {
-    return {
-      pp: Number(score.pp),
-      stars: bm.difficulty_rating || 0,
-      isUnranked: false
-    };
-  }
-
   const osuContent = await getBeatmapOsuContent(beatmapId);
-  if (!osuContent) return null;
+  if (!osuContent) {
+    if (isRanked && score.pp != null && Number(score.pp) > 0) {
+      return {
+        pp: Number(score.pp),
+        stars: bm.difficulty_rating || 0,
+        isUnranked: false,
+        ifFcPp: null,
+        breakdown: null
+      };
+    }
+    return null;
+  }
 
   let map;
   try {
@@ -184,13 +186,57 @@ async function calculateScorePp(score, beatmap = null) {
     const calculatedPp = perf.pp;
     const stars = perf.difficulty?.stars || bm.difficulty_rating || 0;
 
+    // Calculate If FC PP if the score is not an FC and didn't fail
+    const mapMaxCombo = bm.max_combo || bm.count_max_combo || 0;
+    const isFc = isFullCombo(score, bm, mapMaxCombo);
+    let ifFcPp = null;
+
+    if (!isFc && score.rank !== 'F') {
+      try {
+        const fcN300 = n300 + misses;
+        const fcTotalHits = fcN300 + n100 + n50;
+        const fcAcc = fcTotalHits > 0
+          ? ((fcN300 * 300 + n100 * 100 + n50 * 50) / (fcTotalHits * 300)) * 100
+          : perfOptions.accuracy;
+
+        const fcPerfOptions = {
+          ...perfOptions,
+          combo: mapMaxCombo > 0 ? mapMaxCombo : (score.max_combo || 0),
+          misses: 0,
+          accuracy: fcAcc,
+          n300: fcN300,
+          passedObjects: undefined
+        };
+        const fcPerf = new Performance(fcPerfOptions).calculate(map);
+        ifFcPp = fcPerf.pp;
+      } catch (_) {}
+    }
+
+    const officialPp = (isRanked && score.pp != null && Number(score.pp) > 0) ? Number(score.pp) : calculatedPp;
+
     return {
-      pp: calculatedPp,
+      pp: officialPp,
       stars: stars,
-      isUnranked: !isRanked
+      isUnranked: !isRanked,
+      ifFcPp: ifFcPp,
+      breakdown: {
+        aim: perf.ppAim || 0,
+        speed: perf.ppSpeed || 0,
+        acc: perf.ppAccuracy || 0,
+        flashlight: perf.ppFlashlight || 0
+      }
     };
   } catch (err) {
     console.error(`[ppCalculator] Gagal menghitung PP untuk beatmap ${beatmapId}:`, err.message);
+    if (isRanked && score.pp != null && Number(score.pp) > 0) {
+      return {
+        pp: Number(score.pp),
+        stars: bm.difficulty_rating || 0,
+        isUnranked: false,
+        ifFcPp: null,
+        breakdown: null
+      };
+    }
     return null;
   } finally {
     if (map) {

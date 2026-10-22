@@ -284,16 +284,24 @@ class OsuApi {
       } catch (_) {}
     }
 
-    // 3. Check rank/status and calculate PP locally if missing or unranked
+    // 3. Calculate PP, If FC PP, and PP Breakdown locally
     const mapStatus = String(score.beatmap?.status || '').toLowerCase();
     const isRanked = mapStatus === 'ranked' || mapStatus === 'approved';
 
-    if (score.beatmap?.id && (score.pp == null || score.pp === 0 || !isRanked)) {
+    if (score.beatmap?.id) {
       try {
         const ppResult = await calculateScorePp(score);
-        if (ppResult && ppResult.pp != null) {
-          score.pp = ppResult.pp;
+        if (ppResult) {
+          if (ppResult.pp != null && (!score.pp || !isRanked)) {
+            score.pp = ppResult.pp;
+          }
           score.is_unranked_pp = ppResult.isUnranked;
+          if (ppResult.ifFcPp != null) {
+            score.if_fc_pp = ppResult.ifFcPp;
+          }
+          if (ppResult.breakdown) {
+            score.pp_breakdown = ppResult.breakdown;
+          }
           if (ppResult.stars && !score.beatmap.modded_difficulty_rating) {
             score.beatmap.modded_difficulty_rating = ppResult.stars;
           }
