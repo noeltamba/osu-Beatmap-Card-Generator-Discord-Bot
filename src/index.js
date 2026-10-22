@@ -13,6 +13,7 @@ const {
 const OsuApi = require('./osuApi');
 const { generateBeatmapCard } = require('./cardGenerator');
 const { generateScoreCard } = require('./scoreCardGenerator');
+const { generateTopPlaysCard } = require('./topCardGenerator');
 const { getLinkedUser, linkUser, unlinkUser } = require('./database');
 const {
   parseBeatmapInput,
@@ -117,7 +118,7 @@ const recentCommand = new SlashCommandBuilder()
 
 const topCommand = new SlashCommandBuilder()
   .setName('top')
-  .setDescription('Tampilkan kartu skor terbaik (top play) dari pemain osu!')
+  .setDescription('Tampilkan daftar kartu skor terbaik (Top Plays) dari pemain osu!')
   .addStringOption(option =>
     option
       .setName('player')
@@ -126,10 +127,10 @@ const topCommand = new SlashCommandBuilder()
   )
   .addIntegerOption(option =>
     option
-      .setName('index')
-      .setDescription('Peringkat top play (1 - 100, default: 1)')
+      .setName('count')
+      .setDescription('Jumlah skor yang ditampilkan (1 - 10, default: 10)')
       .setMinValue(1)
-      .setMaxValue(100)
+      .setMaxValue(10)
       .setRequired(false)
   );
 
@@ -314,10 +315,10 @@ client.on('interactionCreate', async interaction => {
     return;
   }
 
-  // 3b. Command /top (Top Best Play Card Generator)
+  // 3b. Command /top (Top Best Plays List Generator)
   if (interaction.commandName === 'top') {
     let targetPlayer = interaction.options.getString('player');
-    const index = interaction.options.getInteger('index') || 1;
+    const count = interaction.options.getInteger('count') || 10;
 
     if (!targetPlayer) {
       const linked = getLinkedUser(interaction.user.id);
@@ -334,21 +335,29 @@ client.on('interactionCreate', async interaction => {
 
     try {
       const user = await osuApi.getUser(targetPlayer);
-      const scores = await osuApi.getUserBestScore(user.id, index);
+      const scores = await osuApi.getUserBestScore(user.id, count);
 
-      if (!scores || scores.length < index) {
+      if (!scores || scores.length === 0) {
         return interaction.editReply({
-          content: `ℹ️ Skor top #${index} tidak ditemukan untuk pemain **${user.username}**.`
+          content: `ℹ️ Tidak ada top plays yang ditemukan untuk pemain **${user.username}**.`
         });
       }
 
-      const score = scores[index - 1];
-      score.topRank = index;
-      await osuApi.enrichScoreWithBeatmapAndMods(score);
-      const imageBuffer = await generateScoreCard(score, user);
-      const attachment = new AttachmentBuilder(imageBuffer, { name: `top${index}_${user.username}_${score.id || 'score'}.png` });
+      // Enrich scores with beatmap data & ifFc calculations
+      for (const score of scores) {
+        await osuApi.enrichScoreWithBeatmapAndMods(score);
+      }
 
-      const row = createScoreButtons(score);
+      const imageBuffer = await generateTopPlaysCard(user, scores);
+      const attachment = new AttachmentBuilder(imageBuffer, { name: `top_${user.username}.png` });
+
+      // Profile Button
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel('Buka Profil osu!')
+          .setStyle(ButtonStyle.Link)
+          .setURL(`https://osu.ppy.sh/users/${user.id}`)
+      );
 
       await interaction.editReply({
         files: [attachment],
@@ -357,7 +366,7 @@ client.on('interactionCreate', async interaction => {
     } catch (err) {
       console.error('Error saat memproses command /top:', err);
       await interaction.editReply({
-        content: `❌ Gagal mengambil top score: ${err.message}`
+        content: `❌ Gagal mengambil top scores: ${err.message}`
       });
     }
     return;
