@@ -125,3 +125,12 @@ Hasil gambar kartu akan disimpan sebagai `test_output.png`.
 6. **Auto Detect Link (Otomatis di Chat)**:
    * **Link Skor**: Kirim link seperti `https://osu.ppy.sh/scores/7265198407` di chat, bot akan otomatis membalas dengan **Score Card**!
    * **Link Beatmap**: Kirim link seperti `https://osu.ppy.sh/beatmapsets/742961#osu/1816113`, bot otomatis membalas dengan **Beatmap Card**!
+
+---
+
+## 📜 Ketentuan & Kebijakan (Legal & Privacy)
+
+Untuk keperluan verifikasi bot di Discord Developer Portal atau kepatuhan privasi (GDPR):
+* [Terms of Service](TERMS_OF_SERVICE.md)
+* [Privacy Policy](PRIVACY_POLICY.md)
+
