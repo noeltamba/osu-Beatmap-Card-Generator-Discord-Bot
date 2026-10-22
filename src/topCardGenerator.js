@@ -5,9 +5,11 @@ const {
   formatRelativeTime,
   getRankGradeStyle,
   getStarRatingColor,
-  parseMods
+  parseMods,
+  calculateModdedStats
 } = require('./utils');
 
+// Register Torus Font family
 const fontsDir = path.join(__dirname, '..', 'assets', 'fonts');
 try {
   GlobalFonts.registerFromPath(path.join(fontsDir, 'Torus-Regular.otf'), 'Torus');
@@ -16,7 +18,22 @@ try {
   GlobalFonts.registerFromPath(path.join(fontsDir, 'Torus-Heavy.otf'), 'Torus');
 } catch (e) {}
 
-const FONT_STACK = '"Torus", "Yu Gothic", "MS Gothic", "Microsoft YaHei", "Segoe UI", sans-serif';
+// Register CJK Fallback Fonts from Windows if available
+try {
+  const winFonts = [
+    { path: 'C:\\Windows\\Fonts\\YuGothB.ttc', name: 'Yu Gothic' },
+    { path: 'C:\\Windows\\Fonts\\msgothic.ttc', name: 'MS Gothic' },
+    { path: 'C:\\Windows\\Fonts\\msyh.ttc', name: 'Microsoft YaHei' },
+    { path: 'C:\\Windows\\Fonts\\malgun.ttf', name: 'Malgun Gothic' }
+  ];
+  for (const f of winFonts) {
+    try {
+      GlobalFonts.registerFromPath(f.path, f.name);
+    } catch (_) {}
+  }
+} catch (_) {}
+
+const FONT_STACK = '"Torus", "Yu Gothic", "MS Gothic", "Microsoft YaHei", "Malgun Gothic", "Segoe UI", sans-serif';
 
 function truncate(ctx, text, maxWidth) {
   if (!text) return '';
@@ -28,67 +45,143 @@ function truncate(ctx, text, maxWidth) {
   return t + '...';
 }
 
+function getEffectiveStarRating(score, beatmap) {
+  const bm = beatmap || score.beatmap || {};
+  if (score.modded_difficulty_rating) return Number(score.modded_difficulty_rating);
+  if (bm.modded_difficulty_rating) return Number(bm.modded_difficulty_rating);
+  const mods = score.mods || [];
+  if (mods.length > 0) {
+    const modded = calculateModdedStats(bm, mods);
+    if (modded?.sr) return Number(modded.sr);
+  }
+  return Number(bm.difficulty_rating || 0);
+}
+
 async function generateTopPlaysCard(user, scores) {
   const count = Math.min(scores.length, 10);
-  const width = 1100;
-  const headerH = 120;
-  const rowH = 64;
-  const rowGap = 8;
-  const topPad = 28;
-  const bottomPad = 28;
-  const height = topPad + headerH + 20 + (count * (rowH + rowGap)) + bottomPad;
+  const width = 1180;
+  const outerMargin = 28;
+
+  const headerH = 88;
+  const tableHeaderH = 30;
+  const rowH = 52;
+  const innerPad = 24;
+
+  const contentW = width - (outerMargin * 2);
+  const contentH = 20 + headerH + 16 + tableHeaderH + (count * rowH) + 16;
+  const height = contentH + (outerMargin * 2);
+  const contentX = outerMargin;
+  const contentY = outerMargin;
+  const contentRadius = 18;
 
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext('2d');
 
-  // Rounded card clip
+  // Clip to outer card rectangle
   ctx.save();
   ctx.beginPath();
   ctx.roundRect(0, 0, width, height, 24);
   ctx.clip();
 
-  // Dark Base Background
-  ctx.fillStyle = '#0a0d16';
+  // Dark fallback base
+  ctx.fillStyle = '#070a12';
   ctx.fillRect(0, 0, width, height);
 
-  // Background subtle gradient
-  const bgGrad = ctx.createLinearGradient(0, 0, width, height);
-  bgGrad.addColorStop(0, '#0f172a');
-  bgGrad.addColorStop(0.5, '#0b0f19');
-  bgGrad.addColorStop(1, '#05070c');
-  ctx.fillStyle = bgGrad;
-  ctx.fillRect(0, 0, width, height);
+  // 1. Get Top #1 Beatmap Cover URL
+  const topScore = scores[0];
+  const topBm = topScore?.beatmap || {};
+  const topSet = topScore?.beatmapset || topBm.beatmapset || {};
+  const coverUrl = (topSet.covers && (topSet.covers['cover@2x'] || topSet.covers.cover || topSet.covers['card@2x'])) ||
+    (topBm.beatmapset_id ? `https://assets.ppy.sh/beatmaps/${topBm.beatmapset_id}/covers/cover@2x.jpg` : null) ||
+    (topSet.id ? `https://assets.ppy.sh/beatmaps/${topSet.id}/covers/cover@2x.jpg` : null) ||
+    user.cover?.url ||
+    user.cover_url;
 
-  // Frosted Glass Outer Container
-  const pad = 24;
-  const glassW = width - (pad * 2);
-  const glassH = height - (pad * 2);
+  let bgImage = null;
+  if (coverUrl) {
+    try {
+      bgImage = await loadImage(coverUrl);
+    } catch (_) {}
+  }
 
-  ctx.fillStyle = 'rgba(15, 20, 32, 0.55)';
+  // 2. LAYER 1: Draw Crisp Background on outer area (unblurred outside content)
+  if (bgImage) {
+    const aspect = bgImage.width / bgImage.height;
+    let drawW = width;
+    let drawH = width / aspect;
+    if (drawH < height) {
+      drawH = height;
+      drawW = height * aspect;
+    }
+    const drawX = (width - drawW) / 2;
+    const drawY = (height - drawH) / 2;
+
+    ctx.drawImage(bgImage, drawX, drawY, drawW, drawH);
+
+    // Subtle dark outer vignette so card borders look elegant
+    ctx.fillStyle = 'rgba(4, 6, 12, 0.40)';
+    ctx.fillRect(0, 0, width, height);
+
+    // 3. LAYER 2: Frosted Glass / Glossy effect ONLY inside Content Area
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(contentX, contentY, contentW, contentH, contentRadius);
+    ctx.clip();
+
+    // Blurred background inside content
+    ctx.filter = 'blur(20px)';
+    ctx.drawImage(bgImage, drawX, drawY, drawW, drawH);
+    ctx.filter = 'none';
+
+    // Dark glass overlay for maximum text legibility
+    ctx.fillStyle = 'rgba(8, 12, 22, 0.84)';
+    ctx.fillRect(contentX, contentY, contentW, contentH);
+
+    // Glossy shine gradient (specular reflection)
+    const glossGrad = ctx.createLinearGradient(contentX, contentY, contentX, contentY + contentH);
+    glossGrad.addColorStop(0, 'rgba(255, 255, 255, 0.10)');
+    glossGrad.addColorStop(0.15, 'rgba(255, 255, 255, 0.03)');
+    glossGrad.addColorStop(0.65, 'rgba(0, 0, 0, 0.00)');
+    glossGrad.addColorStop(1, 'rgba(0, 0, 0, 0.35)');
+    ctx.fillStyle = glossGrad;
+    ctx.fillRect(contentX, contentY, contentW, contentH);
+    ctx.restore();
+  } else {
+    // Fallback dark gradient
+    const grad = ctx.createLinearGradient(0, 0, width, height);
+    grad.addColorStop(0, '#0f172a');
+    grad.addColorStop(1, '#05070c');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = 'rgba(8, 12, 22, 0.90)';
+    ctx.beginPath();
+    ctx.roundRect(contentX, contentY, contentW, contentH, contentRadius);
+    ctx.fill();
+  }
+
+  // 4. Content Area Glass Border
+  ctx.save();
+  const glassBorder = ctx.createLinearGradient(contentX, contentY, contentX, contentY + contentH);
+  glassBorder.addColorStop(0, 'rgba(255, 255, 255, 0.30)');
+  glassBorder.addColorStop(0.5, 'rgba(255, 255, 255, 0.08)');
+  glassBorder.addColorStop(1, 'rgba(255, 255, 255, 0.16)');
+  ctx.strokeStyle = glassBorder;
+  ctx.lineWidth = 1.2;
   ctx.beginPath();
-  ctx.roundRect(pad, pad, glassW, glassH, 18);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-  ctx.lineWidth = 1;
+  ctx.roundRect(contentX, contentY, contentW, contentH, contentRadius);
   ctx.stroke();
+  ctx.restore();
 
-  // 1. HEADER SECTION (Player profile)
-  const headerX = pad + 18;
-  const headerY = pad + 18;
-  const headerW = glassW - 36;
+  // 5. INNER CONTENT LAYOUT
+  const tableX = contentX + innerPad;
+  const tableW = contentW - (innerPad * 2);
+
+  // 5A. Player Profile Header
+  const headerY = contentY + 20;
   const avatarSize = 64;
-
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
-  ctx.beginPath();
-  ctx.roundRect(headerX, headerY, headerW, 88, 14);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  // Draw Avatar
-  const avatarX = headerX + 16;
-  const avatarY = headerY + 12;
+  const avatarX = tableX;
+  const avatarY = headerY + 6;
   const avatarUrl = user.avatar_url || `https://a.ppy.sh/${user.id || 1}`;
 
   try {
@@ -100,7 +193,7 @@ async function generateTopPlaysCard(user, scores) {
     ctx.drawImage(avImg, avatarX, avatarY, avatarSize, avatarSize);
     ctx.restore();
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.arc(avatarX + (avatarSize / 2), avatarY + (avatarSize / 2), avatarSize / 2, 0, Math.PI * 2);
@@ -112,12 +205,12 @@ async function generateTopPlaysCard(user, scores) {
     ctx.fill();
   }
 
-  // Username & Profile Rank
+  // Username & Profile Rank Badges
   const userTextX = avatarX + avatarSize + 16;
   ctx.textAlign = 'left';
   ctx.font = `bold 24px ${FONT_STACK}`;
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(user.username || 'Player', userTextX, headerY + 36);
+  ctx.fillText(user.username || 'Player', userTextX, headerY + 30);
 
   const uStats = user.statistics || {};
   const globalRank = uStats.global_rank ? `#${uStats.global_rank.toLocaleString()}` : '-';
@@ -127,53 +220,85 @@ async function generateTopPlaysCard(user, scores) {
 
   ctx.font = `600 13px ${FONT_STACK}`;
   ctx.fillStyle = '#38bdf8';
-  ctx.fillText(globalRank, userTextX, headerY + 62);
+  ctx.fillText(globalRank, userTextX, headerY + 56);
   const grW = ctx.measureText(globalRank).width;
 
   if (countryRank) {
     ctx.fillStyle = '#94a3b8';
-    ctx.fillText(` (${countryRank})`, userTextX + grW, headerY + 62);
+    ctx.fillText(` (${countryRank})`, userTextX + grW, headerY + 56);
   }
 
   ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
   const crFullW = grW + (countryRank ? ctx.measureText(` (${countryRank})`).width : 0);
-  ctx.fillText('  •  ', userTextX + crFullW, headerY + 62);
+  ctx.fillText('  •  ', userTextX + crFullW, headerY + 56);
   const sepW = ctx.measureText('  •  ').width;
 
-  ctx.fillStyle = '#f8fafc';
-  ctx.fillText(`Total: `, userTextX + crFullW + sepW, headerY + 62);
+  ctx.fillStyle = '#cbd5e1';
+  ctx.fillText(`Total: `, userTextX + crFullW + sepW, headerY + 56);
   const totW = ctx.measureText(`Total: `).width;
   ctx.fillStyle = '#4ade80';
-  ctx.fillText(totalPp, userTextX + crFullW + sepW + totW, headerY + 62);
+  ctx.fillText(totalPp, userTextX + crFullW + sepW + totW, headerY + 56);
   const ppW = ctx.measureText(totalPp).width;
 
   ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-  ctx.fillText('  •  ', userTextX + crFullW + sepW + totW + ppW, headerY + 62);
+  ctx.fillText('  •  ', userTextX + crFullW + sepW + totW + ppW, headerY + 56);
   const sep2W = ctx.measureText('  •  ').width;
 
-  ctx.fillStyle = '#f8fafc';
-  ctx.fillText(`Acc: `, userTextX + crFullW + sepW + totW + ppW + sep2W, headerY + 62);
+  ctx.fillStyle = '#cbd5e1';
+  ctx.fillText(`Acc: `, userTextX + crFullW + sepW + totW + ppW + sep2W, headerY + 56);
   const accLblW = ctx.measureText(`Acc: `).width;
   ctx.fillStyle = '#38bdf8';
-  ctx.fillText(hitAcc, userTextX + crFullW + sepW + totW + ppW + sep2W + accLblW, headerY + 62);
+  ctx.fillText(hitAcc, userTextX + crFullW + sepW + totW + ppW + sep2W + accLblW, headerY + 56);
 
-  // Title on Header Right
+  // Top Right Header: Title
   ctx.textAlign = 'right';
   ctx.font = `bold 16px ${FONT_STACK}`;
   ctx.fillStyle = '#facc15';
-  ctx.fillText('TOP 10 PERFORMANCES', headerX + headerW - 16, headerY + 36);
+  ctx.fillText('TOP 10 PERFORMANCES', tableX + tableW, headerY + 30);
 
   ctx.font = `600 12px ${FONT_STACK}`;
   ctx.fillStyle = '#64748b';
-  ctx.fillText(`Mode: ${(scores[0]?.mode || 'osu').toUpperCase()}`, headerX + headerW - 16, headerY + 58);
+  ctx.fillText(`Mode: ${(scores[0]?.mode || 'osu').toUpperCase()}`, tableX + tableW, headerY + 54);
 
-  // 2. SCORE ROWS
-  const startY = headerY + 104;
-  const rowW = headerW;
+  // 5B. TABLE HEADER ROW (Structured Table Headers)
+  const tblHeaderY = headerY + 84;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+  ctx.beginPath();
+  ctx.roundRect(tableX, tblHeaderY, tableW, tableHeaderH, 6);
+  ctx.fill();
+
+  ctx.font = `bold 11px ${FONT_STACK}`;
+  ctx.fillStyle = '#94a3b8';
+
+  // Table Column Positions
+  const colRankX = tableX + 24; // Center
+  const colGradeX = tableX + 66; // Center
+  const colMapX = tableX + 104; // Left
+  const colModsX = tableX + 620; // Center
+  const colAccX = tableX + 710; // Center
+  const colComboX = tableX + 805; // Center
+  const colPpX = tableX + 940; // Right
+  const colTimeX = tableX + tableW - 14; // Right
+
+  ctx.textAlign = 'center';
+  ctx.fillText('#', colRankX, tblHeaderY + 19);
+  ctx.fillText('GRADE', colGradeX, tblHeaderY + 19);
+  ctx.textAlign = 'left';
+  ctx.fillText('BEATMAP', colMapX, tblHeaderY + 19);
+  ctx.textAlign = 'center';
+  ctx.fillText('MODS', colModsX, tblHeaderY + 19);
+  ctx.fillText('ACC', colAccX, tblHeaderY + 19);
+  ctx.fillText('COMBO', colComboX, tblHeaderY + 19);
+  ctx.textAlign = 'right';
+  ctx.fillText('PERFORMANCE', colPpX, tblHeaderY + 19);
+  ctx.fillText('DATE', colTimeX, tblHeaderY + 19);
+
+  // 5C. TABLE DATA ROWS
+  const rowsStartY = tblHeaderY + tableHeaderH + 4;
 
   for (let i = 0; i < count; i++) {
     const score = scores[i];
-    const rowY = startY + (i * (rowH + rowGap));
+    const rowY = rowsStartY + (i * rowH);
     const bm = score.beatmap || {};
     const set = score.beatmapset || bm.beatmapset || {};
 
@@ -181,152 +306,169 @@ async function generateTopPlaysCard(user, scores) {
     const isTop2 = i === 1;
     const isTop3 = i === 2;
 
-    // Row Container
-    ctx.fillStyle = isTop1 ? 'rgba(234, 179, 8, 0.08)' : 'rgba(255, 255, 255, 0.03)';
+    // Row Background (Alternating + Top Highlights)
+    if (isTop1) {
+      ctx.fillStyle = 'rgba(234, 179, 8, 0.08)';
+    } else if (isTop2) {
+      ctx.fillStyle = 'rgba(203, 213, 225, 0.05)';
+    } else if (isTop3) {
+      ctx.fillStyle = 'rgba(249, 115, 22, 0.05)';
+    } else {
+      ctx.fillStyle = i % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.04)';
+    }
+
     ctx.beginPath();
-    ctx.roundRect(headerX, rowY, rowW, rowH, 10);
+    ctx.roundRect(tableX, rowY, tableW, rowH - 2, 6);
     ctx.fill();
 
-    ctx.strokeStyle = isTop1 ? 'rgba(234, 179, 8, 0.35)' : (isTop2 ? 'rgba(203, 213, 225, 0.2)' : (isTop3 ? 'rgba(249, 115, 22, 0.2)' : 'rgba(255, 255, 255, 0.05)'));
+    // Top 3 Accent Indicator on the Left
+    if (isTop1 || isTop2 || isTop3) {
+      ctx.fillStyle = isTop1 ? '#facc15' : (isTop2 ? '#cbd5e1' : '#fb923c');
+      ctx.beginPath();
+      ctx.roundRect(tableX, rowY, 3.5, rowH - 2, [6, 0, 0, 6]);
+      ctx.fill();
+    }
+
+    // Divider line between rows
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
     ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(tableX, rowY + rowH - 2);
+    ctx.lineTo(tableX + tableW, rowY + rowH - 2);
     ctx.stroke();
 
-    // Col 1: Rank Position (#1, #2, etc.)
+    // 1. Column: Rank Position
     const rankNum = `#${i + 1}`;
     ctx.textAlign = 'center';
-    ctx.font = `bold 16px ${FONT_STACK}`;
+    ctx.font = `bold 15px ${FONT_STACK}`;
     ctx.fillStyle = isTop1 ? '#facc15' : (isTop2 ? '#cbd5e1' : (isTop3 ? '#fb923c' : '#64748b'));
-    ctx.fillText(rankNum, headerX + 24, rowY + 38);
+    ctx.fillText(rankNum, colRankX, rowY + 31);
 
-    // Col 2: Grade Badge
+    // 2. Column: Grade Badge
     const grade = getRankGradeStyle(score.rank);
-    const gradeW = 34;
-    const gradeH = 26;
-    const gradeX = headerX + 48;
-    const gradeY = rowY + 19;
+    const gradeW = 32;
+    const gradeH = 24;
+    const gradeBoxX = colGradeX - (gradeW / 2);
+    const gradeBoxY = rowY + 13;
 
     ctx.fillStyle = grade.bg;
     ctx.beginPath();
-    ctx.roundRect(gradeX, gradeY, gradeW, gradeH, 6);
+    ctx.roundRect(gradeBoxX, gradeBoxY, gradeW, gradeH, 6);
     ctx.fill();
     ctx.strokeStyle = grade.color;
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    ctx.font = `bold 14px ${FONT_STACK}`;
+    ctx.font = `bold 13px ${FONT_STACK}`;
     ctx.fillStyle = grade.color;
-    ctx.fillText(grade.label, gradeX + (gradeW / 2), gradeY + 18);
+    ctx.fillText(grade.label, colGradeX, gradeBoxY + 17);
 
-    // Col 3: Beatmap Info (Title, Diff, Mods, SR)
-    const titleX = headerX + 96;
+    // 3. Column: Beatmap Title & Difficulty (with Star Rating Synchronized with Mods)
     const songTitle = `${set.title || bm.title || 'Unknown Beatmap'}`;
     const artist = `${set.artist || bm.artist || ''}`;
     const fullSongText = artist ? `${artist} - ${songTitle}` : songTitle;
 
+    // Line 1: Title
     ctx.textAlign = 'left';
-    ctx.font = `bold 14px ${FONT_STACK}`;
+    ctx.font = `bold 13px ${FONT_STACK}`;
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(truncate(ctx, fullSongText, 450), titleX, rowY + 28);
+    ctx.fillText(truncate(ctx, fullSongText, 490), colMapX, rowY + 21);
 
-    // Diff + SR + Mods line
-    const sr = Number(bm.difficulty_rating || 0);
+    // Line 2: Modded Star Rating Pill + Difficulty Name
+    const sr = getEffectiveStarRating(score, bm);
     const srInfo = getStarRatingColor(sr);
     const diffName = bm.version || 'Normal';
 
-    // SR Pill
+    // Synchronized Modded SR Pill
     const srText = `★ ${sr.toFixed(2)}`;
-    ctx.font = `bold 11px ${FONT_STACK}`;
-    const srW = ctx.measureText(srText).width + 10;
+    ctx.font = `bold 10px ${FONT_STACK}`;
+    const srPillW = ctx.measureText(srText).width + 8;
     ctx.fillStyle = srInfo.bg;
     ctx.beginPath();
-    ctx.roundRect(titleX, rowY + 38, srW, 18, 5);
+    ctx.roundRect(colMapX, rowY + 29, srPillW, 16, 4);
     ctx.fill();
     ctx.fillStyle = srInfo.text;
-    ctx.fillText(srText, titleX + 5, rowY + 51);
+    ctx.fillText(srText, colMapX + 4, rowY + 41);
 
-    // Diff text
-    ctx.font = `600 12px ${FONT_STACK}`;
+    // Difficulty name
+    ctx.font = `600 11px ${FONT_STACK}`;
     ctx.fillStyle = '#94a3b8';
-    const diffX = titleX + srW + 8;
-    ctx.fillText(`[${truncate(ctx, diffName, 260)}]`, diffX, rowY + 51);
-    const diffW = ctx.measureText(`[${truncate(ctx, diffName, 260)}]`).width;
+    ctx.fillText(`[${truncate(ctx, diffName, 380)}]`, colMapX + srPillW + 6, rowY + 41);
 
-    // Mods
+    // 4. Column: Mods
     const mods = parseMods(score.mods);
+    ctx.textAlign = 'center';
     if (mods.length > 0) {
       const modsText = `+${mods.join('')}`;
       ctx.font = `bold 11px ${FONT_STACK}`;
-      const modsW = ctx.measureText(modsText).width + 10;
-      const modX = diffX + diffW + 8;
+      const modPillW = ctx.measureText(modsText).width + 10;
+      const modPillX = colModsX - (modPillW / 2);
 
-      ctx.fillStyle = 'rgba(234, 179, 8, 0.15)';
+      ctx.fillStyle = 'rgba(234, 179, 8, 0.14)';
       ctx.beginPath();
-      ctx.roundRect(modX, rowY + 38, modsW, 18, 5);
+      ctx.roundRect(modPillX, rowY + 16, modPillW, 18, 5);
       ctx.fill();
-      ctx.strokeStyle = '#facc15';
+      ctx.strokeStyle = 'rgba(234, 179, 8, 0.40)';
       ctx.lineWidth = 1;
       ctx.stroke();
 
       ctx.fillStyle = '#fde047';
-      ctx.fillText(modsText, modX + 5, rowY + 51);
+      ctx.fillText(modsText, colModsX, rowY + 29);
+    } else {
+      ctx.font = `600 11px ${FONT_STACK}`;
+      ctx.fillStyle = '#64748b';
+      ctx.fillText('NM', colModsX, rowY + 30);
     }
 
-    // Col 4: Score, Combo, Acc, Misses (Right column)
-    const rightColX = headerX + rowW - 18;
+    // 5. Column: Accuracy
+    const accText = `${((score.accuracy || 0) * 100).toFixed(2)}%`;
+    ctx.textAlign = 'center';
+    ctx.font = `bold 13px ${FONT_STACK}`;
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillText(accText, colAccX, rowY + 31);
 
-    // PP Value
-    const pp = Math.round(score.pp || 0);
-    const ppText = `${pp.toLocaleString()}pp`;
-    ctx.textAlign = 'right';
-    ctx.font = `bold 18px ${FONT_STACK}`;
-    ctx.fillStyle = isTop1 ? '#facc15' : '#ffffff';
-    ctx.fillText(ppText, rightColX, rowY + 28);
-    const ppTextW = ctx.measureText(ppText).width;
-
-    // If FC PP if choked
-    if (score.if_fc_pp && Math.round(score.if_fc_pp) > pp) {
-      const ifFcVal = Math.round(score.if_fc_pp);
-      ctx.font = `600 12px ${FONT_STACK}`;
-      ctx.fillStyle = '#38bdf8';
-      ctx.fillText(`(~${ifFcVal}pp FC) `, rightColX - ppTextW - 6, rowY + 28);
-    }
-
-    // Bottom Right Line: Acc • Combo • Time
-    const acc = `${((score.accuracy || 0) * 100).toFixed(2)}%`;
+    // 6. Column: Combo & Misses
     const combo = `${(score.max_combo || 0).toLocaleString()}x`;
     const mapMax = bm.max_combo || bm.count_max_combo || 0;
     const misses = score.statistics?.miss ?? score.statistics?.count_miss ?? 0;
-    const timeText = formatRelativeTime(score.created_at);
-
-    ctx.font = `600 12px ${FONT_STACK}`;
-    ctx.fillStyle = '#64748b';
-    ctx.fillText(timeText, rightColX, rowY + 50);
-    const timeW = ctx.measureText(timeText).width;
-
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-    ctx.fillText(' • ', rightColX - timeW, rowY + 50);
-    const dotW = ctx.measureText(' • ').width;
 
     let comboText = combo;
-    let comboColor = '#ffffff';
+    let comboColor = '#e2e8f0';
     if (misses === 0 && mapMax > 0 && (score.max_combo || 0) >= mapMax - 1) {
       comboText = `${combo} FC`;
       comboColor = '#4ade80';
     } else if (misses > 0) {
-      comboText = `${combo} (${misses}x miss)`;
+      comboText = `${combo} (${misses}m)`;
       comboColor = '#f43f5e';
     }
 
+    ctx.textAlign = 'center';
+    ctx.font = `600 12px ${FONT_STACK}`;
     ctx.fillStyle = comboColor;
-    ctx.fillText(comboText, rightColX - timeW - dotW, rowY + 50);
-    const comboW2 = ctx.measureText(comboText).width;
+    ctx.fillText(comboText, colComboX, rowY + 31);
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-    ctx.fillText(' • ', rightColX - timeW - dotW - comboW2, rowY + 50);
-    const dot2W = ctx.measureText(' • ').width;
+    // 7. Column: Performance Points (PP & If FC)
+    const pp = Math.round(score.pp || 0);
+    const ppText = `${pp.toLocaleString()}pp`;
+    ctx.textAlign = 'right';
+    ctx.font = `bold 16px ${FONT_STACK}`;
+    ctx.fillStyle = isTop1 ? '#facc15' : '#ffffff';
+    ctx.fillText(ppText, colPpX, rowY + (score.if_fc_pp && Math.round(score.if_fc_pp) > pp ? 25 : 31));
 
-    ctx.fillStyle = '#38bdf8';
-    ctx.fillText(acc, rightColX - timeW - dotW - comboW2 - dot2W, rowY + 50);
+    // If FC PP
+    if (score.if_fc_pp && Math.round(score.if_fc_pp) > pp) {
+      const ifFcVal = Math.round(score.if_fc_pp);
+      ctx.font = `600 10px ${FONT_STACK}`;
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillText(`(~${ifFcVal}pp FC)`, colPpX, rowY + 41);
+    }
+
+    // 8. Column: Date / Time
+    const timeText = formatRelativeTime(score.created_at);
+    ctx.textAlign = 'right';
+    ctx.font = `600 11px ${FONT_STACK}`;
+    ctx.fillStyle = '#64748b';
+    ctx.fillText(timeText, colTimeX, rowY + 31);
   }
 
   ctx.restore();
@@ -336,4 +478,3 @@ async function generateTopPlaysCard(user, scores) {
 module.exports = {
   generateTopPlaysCard
 };
-
