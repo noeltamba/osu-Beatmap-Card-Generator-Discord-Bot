@@ -187,7 +187,7 @@ async function generateScoreCard(score, user) {
   const topY = 62;
   const modeText = getModeName(score.mode || beatmap.mode).toUpperCase();
   const statusInfo = getStatusBadge(beatmap.status);
-  const timeText = formatRelativeTime(score.created_at);
+  const timeText = formatRelativeTime(score.ended_at || score.created_at || score.date);
 
   let currentBadgeX = glassMargin + 24;
 

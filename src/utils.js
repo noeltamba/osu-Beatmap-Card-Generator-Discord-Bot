@@ -298,13 +298,79 @@ function formatDuration(seconds) {
 }
 
 function getStarRatingColor(sr) {
-  if (sr < 2.0) return { bg: '#4290fb', text: '#ffffff', glow: 'rgba(66, 144, 251, 0.6)' };
-  if (sr < 2.7) return { bg: '#4fffd5', text: '#002621', glow: 'rgba(79, 255, 213, 0.6)' };
-  if (sr < 4.0) return { bg: '#7cee4c', text: '#113300', glow: 'rgba(124, 238, 76, 0.6)' };
-  if (sr < 5.3) return { bg: '#ffbb33', text: '#3d2500', glow: 'rgba(255, 187, 51, 0.6)' };
-  if (sr < 6.5) return { bg: '#ff506e', text: '#ffffff', glow: 'rgba(255, 80, 110, 0.6)' };
-  if (sr < 8.0) return { bg: '#a347eb', text: '#ffffff', glow: 'rgba(163, 71, 235, 0.6)' };
-  return { bg: '#1c1724', text: '#ff3366', glow: 'rgba(255, 51, 102, 0.8)', border: '#ff3366' };
+  const val = Number(sr) || 0;
+  if (val < 2.0) {
+    return { bg: '#0ea5e9', text: '#ffffff', glow: 'rgba(14, 165, 233, 0.6)' }; // Biru (< 2 star)
+  }
+  if (val < 4.0) {
+    return { bg: '#eab308', text: '#0f172a', glow: 'rgba(234, 179, 8, 0.6)' }; // Kuning (2 - 4 star)
+  }
+  if (val < 6.0) {
+    return { bg: '#ef4444', text: '#ffffff', glow: 'rgba(239, 68, 68, 0.6)' }; // Merah (4 - 6 star)
+  }
+  if (val < 7.0) {
+    return { bg: '#8b5cf6', text: '#ffffff', glow: 'rgba(139, 92, 246, 0.6)' }; // Ungu (6 - 7 star)
+  }
+  if (val < 10.0) {
+    return { bg: '#13151f', text: '#facc15', border: 'rgba(250, 204, 21, 0.65)', glow: 'rgba(250, 204, 21, 0.4)' }; // Hitam font kuning (7 - 10 star)
+  }
+  return { bg: '#140c10', text: '#ef4444', border: 'rgba(239, 68, 68, 0.75)', glow: 'rgba(239, 68, 68, 0.5)' }; // Hitam font merah (10+ star)
+}
+
+function getLazerModStyle(acronym) {
+  const acr = (acronym || '').toUpperCase();
+  // 1. Difficulty Reduction (Hijau)
+  if (['EZ', 'NF', 'HT', 'DC'].includes(acr)) {
+    return {
+      category: 'Difficulty Reduction',
+      color: '#4ade80',
+      bg: 'rgba(74, 222, 128, 0.16)',
+      border: 'rgba(74, 222, 128, 0.45)'
+    };
+  }
+  // 2. Difficulty Increase (Merah)
+  if (['HR', 'SD', 'PF', 'DT', 'NC', 'HD', 'FL', 'BL', 'ST', 'AC', 'TC'].includes(acr)) {
+    return {
+      category: 'Difficulty Increase',
+      color: '#f43f5e',
+      bg: 'rgba(244, 63, 94, 0.16)',
+      border: 'rgba(244, 63, 94, 0.45)'
+    };
+  }
+  // 3. Automation (Biru)
+  if (['AT', 'CN', 'RX', 'AP', 'SO'].includes(acr)) {
+    return {
+      category: 'Automation',
+      color: '#38bdf8',
+      bg: 'rgba(56, 189, 248, 0.16)',
+      border: 'rgba(56, 189, 248, 0.45)'
+    };
+  }
+  // 4. Conversion / System (Ungu)
+  if (['CL', 'DA', 'TP', 'RD', 'MR', 'AL', 'SG', 'SV2', '1K', '2K', '3K', '4K', '5K', '6K', '7K', '8K', '9K', '10K'].includes(acr)) {
+    return {
+      category: 'Conversion',
+      color: '#c084fc',
+      bg: 'rgba(192, 132, 252, 0.18)',
+      border: 'rgba(192, 132, 252, 0.45)'
+    };
+  }
+  // 5. Fun (Pink)
+  if (['MU', 'NS', 'MG', 'RP', 'BR', 'WD', 'WU'].includes(acr)) {
+    return {
+      category: 'Fun',
+      color: '#ec4899',
+      bg: 'rgba(236, 72, 153, 0.16)',
+      border: 'rgba(236, 72, 153, 0.45)'
+    };
+  }
+  // Default fallback
+  return {
+    category: 'Other',
+    color: '#cbd5e1',
+    bg: 'rgba(203, 213, 225, 0.12)',
+    border: 'rgba(203, 213, 225, 0.30)'
+  };
 }
 
 function getStatusBadge(status) {
@@ -729,6 +795,7 @@ module.exports = {
   formatRelativeTime,
   formatMods,
   getLazerModBadges,
+  getLazerModStyle,
   getCanonicalBeatmapUrl,
   getCanonicalScoreUrl,
   detectScoreClient,

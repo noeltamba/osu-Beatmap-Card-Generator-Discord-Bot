@@ -5,6 +5,7 @@ const {
   formatRelativeTime,
   getRankGradeStyle,
   getStarRatingColor,
+  getLazerModStyle,
   parseMods,
   calculateModdedStats
 } = require('./utils');
@@ -387,6 +388,11 @@ async function generateTopPlaysCard(user, scores) {
     ctx.beginPath();
     ctx.roundRect(colMapX, rowY + 29, srPillW, 16, 4);
     ctx.fill();
+    if (srInfo.border) {
+      ctx.strokeStyle = srInfo.border;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
     ctx.fillStyle = srInfo.text;
     ctx.fillText(srText, colMapX + 4, rowY + 41);
 
@@ -395,26 +401,42 @@ async function generateTopPlaysCard(user, scores) {
     ctx.fillStyle = '#94a3b8';
     ctx.fillText(`[${truncate(ctx, diffName, 380)}]`, colMapX + srPillW + 6, rowY + 41);
 
-    // 4. Column: Mods
-    const mods = parseMods(score.mods);
-    ctx.textAlign = 'center';
-    if (mods.length > 0) {
-      const modsText = `+${mods.join('')}`;
-      ctx.font = `bold 11px ${FONT_STACK}`;
-      const modPillW = ctx.measureText(modsText).width + 10;
-      const modPillX = colModsX - (modPillW / 2);
+    // 4. Column: Mods (Separated Lazer style badges)
+    const rawMods = parseMods(score.mods);
+    if (rawMods.length > 0) {
+      ctx.font = `bold 10px ${FONT_STACK}`;
+      const badgeH = 18;
+      const badgeGap = 4;
 
-      ctx.fillStyle = 'rgba(234, 179, 8, 0.14)';
-      ctx.beginPath();
-      ctx.roundRect(modPillX, rowY + 16, modPillW, 18, 5);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(234, 179, 8, 0.40)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
+      const badgeList = rawMods.map(m => {
+        const style = getLazerModStyle(m);
+        const textW = ctx.measureText(m).width;
+        const width = Math.max(20, Math.ceil(textW + 6));
+        return { mod: m, width, style };
+      });
 
-      ctx.fillStyle = '#fde047';
-      ctx.fillText(modsText, colModsX, rowY + 29);
+      const totalModsW = badgeList.reduce((acc, b) => acc + b.width, 0) + (badgeList.length - 1) * badgeGap;
+      let currX = colModsX - (totalModsW / 2);
+      const badgeY = rowY + 16;
+
+      for (const b of badgeList) {
+        ctx.fillStyle = b.style.bg;
+        ctx.beginPath();
+        ctx.roundRect(currX, badgeY, b.width, badgeH, 4);
+        ctx.fill();
+
+        ctx.strokeStyle = b.style.border;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = b.style.color;
+        ctx.fillText(b.mod, currX + (b.width / 2), badgeY + 13);
+
+        currX += b.width + badgeGap;
+      }
     } else {
+      ctx.textAlign = 'center';
       ctx.font = `600 11px ${FONT_STACK}`;
       ctx.fillStyle = '#64748b';
       ctx.fillText('NM', colModsX, rowY + 30);
@@ -464,10 +486,10 @@ async function generateTopPlaysCard(user, scores) {
     }
 
     // 8. Column: Date / Time
-    const timeText = formatRelativeTime(score.created_at);
+    const timeText = formatRelativeTime(score.ended_at || score.created_at || score.date);
     ctx.textAlign = 'right';
     ctx.font = `600 11px ${FONT_STACK}`;
-    ctx.fillStyle = '#64748b';
+    ctx.fillStyle = '#94a3b8';
     ctx.fillText(timeText, colTimeX, rowY + 31);
   }
 
