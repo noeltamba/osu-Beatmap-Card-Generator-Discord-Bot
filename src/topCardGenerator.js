@@ -450,31 +450,58 @@ async function generateTopPlaysCard(user, scores) {
     ctx.fillText(accText, colAccX, rowY + 31);
 
     // 6. Column: Combo & Misses
-    const combo = `${(score.max_combo || 0).toLocaleString()}x`;
+    const userCombo = (score.max_combo || 0).toLocaleString();
     const mapMax = bm.max_combo || bm.count_max_combo || 0;
     const misses = score.statistics?.miss ?? score.statistics?.count_miss ?? 0;
 
     const isFc = Boolean(score.legacy_perfect || score.perfect || score.is_perfect_combo) ||
       (misses === 0 && mapMax > 0 && (score.max_combo || 0) >= mapMax - 1);
 
-    let comboText = combo;
-    let comboColor = '#ffffff';
+    const comboText = mapMax > 0 ? `${userCombo} / ${mapMax.toLocaleString()}x` : `${userCombo}x`;
+    const comboColor = isFc ? '#4ade80' : '#ffffff';
 
-    if (isFc) {
-      comboText = combo; // Jgn tambahkan text FC di samping
-      comboColor = '#4ade80'; // Cukup warna font nya menjadi hijau kalau FC
-    } else if (misses > 0) {
-      comboText = `${combo} (${misses}m)`;
-      comboColor = '#ffffff'; // Skor tidak FC warna font-nya Putih
-    } else {
-      comboText = combo;
-      comboColor = '#ffffff'; // Skor tidak FC warna font-nya Putih
+    ctx.font = `600 12px ${FONT_STACK}`;
+    const comboTextW = ctx.measureText(comboText).width;
+
+    const hasMissBadge = misses > 0;
+    let missBadgeW = 0;
+    const missBadgeText = `${misses}x`;
+    const badgeH = 17;
+    const gap = 6;
+
+    if (hasMissBadge) {
+      ctx.font = `bold 10px ${FONT_STACK}`;
+      missBadgeW = Math.max(20, Math.ceil(ctx.measureText(missBadgeText).width + 8));
     }
 
-    ctx.textAlign = 'center';
+    const totalComboW = comboTextW + (hasMissBadge ? gap + missBadgeW : 0);
+    const startComboX = colComboX - (totalComboW / 2);
+
+    // Draw combo text
+    ctx.textAlign = 'left';
     ctx.font = `600 12px ${FONT_STACK}`;
     ctx.fillStyle = comboColor;
-    ctx.fillText(comboText, colComboX, rowY + 31);
+    ctx.fillText(comboText, startComboX, rowY + 31);
+
+    // Draw red miss badge beside combo if misses > 0
+    if (hasMissBadge) {
+      const badgeX = startComboX + comboTextW + gap;
+      const badgeY = rowY + 17;
+
+      ctx.fillStyle = 'rgba(244, 63, 94, 0.16)';
+      ctx.beginPath();
+      ctx.roundRect(badgeX, badgeY, missBadgeW, badgeH, 4);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(244, 63, 94, 0.45)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.textAlign = 'center';
+      ctx.font = `bold 10px ${FONT_STACK}`;
+      ctx.fillStyle = '#f43f5e';
+      ctx.fillText(missBadgeText, badgeX + (missBadgeW / 2), badgeY + 12);
+    }
 
     // 7. Column: Performance Points (PP & If FC)
     const pp = Math.round(score.pp || 0);
