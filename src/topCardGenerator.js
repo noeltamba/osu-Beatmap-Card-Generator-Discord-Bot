@@ -459,7 +459,9 @@ async function generateTopPlaysCard(user, scores) {
     const isFc = Boolean(score.legacy_perfect || score.perfect || score.is_perfect_combo) ||
       (misses === 0 && mapMax > 0 && (score.max_combo || 0) >= mapMax - 1);
 
-    const comboText = mapMax > 0 ? `${userCombo} / ${mapMax.toLocaleString()}x` : `${userCombo}x`;
+    const comboText = isFc
+      ? `${userCombo}x`
+      : (mapMax > 0 ? `${userCombo} / ${mapMax.toLocaleString()}x` : `${userCombo}x`);
     const comboColor = isFc ? '#4ade80' : '#ffffff';
 
     ctx.font = `600 12px ${FONT_STACK}`;
