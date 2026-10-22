@@ -300,21 +300,51 @@ function formatDuration(seconds) {
 function getStarRatingColor(sr) {
   const val = Number(sr) || 0;
   if (val < 2.0) {
-    return { bg: '#0ea5e9', text: '#ffffff', glow: 'rgba(14, 165, 233, 0.6)' }; // Biru (< 2 star)
+    return {
+      bg: 'rgba(56, 189, 248, 0.12)',
+      text: '#38bdf8',
+      border: 'rgba(56, 189, 248, 0.45)',
+      glow: 'rgba(56, 189, 248, 0.25)'
+    }; // Biru (< 2 star)
   }
   if (val < 4.0) {
-    return { bg: '#eab308', text: '#0f172a', glow: 'rgba(234, 179, 8, 0.6)' }; // Kuning (2 - 4 star)
+    return {
+      bg: 'rgba(250, 204, 21, 0.12)',
+      text: '#facc15',
+      border: 'rgba(250, 204, 21, 0.45)',
+      glow: 'rgba(250, 204, 21, 0.25)'
+    }; // Kuning (2 - 4 star)
   }
   if (val < 6.0) {
-    return { bg: '#ef4444', text: '#ffffff', glow: 'rgba(239, 68, 68, 0.6)' }; // Merah (4 - 6 star)
+    return {
+      bg: 'rgba(244, 63, 94, 0.12)',
+      text: '#fb7185',
+      border: 'rgba(244, 63, 94, 0.45)',
+      glow: 'rgba(244, 63, 94, 0.25)'
+    }; // Merah (4 - 6 star)
   }
   if (val < 7.0) {
-    return { bg: '#8b5cf6', text: '#ffffff', glow: 'rgba(139, 92, 246, 0.6)' }; // Ungu (6 - 7 star)
+    return {
+      bg: 'rgba(192, 132, 252, 0.12)',
+      text: '#c084fc',
+      border: 'rgba(192, 132, 252, 0.45)',
+      glow: 'rgba(192, 132, 252, 0.25)'
+    }; // Ungu (6 - 7 star)
   }
   if (val < 10.0) {
-    return { bg: '#13151f', text: '#facc15', border: 'rgba(250, 204, 21, 0.65)', glow: 'rgba(250, 204, 21, 0.4)' }; // Hitam font kuning (7 - 10 star)
+    return {
+      bg: 'rgba(250, 204, 21, 0.14)',
+      text: '#fde047',
+      border: 'rgba(250, 204, 21, 0.55)',
+      glow: 'rgba(250, 204, 21, 0.35)'
+    }; // Hitam font kuning (7 - 10 star)
   }
-  return { bg: '#140c10', text: '#ef4444', border: 'rgba(239, 68, 68, 0.75)', glow: 'rgba(239, 68, 68, 0.5)' }; // Hitam font merah (10+ star)
+  return {
+    bg: 'rgba(239, 68, 68, 0.14)',
+    text: '#f87171',
+    border: 'rgba(239, 68, 68, 0.60)',
+    glow: 'rgba(239, 68, 68, 0.40)'
+  }; // Hitam font merah (10+ star)
 }
 
 function getLazerModStyle(acronym) {

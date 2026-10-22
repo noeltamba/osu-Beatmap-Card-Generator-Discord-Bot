@@ -454,14 +454,21 @@ async function generateTopPlaysCard(user, scores) {
     const mapMax = bm.max_combo || bm.count_max_combo || 0;
     const misses = score.statistics?.miss ?? score.statistics?.count_miss ?? 0;
 
+    const isFc = Boolean(score.legacy_perfect || score.perfect || score.is_perfect_combo) ||
+      (misses === 0 && mapMax > 0 && (score.max_combo || 0) >= mapMax - 1);
+
     let comboText = combo;
-    let comboColor = '#e2e8f0';
-    if (misses === 0 && mapMax > 0 && (score.max_combo || 0) >= mapMax - 1) {
-      comboText = `${combo} FC`;
-      comboColor = '#4ade80';
+    let comboColor = '#ffffff';
+
+    if (isFc) {
+      comboText = combo; // Jgn tambahkan text FC di samping
+      comboColor = '#4ade80'; // Cukup warna font nya menjadi hijau kalau FC
     } else if (misses > 0) {
       comboText = `${combo} (${misses}m)`;
-      comboColor = '#f43f5e';
+      comboColor = '#ffffff'; // Skor tidak FC warna font-nya Putih
+    } else {
+      comboText = combo;
+      comboColor = '#ffffff'; // Skor tidak FC warna font-nya Putih
     }
 
     ctx.textAlign = 'center';
