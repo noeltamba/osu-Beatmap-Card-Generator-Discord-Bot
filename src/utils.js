@@ -455,17 +455,27 @@ function getRankGradeStyle(rank) {
   return { label: 'F', color: '#ef4444', glow: 'rgba(239, 68, 68, 0.8)', bg: 'rgba(239, 68, 68, 0.15)' };
 }
 
-function formatRelativeTime(dateString) {
+function formatRelativeTime(dateString, lang = 'en') {
   if (!dateString) return '';
   const date = new Date(dateString);
   const now = new Date();
   const diffSec = Math.floor((now - date) / 1000);
+  const isId = lang === 'id';
 
-  if (diffSec < 60) return 'Baru saja';
-  if (diffSec < 3600) return `${Math.floor(diffSec / 60)} menit lalu`;
-  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} jam lalu`;
-  if (diffSec < 604800) return `${Math.floor(diffSec / 86400)} hari lalu`;
-  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  if (isId) {
+    if (diffSec < 60) return 'Baru saja';
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)} menit lalu`;
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} jam lalu`;
+    if (diffSec < 604800) return `${Math.floor(diffSec / 86400)} hari lalu`;
+    return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  // Default: English ('en')
+  if (diffSec < 60) return 'Just now';
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+  if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}d ago`;
+  return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function formatMods(mods) {

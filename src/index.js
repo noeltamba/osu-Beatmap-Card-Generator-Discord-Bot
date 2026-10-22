@@ -7,14 +7,21 @@ const {
   AttachmentBuilder,
   ActionRowBuilder,
   ButtonBuilder,
-  ButtonStyle
+  ButtonStyle,
+  EmbedBuilder
 } = require('discord.js');
 
 const OsuApi = require('./osuApi');
 const { generateBeatmapCard } = require('./cardGenerator');
 const { generateScoreCard } = require('./scoreCardGenerator');
 const { generateTopPlaysCard } = require('./topCardGenerator');
-const { getLinkedUser, linkUser, unlinkUser } = require('./database');
+const {
+  getLinkedUser,
+  linkUser,
+  unlinkUser,
+  getUserLanguage,
+  setUserLanguage
+} = require('./database');
 const {
   parseBeatmapInput,
   extractAllOsuUrls,
@@ -25,6 +32,7 @@ const {
   getCanonicalBeatmapUrl,
   getCanonicalScoreUrl
 } = require('./utils');
+const { t } = require('./i18n');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const OSU_CLIENT_ID = process.env.OSU_CLIENT_ID || '72172';
@@ -32,14 +40,14 @@ const OSU_CLIENT_SECRET = process.env.OSU_CLIENT_SECRET;
 
 // Validate environment variables
 if (!DISCORD_TOKEN || DISCORD_TOKEN === 'your_discord_bot_token_here' || DISCORD_TOKEN === 'ISI_DISCORD_BOT_TOKEN_DISINI') {
-  console.error('\n❌ [ERROR] DISCORD_TOKEN belum diisi di file .env!');
-  console.error('Silakan buka file .env dan masukkan Token bot Discord Anda.\n');
+  console.error('\n❌ [ERROR] DISCORD_TOKEN is not set in .env!');
+  console.error('Please open .env and enter your Discord bot token.\n');
   process.exit(1);
 }
 
 if (!OSU_CLIENT_SECRET || OSU_CLIENT_SECRET === 'your_osu_client_secret_here' || OSU_CLIENT_SECRET === 'ISI_CLIENT_SECRET_KAMU_DISINI') {
-  console.warn('\n⚠️ [PERINGATAN] OSU_CLIENT_SECRET belum diisi di file .env!');
-  console.warn('Silakan masukkan Secret Key dari osu! OAuth Anda di file .env agar bot bisa mengambil data osu!.\n');
+  console.warn('\n⚠️ [WARNING] OSU_CLIENT_SECRET is not set in .env!');
+  console.warn('Please enter your Secret Key from osu! OAuth in .env to allow the bot to fetch osu! data.\n');
 }
 
 const osuApi = new OsuApi(OSU_CLIENT_ID, OSU_CLIENT_SECRET);
@@ -53,82 +61,147 @@ const client = new Client({
   partials: [Partials.Channel]
 });
 
-// Slash Command Definitions
+// Slash Command Definitions (English default with Indonesian description localizations)
 const linkCommand = new SlashCommandBuilder()
   .setName('link')
-  .setDescription('Tautkan akun Discord kamu ke akun osu! kamu untuk mempermudah /recent dan /showcase')
+  .setDescription('Link your Discord account to your osu! profile for easier /recent and /top commands')
+  .setDescriptionLocalizations({
+    id: 'Tautkan akun Discord kamu ke akun osu! kamu untuk mempermudah /recent dan /top'
+  })
   .addStringOption(option =>
     option
       .setName('username')
-      .setDescription('Username osu! kamu')
+      .setDescription('Your osu! username')
+      .setDescriptionLocalizations({
+        id: 'Username osu! kamu'
+      })
       .setRequired(true)
   );
 
 const unlinkCommand = new SlashCommandBuilder()
   .setName('unlink')
-  .setDescription('Lepas tautan akun osu! dari akun Discord kamu');
+  .setDescription('Unlink your osu! account from your Discord profile')
+  .setDescriptionLocalizations({
+    id: 'Lepas tautan akun osu! dari akun Discord kamu'
+  });
+
+const languageCommand = new SlashCommandBuilder()
+  .setName('language')
+  .setDescription('Choose your preferred language (English / Bahasa Indonesia)')
+  .setDescriptionLocalizations({
+    id: 'Pilih preferensi bahasa bot (English / Bahasa Indonesia)'
+  })
+  .addStringOption(option =>
+    option
+      .setName('set')
+      .setDescription('Directly set language to English or Indonesian')
+      .setDescriptionLocalizations({
+        id: 'Atur bahasa langsung ke English atau Indonesia'
+      })
+      .setRequired(false)
+      .addChoices(
+        { name: '🇬🇧 English (Default)', value: 'en' },
+        { name: '🇮🇩 Bahasa Indonesia', value: 'id' }
+      )
+  );
 
 const beatmapCommand = new SlashCommandBuilder()
   .setName('beatmap')
-  .setDescription('Tampilkan kartu informasi beatmap osu! dengan visual modern')
+  .setDescription('Display modern visual card for an osu! beatmap')
+  .setDescriptionLocalizations({
+    id: 'Tampilkan kartu informasi beatmap osu! dengan visual modern'
+  })
   .addStringOption(option =>
     option
       .setName('input')
-      .setDescription('Link osu! (cth: https://osu.ppy.sh/b/12345) atau Beatmap ID')
+      .setDescription('osu! beatmap link (e.g. https://osu.ppy.sh/b/12345) or Beatmap ID')
+      .setDescriptionLocalizations({
+        id: 'Link osu! (cth: https://osu.ppy.sh/b/12345) atau Beatmap ID'
+      })
       .setRequired(true)
   )
   .addStringOption(option =>
     option
       .setName('mods')
-      .setDescription('Mods osu! yang ingin diterapkan (cth: DT, HR, HDDT, EZ)')
+      .setDescription('osu! mods to apply (e.g. DT, HR, HDDT, EZ)')
+      .setDescriptionLocalizations({
+        id: 'Mods osu! yang ingin diterapkan (cth: DT, HR, HDDT, EZ)'
+      })
       .setRequired(false)
   );
 
 const showcaseCommand = new SlashCommandBuilder()
   .setName('showcase')
-  .setDescription('Tampilkan kartu beatmap khusus untuk showcase gameplay')
+  .setDescription('Display beatmap showcase card for gameplay showcases')
+  .setDescriptionLocalizations({
+    id: 'Tampilkan kartu beatmap khusus untuk showcase gameplay'
+  })
   .addStringOption(option =>
     option
       .setName('link')
-      .setDescription('Link beatmap osu! (cth: https://osu.ppy.sh/b/12345) atau Beatmap ID')
+      .setDescription('osu! beatmap link or Beatmap ID')
+      .setDescriptionLocalizations({
+        id: 'Link beatmap osu! atau Beatmap ID'
+      })
       .setRequired(true)
   )
   .addStringOption(option =>
     option
       .setName('player')
-      .setDescription('Nama player (opsional jika sudah menautkan akun dengan /link)')
+      .setDescription('Player username (optional if already linked)')
+      .setDescriptionLocalizations({
+        id: 'Nama player (opsional jika sudah menautkan akun dengan /link)'
+      })
       .setRequired(false)
   )
   .addStringOption(option =>
     option
       .setName('mods')
-      .setDescription('Mods osu! yang ingin diterapkan (cth: DT, HR, HDDT, EZ)')
+      .setDescription('osu! mods to apply (e.g. DT, HR, HDDT, EZ)')
+      .setDescriptionLocalizations({
+        id: 'Mods osu! yang ingin diterapkan (cth: DT, HR, HDDT, EZ)'
+      })
       .setRequired(false)
   );
 
 const recentCommand = new SlashCommandBuilder()
   .setName('recent')
-  .setDescription('Tampilkan kartu skor terbaru (recent score) dari pemain osu!')
+  .setDescription('Display recent score card for an osu! player')
+  .setDescriptionLocalizations({
+    id: 'Tampilkan kartu skor terbaru (recent score) dari pemain osu!'
+  })
   .addStringOption(option =>
     option
       .setName('player')
-      .setDescription('Nama pemain osu! (opsional jika sudah /link)')
+      .setDescription('osu! player username (optional if already linked)')
+      .setDescriptionLocalizations({
+        id: 'Nama pemain osu! (opsional jika sudah /link)'
+      })
       .setRequired(false)
   );
 
 const topCommand = new SlashCommandBuilder()
   .setName('top')
-  .setDescription('Tampilkan daftar kartu skor terbaik (Top Plays) dari pemain osu!')
+  .setDescription('Display top performance plays leaderboard card for an osu! player')
+  .setDescriptionLocalizations({
+    id: 'Tampilkan daftar kartu skor terbaik (Top Plays) dari pemain osu!'
+  })
   .addStringOption(option =>
     option
       .setName('player')
-      .setDescription('Nama pemain osu! (opsional jika sudah /link)')
+      .setDescription('osu! player username (optional if already linked)')
+      .setDescriptionLocalizations({
+        id: 'Nama pemain osu! (opsional jika sudah /link)'
+      })
       .setRequired(false)
   )
   .addIntegerOption(option =>
     option
       .setName('count')
-      .setDescription('Jumlah skor yang ditampilkan (1 - 10, default: 10)')
+      .setDescription('Number of plays to show (1 - 10, default: 10)')
+      .setDescriptionLocalizations({
+        id: 'Jumlah skor yang ditampilkan (1 - 10, default: 10)'
+      })
       .setMinValue(1)
       .setMaxValue(10)
       .setRequired(false)
@@ -136,15 +209,21 @@ const topCommand = new SlashCommandBuilder()
 
 const scorecardCommand = new SlashCommandBuilder()
   .setName('scorecard')
-  .setDescription('Tampilkan kartu skor osu! dari link skor atau Score ID')
+  .setDescription('Display osu! score card from score link or Score ID')
+  .setDescriptionLocalizations({
+    id: 'Tampilkan kartu skor osu! dari link skor atau Score ID'
+  })
   .addStringOption(option =>
     option
       .setName('link')
-      .setDescription('Link skor osu! (cth: https://osu.ppy.sh/scores/7265198407) atau Score ID')
+      .setDescription('osu! score link (e.g. https://osu.ppy.sh/scores/7265198407) or Score ID')
+      .setDescriptionLocalizations({
+        id: 'Link skor osu! (cth: https://osu.ppy.sh/scores/7265198407) atau Score ID'
+      })
       .setRequired(true)
   );
 
-function createScoreButtons(score, originalInput = null) {
+function createScoreButtons(score, originalInput = null, lang = 'en') {
   const row = new ActionRowBuilder();
   const beatmap = score.beatmap || {};
   const setId = beatmap.beatmapset_id || score.beatmapset?.id || beatmap.beatmapset?.id;
@@ -154,7 +233,7 @@ function createScoreButtons(score, originalInput = null) {
   if (score && score.id) {
     row.addComponents(
       new ButtonBuilder()
-        .setLabel('Buka Skor di osu!')
+        .setLabel(t(lang, 'btn_open_score'))
         .setStyle(ButtonStyle.Link)
         .setURL(scoreUrl)
     );
@@ -162,7 +241,7 @@ function createScoreButtons(score, originalInput = null) {
 
   row.addComponents(
     new ButtonBuilder()
-      .setLabel('Buka Beatmap')
+      .setLabel(t(lang, 'btn_open_beatmap'))
       .setStyle(ButtonStyle.Link)
       .setURL(beatmapUrl)
   );
@@ -170,7 +249,7 @@ function createScoreButtons(score, originalInput = null) {
   if (setId) {
     row.addComponents(
       new ButtonBuilder()
-        .setLabel('Download (Beatconnect)')
+        .setLabel(t(lang, 'btn_download'))
         .setStyle(ButtonStyle.Link)
         .setURL(`https://beatconnect.io/b/${setId}`)
     );
@@ -179,14 +258,14 @@ function createScoreButtons(score, originalInput = null) {
   return row;
 }
 
-function createBeatmapButtons(beatmap, originalInput = null) {
+function createBeatmapButtons(beatmap, originalInput = null, lang = 'en') {
   const row = new ActionRowBuilder();
   const setId = beatmap.beatmapset_id || beatmap.beatmapset?.id;
   const beatmapUrl = getCanonicalBeatmapUrl(beatmap, originalInput);
 
   row.addComponents(
     new ButtonBuilder()
-      .setLabel('Buka di osu!')
+      .setLabel(t(lang, 'btn_open_on_osu'))
       .setStyle(ButtonStyle.Link)
       .setURL(beatmapUrl)
   );
@@ -194,7 +273,7 @@ function createBeatmapButtons(beatmap, originalInput = null) {
   if (setId) {
     row.addComponents(
       new ButtonBuilder()
-        .setLabel('Download (Beatconnect)')
+        .setLabel(t(lang, 'btn_download'))
         .setStyle(ButtonStyle.Link)
         .setURL(`https://beatconnect.io/b/${setId}`)
     );
@@ -205,31 +284,86 @@ function createBeatmapButtons(beatmap, originalInput = null) {
 
 client.once('ready', async () => {
   console.log(`\n===========================================`);
-  console.log(`✨ Bot Berhasil Online sebagai: ${client.user.tag}`);
+  console.log(`✨ Bot Online as: ${client.user.tag}`);
   console.log(`🎮 osu! Client ID: ${OSU_CLIENT_ID}`);
   console.log(`===========================================\n`);
 
   // Register Global Slash Commands
   try {
-    console.log('Mendaftarkan Slash Commands (/link, /unlink, /recent, /top, /beatmap, /showcase, /scorecard)...');
+    console.log('Registering Slash Commands (/link, /unlink, /language, /recent, /top, /beatmap, /showcase, /scorecard)...');
     await client.application.commands.set([
       linkCommand,
       unlinkCommand,
+      languageCommand,
       recentCommand,
       topCommand,
       beatmapCommand,
       showcaseCommand,
       scorecardCommand
     ]);
-    console.log('✅ Semua Slash Commands berhasil didaftarkan!\n');
+    console.log('✅ All Slash Commands registered successfully!\n');
   } catch (err) {
-    console.error('Gagal mendaftarkan slash command:', err.message);
+    console.error('Failed to register slash commands:', err.message);
   }
 });
 
-// Handle Slash Commands
+// Handle Interactions (Slash Commands & Buttons)
 client.on('interactionCreate', async interaction => {
+  // Handle Language Button Selection
+  if (interaction.isButton()) {
+    if (interaction.customId === 'set_lang_en' || interaction.customId === 'set_lang_id') {
+      const chosenLang = interaction.customId === 'set_lang_id' ? 'id' : 'en';
+      setUserLanguage(interaction.user.id, chosenLang);
+      const confirmText = t(chosenLang, chosenLang === 'id' ? 'lang_changed_id' : 'lang_changed_en');
+      return interaction.update({
+        content: confirmText,
+        embeds: [],
+        components: []
+      });
+    }
+  }
+
   if (!interaction.isChatInputCommand()) return;
+
+  const lang = getUserLanguage(interaction.user.id);
+
+  // 0. Command /language
+  if (interaction.commandName === 'language') {
+    const directSet = interaction.options.getString('set');
+    if (directSet) {
+      setUserLanguage(interaction.user.id, directSet);
+      return interaction.reply({
+        content: t(directSet, directSet === 'id' ? 'lang_changed_id' : 'lang_changed_en'),
+        ephemeral: true
+      });
+    }
+
+    const currentLang = getUserLanguage(interaction.user.id);
+    const currentLangLabel = currentLang === 'id' ? '🇮🇩 Bahasa Indonesia' : '🇬🇧 English (Default)';
+
+    const embed = new EmbedBuilder()
+      .setColor('#38bdf8')
+      .setTitle(t(currentLang, 'lang_embed_title'))
+      .setDescription(t(currentLang, 'lang_embed_desc', { currentLang: currentLangLabel }))
+      .setThumbnail('https://assets.ppy.sh/wiki/images/shared/osu-logo.png');
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('set_lang_en')
+        .setLabel(t(currentLang, 'lang_btn_en'))
+        .setStyle(currentLang === 'en' ? ButtonStyle.Success : ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId('set_lang_id')
+        .setLabel(t(currentLang, 'lang_btn_id'))
+        .setStyle(currentLang === 'id' ? ButtonStyle.Success : ButtonStyle.Secondary)
+    );
+
+    return interaction.reply({
+      embeds: [embed],
+      components: [row],
+      ephemeral: true
+    });
+  }
 
   // 1. Command /link
   if (interaction.commandName === 'link') {
@@ -242,11 +376,11 @@ client.on('interactionCreate', async interaction => {
       const rankStr = user.statistics?.global_rank ? ` (Rank: #${user.statistics.global_rank.toLocaleString()})` : '';
 
       await interaction.editReply({
-        content: `✅ Berhasil menautkan akun osu! **${user.username}**${rankStr} ke akun Discord kamu!\nSekarang kamu bisa langsung ketik \`/recent\` atau \`/showcase\` tanpa perlu mengisi nama pemain lagi.`
+        content: t(lang, 'link_success', { username: user.username, rank: rankStr })
       });
     } catch (err) {
       await interaction.editReply({
-        content: `❌ Gagal menautkan akun: ${err.message}`
+        content: t(lang, 'link_error', { message: err.message })
       });
     }
     return;
@@ -257,12 +391,12 @@ client.on('interactionCreate', async interaction => {
     const success = unlinkUser(interaction.user.id);
     if (success) {
       return interaction.reply({
-        content: '✅ Tautan akun osu! kamu berhasil dihapus.',
+        content: t(lang, 'unlink_success'),
         ephemeral: true
       });
     } else {
       return interaction.reply({
-        content: 'ℹ️ Akun Discord kamu belum menautkan akun osu! mana pun.',
+        content: t(lang, 'unlink_not_linked'),
         ephemeral: true
       });
     }
@@ -276,7 +410,7 @@ client.on('interactionCreate', async interaction => {
       const linked = getLinkedUser(interaction.user.id);
       if (!linked) {
         return interaction.reply({
-          content: '❌ Kamu belum menautkan akun osu!\nGunakan `/link username:<nama_osu>` terlebih dahulu, atau masukkan nama pemain dengan opsi `/recent player:<nama>`.',
+          content: t(lang, 'recent_not_linked'),
           ephemeral: true
         });
       }
@@ -291,25 +425,25 @@ client.on('interactionCreate', async interaction => {
 
       if (!scores || scores.length === 0) {
         return interaction.editReply({
-          content: `ℹ️ Tidak ada permainan / skor terbaru yang ditemukan untuk pemain **${user.username}** dalam 24 jam terakhir.`
+          content: t(lang, 'recent_no_scores', { username: user.username })
         });
       }
 
       const score = scores[0];
       await osuApi.enrichScoreWithBeatmapAndMods(score);
-      const imageBuffer = await generateScoreCard(score, user);
+      const imageBuffer = await generateScoreCard(score, user, { lang });
       const attachment = new AttachmentBuilder(imageBuffer, { name: `recent_${user.username}_${score.id || 'score'}.png` });
 
-      const row = createScoreButtons(score);
+      const row = createScoreButtons(score, null, lang);
 
       await interaction.editReply({
         files: [attachment],
         components: [row]
       });
     } catch (err) {
-      console.error('Error saat memproses command /recent:', err);
+      console.error('Error in /recent command:', err);
       await interaction.editReply({
-        content: `❌ Gagal mengambil score: ${err.message}`
+        content: t(lang, 'recent_error', { message: err.message })
       });
     }
     return;
@@ -324,7 +458,7 @@ client.on('interactionCreate', async interaction => {
       const linked = getLinkedUser(interaction.user.id);
       if (!linked) {
         return interaction.reply({
-          content: '❌ Kamu belum menautkan akun osu!\nGunakan `/link username:<nama_osu>` terlebih dahulu, atau masukkan nama pemain dengan opsi `/top player:<nama>`.',
+          content: t(lang, 'top_not_linked'),
           ephemeral: true
         });
       }
@@ -339,7 +473,7 @@ client.on('interactionCreate', async interaction => {
 
       if (!scores || scores.length === 0) {
         return interaction.editReply({
-          content: `ℹ️ Tidak ada top plays yang ditemukan untuk pemain **${user.username}**.`
+          content: t(lang, 'top_no_scores', { username: user.username })
         });
       }
 
@@ -348,13 +482,13 @@ client.on('interactionCreate', async interaction => {
         await osuApi.enrichScoreWithBeatmapAndMods(score);
       }
 
-      const imageBuffer = await generateTopPlaysCard(user, scores);
+      const imageBuffer = await generateTopPlaysCard(user, scores, { lang });
       const attachment = new AttachmentBuilder(imageBuffer, { name: `top_${user.username}.png` });
 
       // Profile Button
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
-          .setLabel('Buka Profil osu!')
+          .setLabel(t(lang, 'btn_open_profile'))
           .setStyle(ButtonStyle.Link)
           .setURL(`https://osu.ppy.sh/users/${user.id}`)
       );
@@ -364,9 +498,9 @@ client.on('interactionCreate', async interaction => {
         components: [row]
       });
     } catch (err) {
-      console.error('Error saat memproses command /top:', err);
+      console.error('Error in /top command:', err);
       await interaction.editReply({
-        content: `❌ Gagal mengambil top scores: ${err.message}`
+        content: t(lang, 'top_error', { message: err.message })
       });
     }
     return;
@@ -391,7 +525,7 @@ client.on('interactionCreate', async interaction => {
 
     if (!parsed) {
       return interaction.reply({
-        content: '❌ Format input tidak valid! Masukkan URL beatmap osu! yang sah atau Beatmap ID angka.',
+        content: t(lang, 'beatmap_invalid_input'),
         ephemeral: true
       });
     }
@@ -414,20 +548,21 @@ client.on('interactionCreate', async interaction => {
       const imageBuffer = await generateBeatmapCard(beatmap, {
         showcase: isShowcase,
         player: playerName,
-        mods: cleanMods
+        mods: cleanMods,
+        lang
       });
       const attachment = new AttachmentBuilder(imageBuffer, { name: `${isShowcase ? 'showcase' : 'beatmap'}_${beatmap.id}.png` });
 
-      const row = createBeatmapButtons(beatmap, input);
+      const row = createBeatmapButtons(beatmap, input, lang);
 
       await interaction.editReply({
         files: [attachment],
         components: [row]
       });
     } catch (err) {
-      console.error(`Error saat memproses command /${interaction.commandName}:`, err);
+      console.error(`Error in /${interaction.commandName} command:`, err);
       await interaction.editReply({
-        content: `❌ Gagal mengambil beatmap: ${err.message}`
+        content: t(lang, 'beatmap_error', { message: err.message })
       });
     }
     return;
@@ -440,7 +575,7 @@ client.on('interactionCreate', async interaction => {
 
     if (!parsedScore) {
       return interaction.reply({
-        content: '❌ Format link atau Score ID tidak valid! Masukkan link skor osu! yang sah (cth: `https://osu.ppy.sh/scores/7265198407`) atau angka Score ID.',
+        content: t(lang, 'scorecard_invalid_input'),
         ephemeral: true
       });
     }
@@ -454,19 +589,19 @@ client.on('interactionCreate', async interaction => {
       const score = await osuApi.getScore(scoreId, scoreMode);
       await osuApi.enrichScoreWithBeatmapAndMods(score);
       const user = score.user || (score.user_id ? await osuApi.getUser(score.user_id) : {});
-      const imageBuffer = await generateScoreCard(score, user);
+      const imageBuffer = await generateScoreCard(score, user, { lang });
       const attachment = new AttachmentBuilder(imageBuffer, { name: `score_${score.id}.png` });
 
-      const row = createScoreButtons(score, input);
+      const row = createScoreButtons(score, input, lang);
 
       await interaction.editReply({
         files: [attachment],
         components: [row]
       });
     } catch (err) {
-      console.error('Error saat memproses command /scorecard:', err);
+      console.error('Error in /scorecard command:', err);
       await interaction.editReply({
-        content: `❌ Gagal mengambil data skor: ${err.message}`
+        content: t(lang, 'scorecard_error', { message: err.message })
       });
     }
     return;
@@ -476,8 +611,9 @@ client.on('interactionCreate', async interaction => {
 // Auto-detect osu! URLs in chat messages (Score links & Beatmap links)
 client.on('messageCreate', async message => {
   if (message.author.bot) return;
+  const lang = getUserLanguage(message.author.id);
 
-  // 1. Prioritaskan pengecekan link skor osu! (cth: https://osu.ppy.sh/scores/7265198407)
+  // 1. Check osu! score links (e.g. https://osu.ppy.sh/scores/7265198407)
   const scoreUrls = extractAllScoreUrls(message.content);
   if (scoreUrls.length > 0) {
     const targetUrl = scoreUrls[0];
@@ -493,22 +629,22 @@ client.on('messageCreate', async message => {
       const score = await osuApi.getScore(scoreId, scoreMode);
       await osuApi.enrichScoreWithBeatmapAndMods(score);
       const user = score.user || (score.user_id ? await osuApi.getUser(score.user_id) : {});
-      const imageBuffer = await generateScoreCard(score, user);
+      const imageBuffer = await generateScoreCard(score, user, { lang });
       const attachment = new AttachmentBuilder(imageBuffer, { name: `score_${score.id}.png` });
 
-      const row = createScoreButtons(score, targetUrl);
+      const row = createScoreButtons(score, targetUrl, lang);
 
       await message.reply({
         files: [attachment],
         components: [row]
       });
     } catch (err) {
-      console.error(`Error auto-detect score dari link ${targetUrl}:`, err.message);
+      console.error(`Error auto-detect score from link ${targetUrl}:`, err.message);
     }
     return;
   }
 
-  // 2. Pengecekan link beatmap osu!
+  // 2. Check osu! beatmap links
   const urls = extractAllOsuUrls(message.content);
   if (urls.length === 0) return;
 
@@ -532,22 +668,22 @@ client.on('messageCreate', async message => {
       } catch (_) {}
     }
 
-    const imageBuffer = await generateBeatmapCard(beatmap, { mods: detectedMods });
+    const imageBuffer = await generateBeatmapCard(beatmap, { mods: detectedMods, lang });
     const attachment = new AttachmentBuilder(imageBuffer, { name: `beatmap_${beatmap.id}.png` });
 
-    const row = createBeatmapButtons(beatmap, targetUrl);
+    const row = createBeatmapButtons(beatmap, targetUrl, lang);
 
     await message.reply({
       files: [attachment],
       components: [row]
     });
   } catch (err) {
-    console.error(`Error auto-detect beatmap dari link ${targetUrl}:`, err.message);
+    console.error(`Error auto-detect beatmap from link ${targetUrl}:`, err.message);
   }
 });
 
 // Log In Discord Client
 client.login(DISCORD_TOKEN).catch(err => {
-  console.error('\n❌ Gagal login ke Discord. Pastikan DISCORD_TOKEN Anda valid!');
+  console.error('\n❌ Failed to log in to Discord. Please ensure your DISCORD_TOKEN is valid!');
   console.error(err.message);
 });

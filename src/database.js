@@ -70,6 +70,39 @@ function linkUser(discordId, osuId, osuUsername) {
 }
 
 /**
+ * Get user's preferred language (defaults to 'en')
+ * @param {string} discordId 
+ * @returns {'en'|'id'}
+ */
+function getUserLanguage(discordId) {
+  if (!discordId) return 'en';
+  const user = usersCache[String(discordId)];
+  return (user && user.language === 'id') ? 'id' : 'en';
+}
+
+/**
+ * Set user's preferred language ('en' or 'id')
+ * @param {string} discordId 
+ * @param {'en'|'id'} language 
+ * @returns {'en'|'id'}
+ */
+function setUserLanguage(discordId, language) {
+  const id = String(discordId);
+  const lang = (language === 'id') ? 'id' : 'en';
+  if (usersCache[id]) {
+    usersCache[id].language = lang;
+  } else {
+    usersCache[id] = {
+      discordId: id,
+      language: lang,
+      updatedAt: new Date().toISOString()
+    };
+  }
+  saveUsers();
+  return lang;
+}
+
+/**
  * Unlink an osu! account from a Discord ID
  * @param {string} discordId 
  * @returns {boolean}
@@ -87,5 +120,7 @@ function unlinkUser(discordId) {
 module.exports = {
   getLinkedUser,
   linkUser,
-  unlinkUser
+  unlinkUser,
+  getUserLanguage,
+  setUserLanguage
 };

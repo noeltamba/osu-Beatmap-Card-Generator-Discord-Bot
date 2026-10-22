@@ -81,7 +81,8 @@ function drawVectorStar(ctx, cx, cy, spikes, outerRadius, innerRadius, color) {
   ctx.restore();
 }
 
-async function generateScoreCard(score, user) {
+async function generateScoreCard(score, user, options = {}) {
+  const lang = options.lang || 'en';
   const width = 1080;
   const height = 580;
   const radius = 28;
@@ -187,7 +188,7 @@ async function generateScoreCard(score, user) {
   const topY = 62;
   const modeText = getModeName(score.mode || beatmap.mode).toUpperCase();
   const statusInfo = getStatusBadge(beatmap.status);
-  const timeText = formatRelativeTime(score.ended_at || score.created_at || score.date);
+  const timeText = formatRelativeTime(score.ended_at || score.created_at || score.date, lang);
 
   let currentBadgeX = glassMargin + 24;
 
@@ -564,7 +565,7 @@ async function generateScoreCard(score, user) {
     if (ifFcVal > Math.round(score.pp || 0)) {
       ctx.save();
       ctx.font = `bold 10px ${FONT_STACK}`;
-      const ifFcText = `~${ifFcVal}pp if FC`;
+      const ifFcText = lang === 'id' ? `~${ifFcVal}pp jika FC` : `~${ifFcVal}pp if FC`;
       const ifFcTextW = ctx.measureText(ifFcText).width;
       const ifFcBadgeW = ifFcTextW + 16;
       const ifFcBadgeH = 20;

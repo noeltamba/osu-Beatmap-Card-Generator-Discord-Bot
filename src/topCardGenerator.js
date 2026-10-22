@@ -58,7 +58,8 @@ function getEffectiveStarRating(score, beatmap) {
   return Number(bm.difficulty_rating || 0);
 }
 
-async function generateTopPlaysCard(user, scores) {
+async function generateTopPlaysCard(user, scores, options = {}) {
+  const lang = options.lang || 'en';
   const count = Math.min(scores.length, 10);
   const width = 1180;
   const outerMargin = 28;
@@ -255,7 +256,7 @@ async function generateTopPlaysCard(user, scores) {
   ctx.textAlign = 'right';
   ctx.font = `bold 16px ${FONT_STACK}`;
   ctx.fillStyle = '#facc15';
-  ctx.fillText('TOP 10 PERFORMANCES', tableX + tableW, headerY + 30);
+  ctx.fillText(lang === 'id' ? '10 SKOR TERBAIK' : 'TOP 10 PERFORMANCES', tableX + tableW, headerY + 30);
 
   ctx.font = `600 12px ${FONT_STACK}`;
   ctx.fillStyle = '#64748b';
@@ -288,11 +289,11 @@ async function generateTopPlaysCard(user, scores) {
   ctx.fillText('BEATMAP', colMapX, tblHeaderY + 19);
   ctx.textAlign = 'center';
   ctx.fillText('MODS', colModsX, tblHeaderY + 19);
-  ctx.fillText('ACC', colAccX, tblHeaderY + 19);
-  ctx.fillText('COMBO', colComboX, tblHeaderY + 19);
+  ctx.fillText(lang === 'id' ? 'AKURASI' : 'ACC', colAccX, tblHeaderY + 19);
+  ctx.fillText(lang === 'id' ? 'KOMBO' : 'COMBO', colComboX, tblHeaderY + 19);
   ctx.textAlign = 'right';
-  ctx.fillText('PERFORMANCE', colPpX, tblHeaderY + 19);
-  ctx.fillText('DATE', colTimeX, tblHeaderY + 19);
+  ctx.fillText(lang === 'id' ? 'PERFORMA' : 'PERFORMANCE', colPpX, tblHeaderY + 19);
+  ctx.fillText(lang === 'id' ? 'TANGGAL' : 'DATE', colTimeX, tblHeaderY + 19);
 
   // 5C. TABLE DATA ROWS
   const rowsStartY = tblHeaderY + tableHeaderH + 4;
@@ -524,7 +525,7 @@ async function generateTopPlaysCard(user, scores) {
     }
 
     // 8. Column: Date / Time
-    const timeText = formatRelativeTime(score.ended_at || score.created_at || score.date);
+    const timeText = formatRelativeTime(score.ended_at || score.created_at || score.date, lang);
     ctx.textAlign = 'right';
     ctx.font = `600 11px ${FONT_STACK}`;
     ctx.fillStyle = '#94a3b8';
