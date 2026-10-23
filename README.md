@@ -1,148 +1,56 @@
-# 🎮 osu! Beatmap Card Generator - Discord Bot
+<div align="center">
+<h1> Columbina Bot </h1>
+  <img src="https://i.imgur.com/WujKXUK.jpeg" alt="Banner" width="100%" />
+ 
+  <br>
 
-Bot Discord modern yang otomatis menghasilkan kartu informasi grafis bergaya visual osu! yang keren saat ada link osu! dikirim di obrolan atau melalui slash command `/beatmap`.
+  [![Invite Discord Bot](https://img.shields.io/badge/Invite_Bot-Click_Here-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/oauth2/authorize?client_id=1562307139274416178&permissions=116736&integration_type=0&scope=applications.commands+bot)
 
----
+</div>
+# 🎮 osu! Beatmap Card Generator - Release v1.1.0
 
-## 📸 Contoh Tampilan Kartu
-
-Kartu grafis menampilkan:
-* **Background & Cover Art Resmi** dari osu! CDN
-* **Judul & Artis Lagu** + Mapper
-* **Status Map** (*Ranked, Loved, Qualified, Graveyard, dll.*)
-* **Star Rating (SR)** dengan badge warna dinamis sesuai spectrum resmi osu!
-* **Difficulty Attributes**: **CS** (Circle Size), **AR** (Approach Rate), **OD** (Overall Difficulty), **HP** (Drain) lengkap dengan progress bar
-* **Statistik Tambahan**: BPM, Total & Drain Length, Max Combo, Plays/Passes, dan Favorites (♥)
+A major update introducing the brand-new **Mini Score Card** (`/miniscorecard`), delivering a compact, stream-overlay-inspired visual score widget with zero dead space and ultra-clean aesthetics.
 
 ---
 
-## ⚙️ Tempat Mengisi Kunci Rahasia (.env)
+### ✨ What's New in v1.1.0?
 
-Buka file [`.env`](.env) di root folder proyek ini:
-
-```env
-# osu! API Credentials
-OSU_CLIENT_ID=your_osu_client_id_here
-OSU_CLIENT_SECRET=your_osu_client_secret_here
-
-# Discord Bot Token
-DISCORD_TOKEN=your_discord_bot_token_here
-```
-
-> ⚠️ **PENTING**: Jangan pernah membagikan file `.env` atau token Anda ke publik. File `.env` sudah masuk ke `.gitignore`.
+* **New Command: `/miniscorecard`**:
+  * **Compact 640×360 px Form Factor**: Designed as a sleek, tight 16:9 widget card ideal for thumbnails, stream overlays, and Discord sharing.
+  * **Top Banner Header**: Displays beatmap background art with smooth gradient transitions, combo status badge (*"FC"*, *"1x MISS"*, *"PASS"*, *"FAIL"*), modded Star Rating capsule (`▲ SR`), and prominent bold PP value (with `if FC: ~...` calculation when choked).
+  * **Floating Separator Capsules**: Three frosted-glass pills bridging the banner and dashboard for Max Combo, Difficulty Name, and modded BPM.
+  * **Perfect Center-Axis Layout**: Beatmap title, artist subtitle, player avatar, and footer are locked to the exact horizontal center line for maximum visual balance.
+  * **Physical Pin-Style Country Flag Badge**: Player avatars now feature an official country flag pinned to the bottom-center.
+  * **Glowing Neon Grade**: Prominent holographic glowing rank grade (*SS, S, A, B, etc.*) positioned cleanly on the left.
+  * **Flexible Querying**: Use `/miniscorecard` for your recent play, look up any player (`player:`), query a specific score by URL/ID (`link:`), or showcase a specific personal best ranking (`top:1` to `top:100`).
 
 ---
 
-## 🤖 Langkah Membuat Discord Bot & Mengambil Token
+### 📋 Full Slash Commands List
 
-Jika Anda belum memiliki Discord Bot Token:
-
-1. Buka [Discord Developer Portal](https://discord.com/developers/applications).
-2. Klik tombol **"New Application"** di pojok kanan atas, beri nama (misal: `osu! Card Bot`), lalu klik **Create**.
-3. Di menu sebelah kiri, pilih **"Bot"**:
-   - Klik **"Reset Token"** lalu salin (**Copy**) token tersebut.
-   - Paste token ke file [`.env`](.env) pada variabel `DISCORD_TOKEN`.
-   - Scroll ke bawah ke bagian **"Privileged Gateway Intents"**:
-     - ✅ Aktifkan **"Message Content Intent"** (agar bot bisa mendeteksi link osu! di chat).
-     - Klik **"Save Changes"**.
-4. Mengundang bot ke Server Discord Anda:
-   - Di menu sebelah kiri, pilih **"OAuth2"** > **"URL Generator"**.
-   - Di bagian **Scopes**, centang:
-     - `bot`
-     - `applications.commands`
-   - Di bagian **Bot Permissions**, centang:
-     - `Send Messages`
-     - `Send Messages in Threads`
-     - `Embed Links`
-     - `Attach Files`
-     - `Read Message History`
-   - Salin link di bagian bawah (**Generated URL**) dan buka di browser untuk mengundang bot ke server Discord Anda.
+| Command | Arguments | Description |
+| :--- | :--- | :--- |
+| **`/miniscorecard`** *(New!)* | `[player]`, `[link]`, `[top]` | Displays a compact, aesthetic mini score card widget with combo badge, star rating, PP, avatar with flag, and mod chips. |
+| **`/recent`** | `[player]` | Displays a comprehensive visual score card with full hit judgments (300/100/50/miss), PP breakdown, and modded map stats. |
+| **`/scorecard`** | `link` | Displays a full detailed score card from an osu! score URL or numeric Score ID. |
+| **`/top`** | `[player]`, `[count]` | Displays a leaderboard card of a player's top performance plays (1 to 10 plays). |
+| **`/beatmap`** | `input`, `[mods]` | Displays an osu! beatmap information card with mod-calculated attributes (*DT, HR, HD, EZ, etc.*). |
+| **`/showcase`** | `link`, `[player]`, `[mods]` | Displays a dedicated beatmap showcase card for gameplay showcases with a golden crown badge. |
+| **`/link`** | `username` | Links your Discord account to your osu! profile for seamless usage without typing your username. |
+| **`/unlink`** | - | Unlinks your osu! account from your Discord profile. |
+| **`/language`** | `[set]` | Configures your preferred bot language (🇬🇧 English / 🇮🇩 Bahasa Indonesia). |
 
 ---
 
-## 🚀 Cara Menjalankan Bot
+### 💬 Auto-Detect Chat Links
+* **Score Links** (e.g. `https://osu.ppy.sh/scores/7265198407`) $\rightarrow$ Automatically replies with a **Score Card**.
+* **Beatmap Links** (e.g. `https://osu.ppy.sh/b/129891` or `https://osu.ppy.sh/beatmapsets/...`) $\rightarrow$ Automatically replies with a **Beatmap Card**.
 
-Pastikan dependensi sudah terpasang, lalu jalankan:
+<div align="center">
+  <br>
+<h4> by @hyzity / @noeltamba </h4>
+<h4> wanna collab? <a href="https://discord.com/users/790618301952032769">Contact me on Discord!</a></h4>
+ <br>
+  <sub>Banner artwork credit: <a href="https://www.pixiv.net/artworks/138613692">Pixiv Artwork</a></sub>
 
-```bash
-npm start
-```
-*(atau `node src/index.js`)*
-
-Jika Anda ingin melihat contoh hasil generate gambar kartu tanpa perlu menyalakan bot:
-```bash
-node test-card.js
-```
-Hasil gambar kartu akan disimpan sebagai `test_output.png`.
-
----
-
-## 💬 Cara Penggunaan di Discord
-
-1. **Tautkan Akun (`/link`) & Lepas Akun (`/unlink`)**:
-   Tautkan akun Discord Anda ke akun osu! sekali saja agar tidak perlu mengetik nama lagi:
-   ```
-   /link username:Hyzity
-   ```
-   Untuk melepas tautan akun:
-   ```
-   /unlink
-   ```
-
-2. **Kartu Skor Terbaru (`/recent`)** *(Baru!)*:
-   Menampilkan kartu grafis skor / permainan terbaru pemain:
-   ```
-   /recent
-   ```
-   *(Otomatis mengambil skor akun Anda jika sudah `/link`)*, atau mengecek pemain lain:
-   ```
-   /recent player:mrekk
-   ```
-
-3. **Command Khusus Showcase (`/showcase`)**:
-   Menghasilkan kartu showcase gameplay dengan nama pemain & mahkota emas:
-   ```
-   /showcase link:https://osu.ppy.sh/beatmapsets/2624187#osu/5894468
-   ```
-   *(Nama pemain otomatis terisi dari akun linked Anda jika parameter `player` tidak diisi)*
-
-4. **Kartu Skor Tertentu (`/scorecard`)**:
-   Menampilkan kartu grafis skor lengkap dari link skor atau Score ID:
-   ```
-   /scorecard link:https://osu.ppy.sh/scores/7265198407
-   ```
-   atau dengan angka Score ID saja:
-   ```
-   /scorecard link:7265198407
-   ```
-
-5. **Kartu Skor Mini / Compact (`/miniscorecard`)** *(Baru!)*:
-   Menampilkan kartu mini skor overlay compact yang estetis dan modern (FC badge, Star Rating, PP besar, Grade neon, avatar + bendera negara, mods, dan ranking):
-   ```
-   /miniscorecard
-   ```
-   *(Otomatis mengambil skor terbaru jika akun sudah `/link`)*, atau dengan opsi lain:
-   ```
-   /miniscorecard player:Utami
-   /miniscorecard link:https://osu.ppy.sh/scores/7265198407
-   /miniscorecard player:mrekk top:1
-   ```
-
-6. **Command Standar Beatmap (`/beatmap`)**:
-   Menampilkan informasi beatmap lengkap termasuk Plays & Favorites:
-   ```
-   /beatmap input:129891
-   ```
-
-7. **Auto Detect Link (Otomatis di Chat)**:
-   * **Link Skor**: Kirim link seperti `https://osu.ppy.sh/scores/7265198407` di chat, bot akan otomatis membalas dengan **Score Card**!
-   * **Link Beatmap**: Kirim link seperti `https://osu.ppy.sh/beatmapsets/742961#osu/1816113`, bot otomatis membalas dengan **Beatmap Card**!
-
----
-
-## 📜 Ketentuan & Kebijakan (Legal & Privacy)
-
-Untuk keperluan verifikasi bot di Discord Developer Portal atau kepatuhan privasi (GDPR):
-* [Terms of Service](TERMS_OF_SERVICE.md)
-* [Privacy Policy](PRIVACY_POLICY.md)
-
+</div>
