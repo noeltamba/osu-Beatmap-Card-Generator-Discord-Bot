@@ -8,7 +8,8 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  EmbedBuilder
+  EmbedBuilder,
+  ActivityType
 } = require('discord.js');
 
 const OsuApi = require('./osuApi');
@@ -325,6 +326,21 @@ client.once('ready', async () => {
   console.log(`✨ Bot Online as: ${client.user.tag}`);
   console.log(`🎮 osu! Client ID: ${OSU_CLIENT_ID}`);
   console.log(`===========================================\n`);
+
+  // Atur status profil bot
+  try {
+    client.user.setPresence({
+      activities: [{
+        name: 'custom',
+        type: ActivityType.Custom,
+        state: ';help | osu! Image Generator ✨'
+      }],
+      status: 'online'
+    });
+    console.log('✨ Bot presence set: ";help | osu! Image Generator ✨"\n');
+  } catch (presenceErr) {
+    console.error('Failed to set bot presence:', presenceErr.message);
+  }
 
   // Register Global Slash Commands
   try {
