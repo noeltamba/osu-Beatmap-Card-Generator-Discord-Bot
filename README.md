@@ -106,8 +106,8 @@ Hasil gambar kartu akan disimpan sebagai `test_output.png`.
    ```
    *(Nama pemain otomatis terisi dari akun linked Anda jika parameter `player` tidak diisi)*
 
-4. **Kartu Skor Tertentu (`/scorecard`)** *(Baru!)*:
-   Menampilkan kartu grafis skor dari link skor atau Score ID:
+4. **Kartu Skor Tertentu (`/scorecard`)**:
+   Menampilkan kartu grafis skor lengkap dari link skor atau Score ID:
    ```
    /scorecard link:https://osu.ppy.sh/scores/7265198407
    ```
@@ -116,13 +116,25 @@ Hasil gambar kartu akan disimpan sebagai `test_output.png`.
    /scorecard link:7265198407
    ```
 
-5. **Command Standar Beatmap (`/beatmap`)**:
+5. **Kartu Skor Mini / Compact (`/miniscorecard`)** *(Baru!)*:
+   Menampilkan kartu mini skor overlay compact yang estetis dan modern (FC badge, Star Rating, PP besar, Grade neon, avatar + bendera negara, mods, dan ranking):
+   ```
+   /miniscorecard
+   ```
+   *(Otomatis mengambil skor terbaru jika akun sudah `/link`)*, atau dengan opsi lain:
+   ```
+   /miniscorecard player:Utami
+   /miniscorecard link:https://osu.ppy.sh/scores/7265198407
+   /miniscorecard player:mrekk top:1
+   ```
+
+6. **Command Standar Beatmap (`/beatmap`)**:
    Menampilkan informasi beatmap lengkap termasuk Plays & Favorites:
    ```
    /beatmap input:129891
    ```
 
-6. **Auto Detect Link (Otomatis di Chat)**:
+7. **Auto Detect Link (Otomatis di Chat)**:
    * **Link Skor**: Kirim link seperti `https://osu.ppy.sh/scores/7265198407` di chat, bot akan otomatis membalas dengan **Score Card**!
    * **Link Beatmap**: Kirim link seperti `https://osu.ppy.sh/beatmapsets/742961#osu/1816113`, bot otomatis membalas dengan **Beatmap Card**!
 

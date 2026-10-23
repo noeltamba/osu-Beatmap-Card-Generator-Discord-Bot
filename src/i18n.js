@@ -25,6 +25,10 @@ const translations = {
     cmd_showcase_mods: 'osu! mods to apply (e.g. DT, HR, HDDT, EZ)',
     cmd_scorecard_desc: 'Display osu! score card from score link or Score ID',
     cmd_scorecard_link: 'osu! score link (e.g. https://osu.ppy.sh/scores/7265198407) or Score ID',
+    cmd_miniscorecard_desc: 'Display compact modern mini score card for an osu! score',
+    cmd_miniscorecard_player: 'osu! player username (optional if already linked)',
+    cmd_miniscorecard_link: 'osu! score link (e.g. https://osu.ppy.sh/scores/7265198407) or Score ID',
+    cmd_miniscorecard_top: 'Show specific top play ranking (1 - 100, e.g. 1 for #1 top play)',
     cmd_language_desc: 'Choose your preferred language (English / Bahasa Indonesia)',
     cmd_language_option: 'Select language',
 
@@ -100,6 +104,10 @@ const translations = {
     cmd_showcase_mods: 'Mods osu! yang ingin diterapkan (cth: DT, HR, HDDT, EZ)',
     cmd_scorecard_desc: 'Tampilkan kartu skor osu! dari link skor atau Score ID',
     cmd_scorecard_link: 'Link skor osu! (cth: https://osu.ppy.sh/scores/7265198407) atau Score ID',
+    cmd_miniscorecard_desc: 'Tampilkan kartu mini skor osu! dengan visual modern dan compact',
+    cmd_miniscorecard_player: 'Nama pemain osu! (opsional jika sudah /link)',
+    cmd_miniscorecard_link: 'Link skor osu! (cth: https://osu.ppy.sh/scores/7265198407) atau Score ID',
+    cmd_miniscorecard_top: 'Tampilkan ranking top play tertentu (1 - 100, cth: 1 untuk top play #1)',
     cmd_language_desc: 'Ubah preferensi bahasa bot (Inggris / Bahasa Indonesia)',
     cmd_language_option: 'Pilih bahasa',
 

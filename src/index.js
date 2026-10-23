@@ -15,6 +15,7 @@ const OsuApi = require('./osuApi');
 const { generateBeatmapCard } = require('./cardGenerator');
 const { generateScoreCard } = require('./scoreCardGenerator');
 const { generateTopPlaysCard } = require('./topCardGenerator');
+const { generateMiniScoreCard } = require('./miniScoreCardGenerator');
 const {
   getLinkedUser,
   linkUser,
@@ -223,6 +224,42 @@ const scorecardCommand = new SlashCommandBuilder()
       .setRequired(true)
   );
 
+const miniscorecardCommand = new SlashCommandBuilder()
+  .setName('miniscorecard')
+  .setDescription('Display compact modern mini score card for an osu! score')
+  .setDescriptionLocalizations({
+    id: 'Tampilkan kartu mini skor osu! dengan visual modern dan compact'
+  })
+  .addStringOption(option =>
+    option
+      .setName('player')
+      .setDescription('osu! player username (optional if already linked)')
+      .setDescriptionLocalizations({
+        id: 'Nama pemain osu! (opsional jika sudah /link)'
+      })
+      .setRequired(false)
+  )
+  .addStringOption(option =>
+    option
+      .setName('link')
+      .setDescription('osu! score link (e.g. https://osu.ppy.sh/scores/7265198407) or Score ID')
+      .setDescriptionLocalizations({
+        id: 'Link skor osu! (cth: https://osu.ppy.sh/scores/7265198407) atau Score ID'
+      })
+      .setRequired(false)
+  )
+  .addIntegerOption(option =>
+    option
+      .setName('top')
+      .setDescription('Show specific top play ranking (1 - 100, e.g. 1 for #1 top play)')
+      .setDescriptionLocalizations({
+        id: 'Tampilkan ranking top play tertentu (1 - 100, cth: 1 untuk top play #1)'
+      })
+      .setMinValue(1)
+      .setMaxValue(100)
+      .setRequired(false)
+  );
+
 function createScoreButtons(score, originalInput = null, lang = 'en') {
   const row = new ActionRowBuilder();
   const beatmap = score.beatmap || {};
@@ -290,7 +327,7 @@ client.once('ready', async () => {
 
   // Register Global Slash Commands
   try {
-    console.log('Registering Slash Commands (/link, /unlink, /language, /recent, /top, /beatmap, /showcase, /scorecard)...');
+    console.log('Registering Slash Commands (/link, /unlink, /language, /recent, /top, /beatmap, /showcase, /scorecard, /miniscorecard)...');
     await client.application.commands.set([
       linkCommand,
       unlinkCommand,
@@ -299,7 +336,8 @@ client.once('ready', async () => {
       topCommand,
       beatmapCommand,
       showcaseCommand,
-      scorecardCommand
+      scorecardCommand,
+      miniscorecardCommand
     ]);
     console.log('✅ All Slash Commands registered successfully!\n');
   } catch (err) {
@@ -602,6 +640,143 @@ client.on('interactionCreate', async interaction => {
       console.error('Error in /scorecard command:', err);
       await interaction.editReply({
         content: t(lang, 'scorecard_error', { message: err.message })
+      });
+    }
+    return;
+  }
+
+  // 6. Command /miniscorecard (Compact Score Card Generator)
+  if (interaction.commandName === 'miniscorecard') {
+    const linkInput = interaction.options.getString('link');
+    const topIndex = interaction.options.getInteger('top');
+    let targetPlayer = interaction.options.getString('player');
+
+    // Case 1: Specific Score Link / ID provided
+    if (linkInput) {
+      const parsedScore = parseScoreInput(linkInput);
+      if (!parsedScore) {
+        return interaction.reply({
+          content: t(lang, 'scorecard_invalid_input'),
+          ephemeral: true
+        });
+      }
+
+      const scoreId = typeof parsedScore === 'object' ? parsedScore.id : parsedScore;
+      const scoreMode = typeof parsedScore === 'object' ? parsedScore.mode : null;
+
+      await interaction.deferReply();
+
+      try {
+        const score = await osuApi.getScore(scoreId, scoreMode);
+        await osuApi.enrichScoreWithBeatmapAndMods(score);
+        const user = score.user || (score.user_id ? await osuApi.getUser(score.user_id) : {});
+
+        // Check if this score is in user's top 100 plays
+        let topRank = null;
+        if (user && user.id) {
+          try {
+            const topScores = await osuApi.getUserBestScore(user.id, 100);
+            if (topScores && topScores.length > 0) {
+              const matchIdx = topScores.findIndex(s => String(s.id) === String(score.id));
+              if (matchIdx !== -1) {
+                topRank = matchIdx + 1;
+              }
+            }
+          } catch (_) {}
+        }
+
+        const imageBuffer = await generateMiniScoreCard(score, user, { lang, topRank });
+        const attachment = new AttachmentBuilder(imageBuffer, { name: `miniscore_${score.id}.png` });
+        const row = createScoreButtons(score, linkInput, lang);
+
+        await interaction.editReply({
+          files: [attachment],
+          components: [row]
+        });
+      } catch (err) {
+        console.error('Error in /miniscorecard command (by link):', err);
+        await interaction.editReply({
+          content: t(lang, 'scorecard_error', { message: err.message })
+        });
+      }
+      return;
+    }
+
+    // If neither link nor player specified, check linked user
+    if (!targetPlayer) {
+      const linked = getLinkedUser(interaction.user.id);
+      if (!linked) {
+        return interaction.reply({
+          content: t(lang, 'recent_not_linked'),
+          ephemeral: true
+        });
+      }
+      targetPlayer = linked.osuUsername;
+    }
+
+    await interaction.deferReply();
+
+    try {
+      const user = await osuApi.getUser(targetPlayer);
+
+      // Case 2: Specific Top Play requested
+      if (topIndex != null && topIndex >= 1) {
+        const scores = await osuApi.getUserBestScore(user.id, topIndex);
+        if (!scores || scores.length < topIndex) {
+          return interaction.editReply({
+            content: t(lang, 'top_no_scores', { username: user.username })
+          });
+        }
+
+        const score = scores[topIndex - 1];
+        score.topRank = topIndex;
+        await osuApi.enrichScoreWithBeatmapAndMods(score);
+
+        const imageBuffer = await generateMiniScoreCard(score, user, { lang, topRank: topIndex });
+        const attachment = new AttachmentBuilder(imageBuffer, { name: `miniscore_${user.username}_top${topIndex}.png` });
+        const row = createScoreButtons(score, null, lang);
+
+        return interaction.editReply({
+          files: [attachment],
+          components: [row]
+        });
+      }
+
+      // Case 3: Recent Score (Default)
+      const scores = await osuApi.getUserRecentScore(user.id, 1, 1);
+      if (!scores || scores.length === 0) {
+        return interaction.editReply({
+          content: t(lang, 'recent_no_scores', { username: user.username })
+        });
+      }
+
+      const score = scores[0];
+      await osuApi.enrichScoreWithBeatmapAndMods(score);
+
+      // Check if this recent score is in user's top 100 plays
+      let topRank = null;
+      try {
+        const topScores = await osuApi.getUserBestScore(user.id, 100);
+        if (topScores && topScores.length > 0) {
+          const matchIdx = topScores.findIndex(s => String(s.id) === String(score.id));
+          if (matchIdx !== -1) {
+            topRank = matchIdx + 1;
+          }
+        }
+      } catch (_) {}
+
+      const imageBuffer = await generateMiniScoreCard(score, user, { lang, topRank });
+      const attachment = new AttachmentBuilder(imageBuffer, { name: `miniscore_${user.username}_${score.id || 'recent'}.png` });
+      const row = createScoreButtons(score, null, lang);
+
+      await interaction.editReply({
+        files: [attachment],
+        components: [row]
+      });
+    } catch (err) {
+      console.error('Error in /miniscorecard command:', err);
+      await interaction.editReply({
+        content: t(lang, 'recent_error', { message: err.message })
       });
     }
     return;
