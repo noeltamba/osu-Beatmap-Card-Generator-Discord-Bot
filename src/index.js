@@ -16,6 +16,7 @@ const { generateBeatmapCard } = require('./cardGenerator');
 const { generateScoreCard } = require('./scoreCardGenerator');
 const { generateTopPlaysCard } = require('./topCardGenerator');
 const { generateMiniScoreCard } = require('./miniScoreCardGenerator');
+const { handlePrefixCommand } = require('./prefixHandler');
 const {
   getLinkedUser,
   linkUser,
@@ -783,9 +784,16 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
-// Auto-detect osu! URLs in chat messages (Score links & Beatmap links)
+// Prefix commands (;) & Auto-detect osu! URLs in chat messages
 client.on('messageCreate', async message => {
   if (message.author.bot) return;
+
+  // 0. Check prefix commands starting with ';' (e.g. ;m, ;r, ;t, ;b, ;help)
+  if (message.content.startsWith(';')) {
+    const handled = await handlePrefixCommand(message, osuApi);
+    if (handled !== false) return;
+  }
+
   const lang = getUserLanguage(message.author.id);
 
   // 1. Check osu! score links (e.g. https://osu.ppy.sh/scores/7265198407)
