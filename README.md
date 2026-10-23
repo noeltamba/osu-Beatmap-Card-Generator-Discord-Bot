@@ -48,7 +48,7 @@ A major update introducing the brand-new **Mini Score Card** (`/miniscorecard`),
 
 <div align="center">
   <br>
-<h4> by @hyzity / @noeltamba </h4>
+<h3> by <a href="https://github.com/hyzity">@hyzity</a> / <a href="https://github.com/noeltamba">@noeltamba</a></h3>
 <h4> wanna collab? <a href="https://discord.com/users/790618301952032769">Contact me on Discord!</a></h4>
  <br>
   <sub>Banner artwork credit: <a href="https://www.pixiv.net/artworks/138613692">Pixiv Artwork</a></sub>
