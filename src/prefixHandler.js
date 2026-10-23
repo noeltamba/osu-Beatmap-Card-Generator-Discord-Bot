@@ -429,7 +429,7 @@ async function handlePrefixCommand(message, osuApi) {
             `• \`;s <link/id>\` : Kartu Skor dari link/ID\n` +
             `• \`;link <username>\` : Tautkan akun osu!\n` +
             `• \`;unlink\` : Lepas tautan akun osu!\n\n` +
-            `⚠️ *(Perhatian: Bot ini kekurangan izin **Embed Links** atau **Attach Files** di channel ini. Mohon aktifkan izin tersebut di pengaturan server/channel)*`
+            `💡 *Tip: Slash command (/) juga tetap aktif dan bisa digunakan kapan saja!*`
           : `⚡ **Columbina Bot - Prefix Commands (;)**\n\n` +
             `• \`;m [player] [top#]\` : Mini Score Card (e.g. \`;m\`, \`;m Utami 1\`)\n` +
             `• \`;r [player]\` : Detailed Recent Score Card\n` +
@@ -438,7 +438,7 @@ async function handlePrefixCommand(message, osuApi) {
             `• \`;s <link/id>\` : Full Score Card from link/ID\n` +
             `• \`;link <username>\` : Link your osu! account\n` +
             `• \`;unlink\` : Unlink your osu! account\n\n` +
-            `⚠️ *(Notice: Bot lacks **Embed Links** or **Attach Files** permission in this channel. Please grant them in channel/role permissions)*`;
+            `💡 *Tip: Slash commands (/) are also available and can be used anytime!*`;
         return await message.reply({ content: plainHelp }).catch(() => {});
       }
       throw err;
