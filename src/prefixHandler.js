@@ -139,7 +139,7 @@ async function handlePrefixCommand(message, osuApi) {
         const scoreId = typeof parsed === 'object' ? parsed.id : parsed;
         const scoreMode = typeof parsed === 'object' ? parsed.mode : null;
 
-        await message.channel.sendTyping();
+        await message.channel.sendTyping().catch(() => {});
         const score = await osuApi.getScore(scoreId, scoreMode);
         await osuApi.enrichScoreWithBeatmapAndMods(score);
         const user = score.user || (score.user_id ? await osuApi.getUser(score.user_id) : {});
@@ -168,7 +168,7 @@ async function handlePrefixCommand(message, osuApi) {
         player = linked.osuUsername;
       }
 
-      await message.channel.sendTyping();
+      await message.channel.sendTyping().catch(() => {});
       const user = await osuApi.getUser(player);
 
       // Case B: Top play specified
@@ -208,8 +208,8 @@ async function handlePrefixCommand(message, osuApi) {
       const row = createScoreButtons(score, null, lang);
       return message.reply({ files: [attachment], components: [row] });
     } catch (err) {
-      console.error(`Error in ;${cmd}:`, err);
-      return message.reply({ content: t(lang, 'recent_error', { message: err.message }) });
+      console.error(`Error in ;${cmd}:`, err.message);
+      return message.reply({ content: t(lang, 'recent_error', { message: err.message }) }).catch(() => {});
     }
   }
 
@@ -223,7 +223,7 @@ async function handlePrefixCommand(message, osuApi) {
     }
 
     try {
-      await message.channel.sendTyping();
+      await message.channel.sendTyping().catch(() => {});
       const user = await osuApi.getUser(player);
       const scores = await osuApi.getUserRecentScore(user.id, 1, 1);
       if (!scores || scores.length === 0) {
@@ -236,8 +236,8 @@ async function handlePrefixCommand(message, osuApi) {
       const row = createScoreButtons(score, null, lang);
       return message.reply({ files: [attachment], components: [row] });
     } catch (err) {
-      console.error(`Error in ;${cmd}:`, err);
-      return message.reply({ content: t(lang, 'recent_error', { message: err.message }) });
+      console.error(`Error in ;${cmd}:`, err.message);
+      return message.reply({ content: t(lang, 'recent_error', { message: err.message }) }).catch(() => {});
     }
   }
 
@@ -273,7 +273,7 @@ async function handlePrefixCommand(message, osuApi) {
     }
 
     try {
-      await message.channel.sendTyping();
+      await message.channel.sendTyping().catch(() => {});
       const user = await osuApi.getUser(player);
       const scores = await osuApi.getUserBestScore(user.id, count);
       if (!scores || scores.length === 0) {
@@ -294,8 +294,8 @@ async function handlePrefixCommand(message, osuApi) {
       );
       return message.reply({ files: [attachment], components: [row] });
     } catch (err) {
-      console.error(`Error in ;${cmd}:`, err);
-      return message.reply({ content: t(lang, 'top_error', { message: err.message }) });
+      console.error(`Error in ;${cmd}:`, err.message);
+      return message.reply({ content: t(lang, 'top_error', { message: err.message }) }).catch(() => {});
     }
   }
 
@@ -311,7 +311,7 @@ async function handlePrefixCommand(message, osuApi) {
     const scoreMode = typeof parsed === 'object' ? parsed.mode : null;
 
     try {
-      await message.channel.sendTyping();
+      await message.channel.sendTyping().catch(() => {});
       const score = await osuApi.getScore(scoreId, scoreMode);
       await osuApi.enrichScoreWithBeatmapAndMods(score);
       const user = score.user || (score.user_id ? await osuApi.getUser(score.user_id) : {});
@@ -320,8 +320,8 @@ async function handlePrefixCommand(message, osuApi) {
       const row = createScoreButtons(score, input, lang);
       return message.reply({ files: [attachment], components: [row] });
     } catch (err) {
-      console.error(`Error in ;${cmd}:`, err);
-      return message.reply({ content: t(lang, 'scorecard_error', { message: err.message }) });
+      console.error(`Error in ;${cmd}:`, err.message);
+      return message.reply({ content: t(lang, 'scorecard_error', { message: err.message }) }).catch(() => {});
     }
   }
 
@@ -338,7 +338,7 @@ async function handlePrefixCommand(message, osuApi) {
     const cleanMods = extractModsFromText(rawMods).length > 0 ? extractModsFromText(rawMods) : parseMods(rawMods);
 
     try {
-      await message.channel.sendTyping();
+      await message.channel.sendTyping().catch(() => {});
       const beatmap = await osuApi.resolveBeatmap(parsed);
       if (cleanMods.length > 0 && beatmap.id) {
         try {
@@ -351,8 +351,8 @@ async function handlePrefixCommand(message, osuApi) {
       const row = createBeatmapButtons(beatmap, inputStr, lang);
       return message.reply({ files: [attachment], components: [row] });
     } catch (err) {
-      console.error(`Error in ;${cmd}:`, err);
-      return message.reply({ content: t(lang, 'beatmap_error', { message: err.message }) });
+      console.error(`Error in ;${cmd}:`, err.message);
+      return message.reply({ content: t(lang, 'beatmap_error', { message: err.message }) }).catch(() => {});
     }
   }
 
@@ -363,13 +363,13 @@ async function handlePrefixCommand(message, osuApi) {
     }
     const username = args.join(' ');
     try {
-      await message.channel.sendTyping();
+      await message.channel.sendTyping().catch(() => {});
       const user = await osuApi.getUser(username);
       linkUser(message.author.id, user.id, user.username);
       const rankStr = user.statistics?.global_rank ? ` (Rank: #${user.statistics.global_rank.toLocaleString()})` : '';
       return message.reply({ content: t(lang, 'link_success', { username: user.username, rank: rankStr }) });
     } catch (err) {
-      return message.reply({ content: t(lang, 'link_error', { message: err.message }) });
+      return message.reply({ content: t(lang, 'link_error', { message: err.message }) }).catch(() => {});
     }
   }
 
@@ -416,7 +416,33 @@ async function handlePrefixCommand(message, osuApi) {
       )
       .setFooter({ text: isId ? 'Slash command (/) juga tetap aktif dan bisa digunakan!' : 'Slash commands (/) are also available!' });
 
-    return message.reply({ embeds: [embed] });
+    try {
+      return await message.reply({ embeds: [embed] });
+    } catch (err) {
+      if (err.code === 50013 || err.message?.includes('Missing Permissions')) {
+        const plainHelp = isId
+          ? `⚡ **Columbina Bot - Perintah Prefix (;)**\n\n` +
+            `• \`;m [player] [top#]\` : Kartu Mini Skor (cth: \`;m\`, \`;m Utami 1\`)\n` +
+            `• \`;r [player]\` : Kartu Skor Terbaru Lengkap\n` +
+            `• \`;t [player] [1-10]\` : Top Plays Leaderboard\n` +
+            `• \`;b <link/id> [+mods]\` : Informasi Beatmap\n` +
+            `• \`;s <link/id>\` : Kartu Skor dari link/ID\n` +
+            `• \`;link <username>\` : Tautkan akun osu!\n` +
+            `• \`;unlink\` : Lepas tautan akun osu!\n\n` +
+            `⚠️ *(Perhatian: Bot ini kekurangan izin **Embed Links** atau **Attach Files** di channel ini. Mohon aktifkan izin tersebut di pengaturan server/channel)*`
+          : `⚡ **Columbina Bot - Prefix Commands (;)**\n\n` +
+            `• \`;m [player] [top#]\` : Mini Score Card (e.g. \`;m\`, \`;m Utami 1\`)\n` +
+            `• \`;r [player]\` : Detailed Recent Score Card\n` +
+            `• \`;t [player] [1-10]\` : Top Performance Plays\n` +
+            `• \`;b <link/id> [+mods]\` : Beatmap Info Card\n` +
+            `• \`;s <link/id>\` : Full Score Card from link/ID\n` +
+            `• \`;link <username>\` : Link your osu! account\n` +
+            `• \`;unlink\` : Unlink your osu! account\n\n` +
+            `⚠️ *(Notice: Bot lacks **Embed Links** or **Attach Files** permission in this channel. Please grant them in channel/role permissions)*`;
+        return await message.reply({ content: plainHelp }).catch(() => {});
+      }
+      throw err;
+    }
   }
 
   // Not a recognised prefix command

@@ -4,7 +4,7 @@
  
   <br>
 
-  [![Invite Discord Bot](https://img.shields.io/badge/Invite_Bot-Click_Here-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/oauth2/authorize?client_id=1562307139274416178&permissions=116736&integration_type=0&scope=applications.commands+bot)
+  [![Invite Discord Bot](https://img.shields.io/badge/Invite_Bot-Click_Here-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/oauth2/authorize?client_id=1562307139274416178&permissions=274878286912&integration_type=0&scope=applications.commands+bot)
 
 </div>
 # 🎮 osu! Beatmap Card Generator - Release v1.1.1

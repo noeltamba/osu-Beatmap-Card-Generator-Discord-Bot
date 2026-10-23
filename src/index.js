@@ -9,7 +9,8 @@ const {
   ButtonBuilder,
   ButtonStyle,
   EmbedBuilder,
-  ActivityType
+  ActivityType,
+  Events
 } = require('discord.js');
 
 const OsuApi = require('./osuApi');
@@ -62,6 +63,19 @@ const client = new Client({
     GatewayIntentBits.MessageContent
   ],
   partials: [Partials.Channel]
+});
+
+// Global error handlers to keep the bot alive under unexpected API errors
+client.on(Events.Error, err => {
+  console.error('⚠️ [Discord Client Error]:', err.message);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('⚠️ [Unhandled Rejection]:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('⚠️ [Uncaught Exception]:', err);
 });
 
 // Slash Command Definitions (English default with Indonesian description localizations)
@@ -321,7 +335,7 @@ function createBeatmapButtons(beatmap, originalInput = null, lang = 'en') {
   return row;
 }
 
-client.once('ready', async () => {
+client.once(Events.ClientReady, async () => {
   console.log(`\n===========================================`);
   console.log(`✨ Bot Online as: ${client.user.tag}`);
   console.log(`🎮 osu! Client ID: ${OSU_CLIENT_ID}`);
@@ -363,7 +377,7 @@ client.once('ready', async () => {
 });
 
 // Handle Interactions (Slash Commands & Buttons)
-client.on('interactionCreate', async interaction => {
+client.on(Events.InteractionCreate, async interaction => {
   // Handle Language Button Selection
   if (interaction.isButton()) {
     if (interaction.customId === 'set_lang_en' || interaction.customId === 'set_lang_id') {
@@ -801,13 +815,21 @@ client.on('interactionCreate', async interaction => {
 });
 
 // Prefix commands (;) & Auto-detect osu! URLs in chat messages
-client.on('messageCreate', async message => {
+client.on(Events.MessageCreate, async message => {
   if (message.author.bot) return;
 
   // 0. Check prefix commands starting with ';' (e.g. ;m, ;r, ;t, ;b, ;help)
   if (message.content.startsWith(';')) {
-    const handled = await handlePrefixCommand(message, osuApi);
-    if (handled !== false) return;
+    try {
+      const handled = await handlePrefixCommand(message, osuApi);
+      if (handled !== false) return;
+    } catch (err) {
+      console.error(`Error handling prefix command "${message.content}":`, err.message);
+      if (err.code === 50013) {
+        console.warn(`[Missing Permissions] Bot lacks permissions in channel #${message.channel?.name || message.channelId}. Please ensure 'Send Messages', 'Embed Links', and 'Attach Files' are granted.`);
+      }
+      return;
+    }
   }
 
   const lang = getUserLanguage(message.author.id);
@@ -823,7 +845,7 @@ client.on('messageCreate', async message => {
     const scoreMode = typeof parsedScore === 'object' ? parsedScore.mode : null;
 
     try {
-      await message.channel.sendTyping();
+      await message.channel.sendTyping().catch(() => {});
 
       const score = await osuApi.getScore(scoreId, scoreMode);
       await osuApi.enrichScoreWithBeatmapAndMods(score);
@@ -854,7 +876,7 @@ client.on('messageCreate', async message => {
   const detectedMods = extractModsFromText(message.content);
 
   try {
-    await message.channel.sendTyping();
+    await message.channel.sendTyping().catch(() => {});
 
     const beatmap = await osuApi.resolveBeatmap(parsed);
 
