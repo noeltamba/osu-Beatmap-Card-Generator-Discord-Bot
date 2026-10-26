@@ -119,8 +119,10 @@ async function generateMiniScoreCard(score, user = {}, options = {}) {
   const mapStatus = String(beatmap.status || score.beatmap?.status || '').toLowerCase();
   const isRanked = mapStatus === 'ranked' || mapStatus === 'approved';
 
-  // Calculate local PP if missing
-  if (beatmap.id && (!score.pp || score.if_fc_pp == null)) {
+  const isFailed = score.passed === false || String(score.rank || '').toUpperCase() === 'F';
+
+  // Calculate local PP if missing (only if not failed)
+  if (beatmap.id && (!score.pp || score.if_fc_pp == null) && !isFailed) {
     try {
       const calc = await calculateScorePp(score, beatmap);
       if (calc) {
@@ -134,7 +136,7 @@ async function generateMiniScoreCard(score, user = {}, options = {}) {
         if (calc.breakdown) {
           score.pp_breakdown = calc.breakdown;
         }
-        if (calc.stars && !score.beatmap.modded_difficulty_rating) {
+        if (calc.stars && !score.beatmap.modded_difficulty_rating && !isFailed) {
           score.beatmap.modded_difficulty_rating = calc.stars;
         }
       }
@@ -228,8 +230,8 @@ async function generateMiniScoreCard(score, user = {}, options = {}) {
   let fcStatusColor = '#fbbf24';
   let fcGlowColor = 'rgba(251, 191, 36, 0.65)';
 
-  if (score.rank === 'F') {
-    fcStatusText = 'FAIL';
+  if (isFailed) {
+    fcStatusText = score.fail_percent ? `FAIL (${score.fail_percent}%)` : 'FAIL';
     fcStatusColor = '#f87171';
     fcGlowColor = 'rgba(248, 113, 113, 0.55)';
   } else if (isEffectiveFc) {
@@ -297,8 +299,8 @@ async function generateMiniScoreCard(score, user = {}, options = {}) {
   let ppText = '-';
   let ppTextColor = '#ffffff';
 
-  if (score.rank === 'F') {
-    ppText = 'FAILED';
+  if (isFailed) {
+    ppText = score.fail_percent ? `FAILED (${score.fail_percent}%)` : 'FAILED';
     ppTextColor = '#f87171';
   } else if (score.pp != null && Number(score.pp) > 0) {
     ppText = `${Math.round(score.pp)}pp`;
@@ -307,7 +309,7 @@ async function generateMiniScoreCard(score, user = {}, options = {}) {
 
   ctx.save();
   ctx.textAlign = 'right';
-  ctx.font = `bold ${ppText === 'FAILED' ? '28px' : '38px'} ${FONT_STACK}`;
+  ctx.font = `bold ${ppText.startsWith('FAILED') ? '24px' : '38px'} ${FONT_STACK}`;
   ctx.fillStyle = ppTextColor;
   ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
   ctx.shadowBlur = 12;
@@ -315,11 +317,11 @@ async function generateMiniScoreCard(score, user = {}, options = {}) {
   ctx.shadowBlur = 0;
 
   // Subtitle under PP if choked/non-FC or unranked
-  if (isUnrankedPp && ppText !== 'FAILED' && ppText !== '-') {
+  if (isUnrankedPp && !ppText.startsWith('FAILED') && ppText !== '-') {
     ctx.font = `bold 10px ${FONT_STACK}`;
     ctx.fillStyle = 'rgba(148, 163, 184, 0.85)';
     ctx.fillText('UNRANKED', width - 32, 98);
-  } else if (!isEffectiveFc && score.if_fc_pp && score.rank !== 'F') {
+  } else if (!isEffectiveFc && score.if_fc_pp && !isFailed) {
     const ifFcVal = Math.round(score.if_fc_pp);
     if (ifFcVal > Math.round(score.pp || 0)) {
       ctx.font = `600 11px ${FONT_STACK}`;
@@ -392,7 +394,7 @@ async function generateMiniScoreCard(score, user = {}, options = {}) {
 
   // 6. LOWER BODY SECTION
   // 6A. Left Side: Grade Letter (SS, S, A, B, etc.)
-  const gradeInfo = getRankGradeStyle(score.rank);
+  const gradeInfo = getRankGradeStyle(isFailed ? 'F' : score.rank);
   const gradeCenterX = 85;
   const gradeCenterY = 252;
 

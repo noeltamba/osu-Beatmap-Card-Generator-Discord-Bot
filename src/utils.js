@@ -264,7 +264,7 @@ function isFullCombo(score, beatmap = {}, mapMaxCombo = null) {
   if (!score) return false;
 
   // 1. Failed plays can never be an FC
-  if (score.rank === 'F') return false;
+  if (score.passed === false || score.rank === 'F') return false;
 
   const stats = score.statistics || {};
   const missCount = stats.miss ?? stats.count_miss ?? 0;

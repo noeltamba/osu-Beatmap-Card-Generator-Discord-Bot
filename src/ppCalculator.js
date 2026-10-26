@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { Beatmap, Performance, GameMode } = require('rosu-pp-js');
+const { Beatmap, Performance, Difficulty, GameMode } = require('rosu-pp-js');
 const { detectScoreClient, isFullCombo } = require('./utils');
 
 // In-memory cache for .osu file text content to avoid re-reading disk
@@ -178,20 +178,42 @@ async function calculateScorePp(score, beatmap = null) {
     if (stats.large_tick_hit != null) perfOptions.largeTickHits = stats.large_tick_hit;
     if (stats.small_tick_hit != null) perfOptions.smallTickHits = stats.small_tick_hit;
 
-    if (score.rank === 'F') {
+    const isFailed = score.passed === false || score.rank === 'F';
+    if (isFailed) {
       perfOptions.passedObjects = (n300 + n100 + n50 + misses) || 1;
     }
 
     const perf = new Performance(perfOptions).calculate(map);
     const calculatedPp = perf.pp;
-    const stars = perf.difficulty?.stars || bm.difficulty_rating || 0;
+
+    // Full map difficulty calculation:
+    // When a player fails, perf.difficulty?.stars only measures the partial passed objects!
+    // We must ensure the beatmap's star rating represents the full beatmap with mods.
+    let fullStars = bm.difficulty_rating || 0;
+    if (!fullStars || cleanMods.length > 0 || isFailed) {
+      try {
+        const diffOptions = {
+          mods: cleanMods,
+          lazer: isLazer
+        };
+        if (customClockRate != null && !isNaN(customClockRate)) {
+          diffOptions.clockRate = customClockRate;
+        }
+        const fullDiff = new Difficulty(diffOptions).calculate(map);
+        if (fullDiff && fullDiff.stars) {
+          fullStars = fullDiff.stars;
+        }
+      } catch (_) {}
+    }
+
+    const stars = bm.difficulty_rating || fullStars || (isFailed ? 0 : perf.difficulty?.stars) || 0;
 
     // Calculate If FC PP if the score is not an FC and didn't fail
     const mapMaxCombo = bm.max_combo || bm.count_max_combo || 0;
     const isFc = isFullCombo(score, bm, mapMaxCombo);
     let ifFcPp = null;
 
-    if (!isFc && score.rank !== 'F') {
+    if (!isFc && !isFailed) {
       try {
         const fcN300 = n300 + misses;
         const fcTotalHits = fcN300 + n100 + n50;
@@ -215,11 +237,11 @@ async function calculateScorePp(score, beatmap = null) {
     const officialPp = (isRanked && score.pp != null && Number(score.pp) > 0) ? Number(score.pp) : calculatedPp;
 
     return {
-      pp: officialPp,
+      pp: isFailed ? null : officialPp,
       stars: stars,
       isUnranked: !isRanked,
-      ifFcPp: ifFcPp,
-      breakdown: {
+      ifFcPp: isFailed ? null : ifFcPp,
+      breakdown: isFailed ? null : {
         aim: perf.ppAim || 0,
         speed: perf.ppSpeed || 0,
         acc: perf.ppAccuracy || 0,
@@ -228,7 +250,8 @@ async function calculateScorePp(score, beatmap = null) {
     };
   } catch (err) {
     console.error(`[ppCalculator] Gagal menghitung PP untuk beatmap ${beatmapId}:`, err.message);
-    if (isRanked && score.pp != null && Number(score.pp) > 0) {
+    const isFailed = score.passed === false || score.rank === 'F';
+    if (!isFailed && isRanked && score.pp != null && Number(score.pp) > 0) {
       return {
         pp: Number(score.pp),
         stars: bm.difficulty_rating || 0,

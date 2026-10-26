@@ -193,7 +193,16 @@ class OsuApi {
       throw new Error(`Gagal mengambil recent score: HTTP ${response.status}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    if (Array.isArray(data)) {
+      for (const score of data) {
+        if (score.passed === false) {
+          score.fail_rank = score.rank;
+          score.rank = 'F';
+        }
+      }
+    }
+    return data;
   }
 
   async getUserBestScore(userId, limit = 5) {
@@ -232,7 +241,12 @@ class OsuApi {
       try {
         const response = await fetch(ep, { headers: modernHeaders });
         if (response.ok) {
-          return await response.json();
+          const data = await response.json();
+          if (data && data.passed === false) {
+            data.fail_rank = data.rank;
+            data.rank = 'F';
+          }
+          return data;
         }
       } catch (_) {}
     }
@@ -246,7 +260,12 @@ class OsuApi {
       try {
         const response = await fetch(ep, { headers: legacyHeaders });
         if (response.ok) {
-          return await response.json();
+          const data = await response.json();
+          if (data && data.passed === false) {
+            data.fail_rank = data.rank;
+            data.rank = 'F';
+          }
+          return data;
         }
       } catch (_) {}
     }
@@ -257,31 +276,70 @@ class OsuApi {
   async enrichScoreWithBeatmapAndMods(score) {
     if (!score) return score;
 
-    // 1. Ensure full beatmap details exist (especially max_combo and all base stats)
+    // 0. Normalize failed scores: in modern osu! API v2, failed plays can have rank: 'A'/'B' etc. while passed: false
+    const isFailed = score.passed === false || String(score.rank || '').toUpperCase() === 'F';
+    if (isFailed) {
+      score.passed = false;
+      if (score.rank && score.rank !== 'F') {
+        score.fail_rank = score.rank;
+      }
+      score.rank = 'F';
+    }
+
+    // 1. Ensure full beatmap details exist (especially max_combo and base stats)
     if (score.beatmap && score.beatmap.id) {
-      if (!score.beatmap.max_combo) {
+      if (!score.beatmap.max_combo || !score.beatmap.difficulty_rating || score.beatmap.count_circles == null) {
         try {
           const fullBm = await this.getBeatmap(score.beatmap.id);
-          score.beatmap = { ...fullBm, ...score.beatmap, max_combo: fullBm.max_combo };
+          score.beatmap = {
+            ...fullBm,
+            ...score.beatmap,
+            max_combo: fullBm.max_combo || score.beatmap.max_combo,
+            difficulty_rating: fullBm.difficulty_rating || score.beatmap.difficulty_rating,
+            count_circles: fullBm.count_circles ?? score.beatmap.count_circles,
+            count_sliders: fullBm.count_sliders ?? score.beatmap.count_sliders,
+            count_spinners: fullBm.count_spinners ?? score.beatmap.count_spinners
+          };
         } catch (_) {}
+      }
+    }
+
+    // Calculate fail progress percentage if score failed
+    if (isFailed && score.beatmap) {
+      const stats = score.statistics || {};
+      const passedObjects = (stats.great ?? stats.count_300 ?? 0) +
+                            (stats.ok ?? stats.count_100 ?? 0) +
+                            (stats.meh ?? stats.count_50 ?? 0) +
+                            (stats.miss ?? stats.count_miss ?? 0);
+      const totalObjects = (score.beatmap.count_circles || 0) +
+                           (score.beatmap.count_sliders || 0) +
+                           (score.beatmap.count_spinners || 0);
+      if (totalObjects > 0 && passedObjects > 0) {
+        score.fail_percent = Math.min(100, Math.max(1, Math.round((passedObjects / totalObjects) * 100)));
       }
     }
 
     // 2. Fetch official modded attributes (star rating & max combo) if mods exist
     const mods = score.mods || [];
+    const cleanMods = (mods || []).map(m => typeof m === 'string' ? m.toUpperCase() : (m.acronym || '').toUpperCase()).filter(Boolean);
     const mode = score.mode || score.beatmap?.mode || 'osu';
-    if (score.beatmap?.id && mods.length > 0) {
-      try {
-        const attrs = await this.getBeatmapAttributes(score.beatmap.id, mods, mode);
-        if (attrs) {
-          if (attrs.star_rating) {
-            score.beatmap.modded_difficulty_rating = attrs.star_rating;
+    if (score.beatmap?.id) {
+      if (cleanMods.length > 0) {
+        try {
+          const attrs = await this.getBeatmapAttributes(score.beatmap.id, cleanMods, mode);
+          if (attrs) {
+            if (attrs.star_rating) {
+              score.beatmap.modded_difficulty_rating = attrs.star_rating;
+            }
+            if (!score.beatmap.max_combo && attrs.max_combo > 0) {
+              score.beatmap.max_combo = attrs.max_combo;
+            }
           }
-          if (!score.beatmap.max_combo && attrs.max_combo > 0) {
-            score.beatmap.max_combo = attrs.max_combo;
-          }
-        }
-      } catch (_) {}
+        } catch (_) {}
+      } else if (score.beatmap.difficulty_rating) {
+        // Nomod: use official base difficulty rating directly
+        score.beatmap.modded_difficulty_rating = score.beatmap.difficulty_rating;
+      }
     }
 
     // 3. Calculate PP, If FC PP, and PP Breakdown locally
@@ -292,17 +350,26 @@ class OsuApi {
       try {
         const ppResult = await calculateScorePp(score);
         if (ppResult) {
-          if (ppResult.pp != null && (!score.pp || !isRanked)) {
-            score.pp = ppResult.pp;
+          if (isFailed) {
+            // Failed scores do not have valid play PP, If FC PP, or PP breakdown
+            score.pp = null;
+            score.if_fc_pp = null;
+            score.pp_breakdown = null;
+          } else {
+            if (ppResult.pp != null && (!score.pp || !isRanked)) {
+              score.pp = ppResult.pp;
+            }
+            score.is_unranked_pp = ppResult.isUnranked;
+            if (ppResult.ifFcPp != null) {
+              score.if_fc_pp = ppResult.ifFcPp;
+            }
+            if (ppResult.breakdown) {
+              score.pp_breakdown = ppResult.breakdown;
+            }
           }
-          score.is_unranked_pp = ppResult.isUnranked;
-          if (ppResult.ifFcPp != null) {
-            score.if_fc_pp = ppResult.ifFcPp;
-          }
-          if (ppResult.breakdown) {
-            score.pp_breakdown = ppResult.breakdown;
-          }
-          if (ppResult.stars && !score.beatmap.modded_difficulty_rating) {
+
+          // Only set modded_difficulty_rating if not already set and score didn't fail
+          if (ppResult.stars && !score.beatmap.modded_difficulty_rating && !isFailed) {
             score.beatmap.modded_difficulty_rating = ppResult.stars;
           }
         }

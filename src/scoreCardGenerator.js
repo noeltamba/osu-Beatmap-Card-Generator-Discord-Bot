@@ -108,8 +108,10 @@ async function generateScoreCard(score, user, options = {}) {
   const mapStatus = String(beatmap.status || score.beatmap?.status || '').toLowerCase();
   const isRanked = mapStatus === 'ranked' || mapStatus === 'approved';
 
-  // If score does not have PP or ifFc/breakdown yet, calculate PP locally
-  if (beatmap.id && (!score.pp || score.if_fc_pp == null || !score.pp_breakdown)) {
+  const isFailed = score.passed === false || String(score.rank || '').toUpperCase() === 'F';
+
+  // If score does not have PP or ifFc/breakdown yet, calculate PP locally (only if not failed)
+  if (beatmap.id && (!score.pp || score.if_fc_pp == null || !score.pp_breakdown) && !isFailed) {
     try {
       const calc = await calculateScorePp(score, beatmap);
       if (calc) {
@@ -459,7 +461,7 @@ async function generateScoreCard(score, user, options = {}) {
   const scoreStatsY = playerY + avatarSize + 30;
 
   // Grade Badge (Big stylized SS / S / A / B / C / D / F)
-  const gradeInfo = getRankGradeStyle(score.rank);
+  const gradeInfo = getRankGradeStyle(isFailed ? 'F' : score.rank);
   const gradeBoxX = heroX + 22;
   const gradeBoxY = scoreStatsY;
   const gradeBoxW = 110;
@@ -488,8 +490,8 @@ async function generateScoreCard(score, user, options = {}) {
 
   let ppVal = '-';
   let ppColor = '#f8fafc';
-  if (score.rank === 'F') {
-    ppVal = 'FAILED';
+  if (isFailed) {
+    ppVal = score.fail_percent ? `FAILED (${score.fail_percent}%)` : 'FAILED';
     ppColor = '#f87171';
   } else if (score.pp != null && Number(score.pp) > 0) {
     ppVal = `${Math.round(score.pp)}pp`;
@@ -523,14 +525,14 @@ async function generateScoreCard(score, user, options = {}) {
 
   // Big PP
   ctx.textAlign = 'left';
-  ctx.font = `bold ${ppVal === 'FAILED' ? '28px' : '38px'} ${FONT_STACK}`;
+  ctx.font = `bold ${ppVal.startsWith('FAILED') ? '26px' : '38px'} ${FONT_STACK}`;
   ctx.fillStyle = ppColor;
   ctx.fillText(ppVal, midColX, scoreStatsY + 36);
 
   let ppBadgeX = midColX + ctx.measureText(ppVal).width + 10;
 
   // If unranked PP, draw sleek disabled pill badge next to the PP value
-  if (isUnrankedPp && ppVal !== 'FAILED' && ppVal !== '-') {
+  if (isUnrankedPp && !ppVal.startsWith('FAILED') && ppVal !== '-') {
     ctx.save();
     ctx.font = `bold 10px ${FONT_STACK}`;
     const badgeText = 'UNRANKED';
@@ -560,7 +562,7 @@ async function generateScoreCard(score, user, options = {}) {
   }
 
   // If not FC and we have If-FC PP, draw stylish If-FC pill badge
-  if (!isFc && score.if_fc_pp && score.rank !== 'F') {
+  if (!isFc && score.if_fc_pp && !isFailed) {
     const ifFcVal = Math.round(score.if_fc_pp);
     if (ifFcVal > Math.round(score.pp || 0)) {
       ctx.save();
@@ -656,7 +658,7 @@ async function generateScoreCard(score, user, options = {}) {
   }
 
   // Row 4: PP Breakdown (Aim / Speed / Accuracy)
-  if (score.pp_breakdown && score.rank !== 'F') {
+  if (score.pp_breakdown && !isFailed) {
     const bd = score.pp_breakdown;
     const aimPp = Math.round(bd.aim || 0);
     const spdPp = Math.round(bd.speed || 0);

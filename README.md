@@ -7,13 +7,28 @@
   [![Invite Discord Bot](https://img.shields.io/badge/Invite_Bot-Click_Here-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/oauth2/authorize?client_id=1562307139274416178&permissions=274878286912&integration_type=0&scope=applications.commands+bot)
 
 </div>
-# 🎮 osu! Beatmap Card Generator - Release v1.1.1
+# 🎮 osu! Beatmap Card Generator - Release v1.2.0
 
-A major update introducing **Quick Prefix Commands (`;`)** and the brand-new **Mini Score Card** (`/miniscorecard`), delivering ultra-fast chat commands and a compact stream-overlay-inspired visual score widget with zero dead space.
+A high-performance Discord bot generating visually stunning, frosted-glass score and beatmap cards. Featuring ultra-fast prefix commands (`;`), accurate osu! API v2 score modeling, and stream-ready mini widgets.
 
 ---
 
-### ✨ What's New in v1.1.1?
+### ✨ What's New in v1.2.0?
+
+* **🎯 Accurate Failed Score & Fail Progress Detection**:
+  * **True Modern API v2 Fail Detection**: Fully handles scores with `passed: false` from modern osu! API v2 / Lazer endpoints where the API returns an accuracy letter grade (`A`/`B`/`C`) despite a failure.
+  * **Automatic Rank Normalization**: Accurately assigns **Rank F** (glowing red badge) for all failed attempts.
+  * **Dynamic Fail Progress Indicator**: Displays the exact completion percentage when a player fails (e.g. `FAILED (70%)` / `FAIL (70%)`), calculated dynamically from total hits vs full beatmap hit objects.
+  * **Misinformation Filter**: Automatically eliminates misleading full PP awards, choked `if FC` values, and PP breakdowns for plays that failed before song completion.
+* **⭐ Accurate Star Rating Engine**:
+  * **Full-Map Star Rating Calculation**: Fixed an issue where failing early on a beatmap caused the difficulty engine to calculate star rating based only on the few hit objects played before failing (e.g. 3.19★ instead of 8.92★).
+  * **Official Attributes Prioritization**: Directly pulls authoritative star ratings from official osu! API attributes and calculates full beatmap difficulty for modded plays (*DT, HR, HT, EZ, etc.*).
+* **🔄 Automatic 12-Hour Update Presence**:
+  * Features a temporary status announcement system that broadcasts new engine updates for 12 hours before automatically reverting to the default presence.
+
+---
+
+### 🌟 Release v1.1.1 Highlights
 
 * **⚡ Quick Prefix Commands (`;`)**:
   * Execute commands instantly directly in chat without opening slash command popups:

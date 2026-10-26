@@ -1,4 +1,6 @@
 require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 const {
   Client,
   GatewayIntentBits,
@@ -335,26 +337,94 @@ function createBeatmapButtons(beatmap, originalInput = null, lang = 'en') {
   return row;
 }
 
+const STATUS_STATE_FILE = path.join(__dirname, '..', 'data', 'status_state.json');
+const DEFAULT_PRESENCE = ';help | osu! Image Generator ✨';
+const UPDATE_PRESENCE = '✨ v1.2.0 Updated: Accurate SR & Fail Stats! | ;help';
+
+function setupBotPresence(client) {
+  let statusData = null;
+  try {
+    if (fs.existsSync(STATUS_STATE_FILE)) {
+      statusData = JSON.parse(fs.readFileSync(STATUS_STATE_FILE, 'utf-8'));
+    }
+  } catch (_) {}
+
+  // Inisialisasi jendela update status 12 jam jika belum ada atau sudah usang
+  if (!statusData || !statusData.activeUntil) {
+    statusData = {
+      activeUntil: Date.now() + (12 * 60 * 60 * 1000), // 12 jam dari sekarang
+      updateStatus: UPDATE_PRESENCE,
+      defaultStatus: DEFAULT_PRESENCE
+    };
+    try {
+      const dataDir = path.dirname(STATUS_STATE_FILE);
+      if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+      fs.writeFileSync(STATUS_STATE_FILE, JSON.stringify(statusData, null, 2), 'utf-8');
+    } catch (_) {}
+  }
+
+  const now = Date.now();
+  if (statusData.activeUntil && now < statusData.activeUntil) {
+    const remainingMs = statusData.activeUntil - now;
+    const remainingHours = (remainingMs / (1000 * 60 * 60)).toFixed(1);
+
+    try {
+      client.user.setPresence({
+        activities: [{
+          name: 'custom',
+          type: ActivityType.Custom,
+          state: statusData.updateStatus || UPDATE_PRESENCE
+        }],
+        status: 'online'
+      });
+      console.log(`✨ Bot presence set to UPDATE STATUS: "${statusData.updateStatus || UPDATE_PRESENCE}" (Aktif selama ~${remainingHours} jam ke depan)\n`);
+    } catch (err) {
+      console.error('Failed to set bot presence:', err.message);
+    }
+
+    // Jadwalkan pengembalian otomatis ke default status setelah 12 jam selesai
+    setTimeout(() => {
+      try {
+        client.user.setPresence({
+          activities: [{
+            name: 'custom',
+            type: ActivityType.Custom,
+            state: statusData.defaultStatus || DEFAULT_PRESENCE
+          }],
+          status: 'online'
+        });
+        console.log(`🔄 12-Hour update status window selesai. Status bot kembali ke default: "${statusData.defaultStatus || DEFAULT_PRESENCE}"\n`);
+        statusData.activeUntil = null;
+        fs.writeFileSync(STATUS_STATE_FILE, JSON.stringify(statusData, null, 2), 'utf-8');
+      } catch (err) {
+        console.error('Failed to revert bot presence:', err.message);
+      }
+    }, remainingMs);
+  } else {
+    try {
+      client.user.setPresence({
+        activities: [{
+          name: 'custom',
+          type: ActivityType.Custom,
+          state: statusData?.defaultStatus || DEFAULT_PRESENCE
+        }],
+        status: 'online'
+      });
+      console.log(`✨ Bot presence set to default: "${statusData?.defaultStatus || DEFAULT_PRESENCE}"\n`);
+    } catch (err) {
+      console.error('Failed to set bot presence:', err.message);
+    }
+  }
+}
+
 client.once(Events.ClientReady, async () => {
   console.log(`\n===========================================`);
   console.log(`✨ Bot Online as: ${client.user.tag}`);
   console.log(`🎮 osu! Client ID: ${OSU_CLIENT_ID}`);
   console.log(`===========================================\n`);
 
-  // Atur status profil bot
-  try {
-    client.user.setPresence({
-      activities: [{
-        name: 'custom',
-        type: ActivityType.Custom,
-        state: ';help | osu! Image Generator ✨'
-      }],
-      status: 'online'
-    });
-    console.log('✨ Bot presence set: ";help | osu! Image Generator ✨"\n');
-  } catch (presenceErr) {
-    console.error('Failed to set bot presence:', presenceErr.message);
-  }
+  // Atur status profil bot (mendukung 12 jam update status kemudian kembali ke default)
+  setupBotPresence(client);
 
   // Register Global Slash Commands
   try {
