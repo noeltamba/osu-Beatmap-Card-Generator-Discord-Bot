@@ -121,20 +121,25 @@ async function generateMiniScoreCard(score, user = {}, options = {}) {
 
   const isFailed = score.passed === false || String(score.rank || '').toUpperCase() === 'F';
 
-  // Calculate local PP if missing (only if not failed)
-  if (beatmap.id && (!score.pp || score.if_fc_pp == null) && !isFailed) {
+  // Calculate local PP if missing
+  if (beatmap.id && ((!isFailed && (!score.pp || score.if_fc_pp == null)) || (isFailed && score.fail_pp == null))) {
     try {
       const calc = await calculateScorePp(score, beatmap);
       if (calc) {
-        if (calc.pp != null && (!score.pp || !isRanked)) {
-          score.pp = calc.pp;
-        }
-        score.is_unranked_pp = calc.isUnranked;
-        if (calc.ifFcPp != null) {
-          score.if_fc_pp = calc.ifFcPp;
-        }
-        if (calc.breakdown) {
-          score.pp_breakdown = calc.breakdown;
+        if (!isFailed) {
+          if (calc.pp != null && (!score.pp || !isRanked)) {
+            score.pp = calc.pp;
+          }
+          score.is_unranked_pp = calc.isUnranked;
+          if (calc.ifFcPp != null) {
+            score.if_fc_pp = calc.ifFcPp;
+          }
+          if (calc.breakdown) {
+            score.pp_breakdown = calc.breakdown;
+          }
+        } else {
+          score.fail_pp = calc.failPp;
+          score.potential_pp = calc.potentialPp;
         }
         if (calc.stars && !score.beatmap.modded_difficulty_rating && !isFailed) {
           score.beatmap.modded_difficulty_rating = calc.stars;
@@ -226,38 +231,51 @@ async function generateMiniScoreCard(score, user = {}, options = {}) {
   // 4. TOP BANNER ELEMENTS
   // 4A. Left: Combo Status ("FC" / "1x MISS" / "FAIL" / "PASS")
   ctx.save();
-  let fcStatusText = 'FC';
-  let fcStatusColor = '#fbbf24';
-  let fcGlowColor = 'rgba(251, 191, 36, 0.65)';
-
   if (isFailed) {
-    fcStatusText = score.fail_percent ? `FAIL (${score.fail_percent}%)` : 'FAIL';
-    fcStatusColor = '#f87171';
-    fcGlowColor = 'rgba(248, 113, 113, 0.55)';
-  } else if (isEffectiveFc) {
-    fcStatusText = 'FC';
-    fcStatusColor = '#f59e0b';
-    fcGlowColor = 'rgba(245, 158, 11, 0.75)';
-  } else if (missCount > 0 && missCount <= 2) {
-    fcStatusText = `${missCount}x MISS`;
-    fcStatusColor = '#fb923c';
-    fcGlowColor = 'rgba(251, 146, 60, 0.60)';
-  } else if (missCount > 2) {
-    fcStatusText = `${missCount}x MISS`;
-    fcStatusColor = '#f43f5e';
-    fcGlowColor = 'rgba(244, 63, 94, 0.60)';
-  } else {
-    fcStatusText = 'PASS';
-    fcStatusColor = '#38bdf8';
-    fcGlowColor = 'rgba(56, 189, 248, 0.50)';
-  }
+    ctx.shadowColor = 'rgba(248, 113, 113, 0.55)';
+    ctx.shadowBlur = 14;
+    ctx.font = `bold 38px ${FONT_STACK}`;
+    ctx.fillStyle = '#f87171';
+    ctx.textAlign = 'left';
+    ctx.fillText('FAIL', 32, 80);
 
-  ctx.shadowColor = fcGlowColor;
-  ctx.shadowBlur = 16;
-  ctx.font = `bold 40px ${FONT_STACK}`;
-  ctx.fillStyle = fcStatusColor;
-  ctx.textAlign = 'left';
-  ctx.fillText(fcStatusText, 32, 80);
+    if (score.fail_percent) {
+      ctx.shadowBlur = 0;
+      const failW = ctx.measureText('FAIL').width;
+      ctx.font = `bold 16px ${FONT_STACK}`;
+      ctx.fillStyle = 'rgba(254, 202, 202, 0.85)';
+      ctx.fillText(`(${score.fail_percent}%)`, 32 + failW + 8, 79);
+    }
+  } else {
+    let fcStatusText = 'FC';
+    let fcStatusColor = '#fbbf24';
+    let fcGlowColor = 'rgba(251, 191, 36, 0.65)';
+
+    if (isEffectiveFc) {
+      fcStatusText = 'FC';
+      fcStatusColor = '#f59e0b';
+      fcGlowColor = 'rgba(245, 158, 11, 0.75)';
+    } else if (missCount > 0 && missCount <= 2) {
+      fcStatusText = `${missCount}x MISS`;
+      fcStatusColor = '#fb923c';
+      fcGlowColor = 'rgba(251, 146, 60, 0.60)';
+    } else if (missCount > 2) {
+      fcStatusText = `${missCount}x MISS`;
+      fcStatusColor = '#f43f5e';
+      fcGlowColor = 'rgba(244, 63, 94, 0.60)';
+    } else {
+      fcStatusText = 'PASS';
+      fcStatusColor = '#38bdf8';
+      fcGlowColor = 'rgba(56, 189, 248, 0.50)';
+    }
+
+    ctx.shadowColor = fcGlowColor;
+    ctx.shadowBlur = 16;
+    ctx.font = `bold 40px ${FONT_STACK}`;
+    ctx.fillStyle = fcStatusColor;
+    ctx.textAlign = 'left';
+    ctx.fillText(fcStatusText, 32, 80);
+  }
   ctx.restore();
 
   // 4B. Center: Star Rating Pill Badge (▲ 5.83) - Aligned to exact centerX
@@ -300,8 +318,11 @@ async function generateMiniScoreCard(score, user = {}, options = {}) {
   let ppTextColor = '#ffffff';
 
   if (isFailed) {
-    ppText = score.fail_percent ? `FAILED (${score.fail_percent}%)` : 'FAILED';
-    ppTextColor = '#f87171';
+    const rawVal = score.fail_pp != null ? score.fail_pp : score.potential_pp;
+    const roundedPp = rawVal != null ? Math.round(rawVal) : null;
+    ppText = roundedPp != null && roundedPp > 0 ? `${roundedPp}pp` : '-';
+    // Dark/dimmed styling to indicate unobtained
+    ppTextColor = 'rgba(203, 213, 225, 0.38)';
   } else if (score.pp != null && Number(score.pp) > 0) {
     ppText = `${Math.round(score.pp)}pp`;
     ppTextColor = isUnrankedPp ? 'rgba(203, 213, 225, 0.75)' : '#ffffff';
@@ -309,25 +330,47 @@ async function generateMiniScoreCard(score, user = {}, options = {}) {
 
   ctx.save();
   ctx.textAlign = 'right';
-  ctx.font = `bold ${ppText.startsWith('FAILED') ? '24px' : '38px'} ${FONT_STACK}`;
+  ctx.font = `bold 36px ${FONT_STACK}`;
   ctx.fillStyle = ppTextColor;
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
-  ctx.shadowBlur = 12;
+  if (!isFailed) {
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+    ctx.shadowBlur = 12;
+  }
   ctx.fillText(ppText, width - 32, 80);
   ctx.shadowBlur = 0;
 
-  // Subtitle under PP if choked/non-FC or unranked
-  if (isUnrankedPp && !ppText.startsWith('FAILED') && ppText !== '-') {
-    ctx.font = `bold 10px ${FONT_STACK}`;
-    ctx.fillStyle = 'rgba(148, 163, 184, 0.85)';
-    ctx.fillText('UNRANKED', width - 32, 98);
-  } else if (!isEffectiveFc && score.if_fc_pp && !isFailed) {
-    const ifFcVal = Math.round(score.if_fc_pp);
-    if (ifFcVal > Math.round(score.pp || 0)) {
-      ctx.font = `600 11px ${FONT_STACK}`;
-      ctx.fillStyle = '#38bdf8';
-      const ifFcLabel = `if FC: ~${ifFcVal}pp`;
-      ctx.fillText(ifFcLabel, width - 32, 98);
+  // Strikethrough line ("elemen coretan") for failed score PP
+  if (isFailed && ppText !== '-') {
+    const ppWidth = ctx.measureText(ppText).width;
+    const strikeY = 67; // Middle height of the text baseline at 80
+    const startX = width - 32 - ppWidth - 4;
+    const endX = width - 32 + 4;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(startX, strikeY);
+    ctx.lineTo(endX, strikeY);
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.65)'; // sleek red strike line
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Subtitle under PP if choked/non-FC or unranked (only if not failed)
+  if (!isFailed) {
+    if (isUnrankedPp && ppText !== '-') {
+      ctx.font = `bold 10px ${FONT_STACK}`;
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.85)';
+      ctx.fillText('UNRANKED', width - 32, 98);
+    } else if (!isEffectiveFc && score.if_fc_pp) {
+      const ifFcVal = Math.round(score.if_fc_pp);
+      if (ifFcVal > Math.round(score.pp || 0)) {
+        ctx.font = `600 11px ${FONT_STACK}`;
+        ctx.fillStyle = '#38bdf8';
+        const ifFcLabel = `if FC: ~${ifFcVal}pp`;
+        ctx.fillText(ifFcLabel, width - 32, 98);
+      }
     }
   }
   ctx.restore();

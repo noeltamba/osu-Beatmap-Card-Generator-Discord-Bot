@@ -353,6 +353,8 @@ class OsuApi {
           if (isFailed) {
             // Failed scores do not have valid play PP, If FC PP, or PP breakdown
             score.pp = null;
+            score.fail_pp = ppResult.failPp;
+            score.potential_pp = ppResult.potentialPp;
             score.if_fc_pp = null;
             score.pp_breakdown = null;
           } else {

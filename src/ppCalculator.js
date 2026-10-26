@@ -234,10 +234,23 @@ async function calculateScorePp(score, beatmap = null) {
       } catch (_) {}
     }
 
+    let potentialFullPp = null;
+    if (isFailed) {
+      try {
+        const fullPerf = new Performance({
+          ...perfOptions,
+          passedObjects: undefined
+        }).calculate(map);
+        potentialFullPp = fullPerf.pp;
+      } catch (_) {}
+    }
+
     const officialPp = (isRanked && score.pp != null && Number(score.pp) > 0) ? Number(score.pp) : calculatedPp;
 
     return {
       pp: isFailed ? null : officialPp,
+      failPp: isFailed ? calculatedPp : null,
+      potentialPp: isFailed ? potentialFullPp : null,
       stars: stars,
       isUnranked: !isRanked,
       ifFcPp: isFailed ? null : ifFcPp,
