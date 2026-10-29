@@ -7,13 +7,32 @@
   [![Invite Discord Bot](https://img.shields.io/badge/Invite_Bot-Click_Here-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/oauth2/authorize?client_id=1562307139274416178&permissions=274878286912&integration_type=0&scope=applications.commands+bot)
 
 </div>
-# 🎮 osu! Beatmap Card Generator - Release v1.2.0
+# 🎮 osu! Beatmap Card Generator - Release v1.3.0
 
 A high-performance Discord bot generating visually stunning, frosted-glass score and beatmap cards. Featuring ultra-fast prefix commands (`;`), accurate osu! API v2 score modeling, and stream-ready mini widgets.
 
 ---
 
-### ✨ What's New in v1.2.0?
+### ✨ What's New in v1.3.0?
+
+* **🎴 Modern Profile Card (`/profile`, `/pcard`, `;pcard`)**:
+  * **Visual Glassmorphism Profile Dashboard (1180×690 px)**: Sleek, high-resolution profile card showcasing player avatar with country flag, supporter badge, global rank, country rank, and peak rank pill.
+  * **Skill Profile Breakdown (Bathbot-inspired)**: Calculates weighted skill distributions (**Aim / Jump**, **Speed / Tapping**, and **Accuracy / Timing**) derived from top plays using official `rosu-pp-js` decay formulas ($0.95^n$).
+  * **Dynamic Archetype Tag**: Assigns dynamic player playstyle badges (*Speed Demon*, *Aim Specialist*, *All-Rounder*, *Rhythm Master*, etc.) based on skill ratio thresholds.
+  * **Official Bathbot & Bancho Logos**: Custom high-resolution vector assets for Bathbot (green shower tub) and Bancho (blue ASCII ship) headers.
+  * **Complete Bancho Performance Panel**: Total PP, overall accuracy, play time, play count, profile level with progress bar, ranked score, total hits, and medal count.
+  * **Grade Breakdown Counter**: Visual counters for Silver SS, Gold SS, Silver S, Gold S, and A ranks.
+* **⚔️ Smart Personal Best Compare Command (`/compare`, `;c`)**:
+  * **Quick PB Lookup by Replying**: Reply to any score or beatmap message (from Columbina Bot, Bathbot, owo bot, etc.) and type `;c` to instantly inspect your personal best score on that beatmap.
+  * **Automatic User Targeting**: Defaults to your own linked osu! account (`/link`) or query another player (`/compare player:<name>` or `;c <name>`).
+  * **Comprehensive Multi-Bot Detection**: Automatically resolves beatmap IDs from attachment filenames (`_bm<id>_`), buttons, embed URLs, descriptions, and channel message history.
+  * **Missing Score Notification**: Politely notifies if no score exists on the targeted beatmap (`ℹ️ [Username] has no scores on [Beatmap]`).
+* **🎨 Lucide Vector Icons Integration**:
+  * Integrated `lucide-static` clean SVG icons for crisp, anti-aliased visual rendering without relying on system emoji font fallbacks.
+
+---
+
+### 🌟 Release v1.2.0 Highlights
 
 * **🎯 Accurate Failed Score & Fail Progress Detection**:
   * **True Modern API v2 Fail Detection**: Fully handles scores with `passed: false` from modern osu! API v2 / Lazer endpoints where the API returns an accuracy letter grade (`A`/`B`/`C`) despite a failure.
@@ -73,7 +92,7 @@ You can also use the lightning-fast `;` prefix directly in chat without opening 
 
 | Prefix Command | Aliases | Description | Example Usage |
 | :--- | :--- | :--- | :--- |
-| ;c | ;compare | Compare/check top score on map (reply to any bot) | ;c • ;c Utami |
+| `;c` | `;compare` | Compare/check personal best score on map (reply to any bot) | `;c` • `;c Utami` |
 | `;pcard` | `;profile`, `;p`, `;user` | Modern profile card with skill breakdown | `;pcard` • `;pcard Utami` |
 | `;miniscorecard` | `;m`, `;mini` | Compact mini score card | `;m` • `;m Utami` • `;m 1` • `;m Utami 1` |
 | `;recent` | `;r`, `;rs` | Detailed full score card | `;r` • `;r Utami` |
