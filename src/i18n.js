@@ -29,6 +29,11 @@ const translations = {
     cmd_miniscorecard_player: 'osu! player username (optional if already linked)',
     cmd_miniscorecard_link: 'osu! score link (e.g. https://osu.ppy.sh/scores/7265198407) or Score ID',
     cmd_miniscorecard_top: 'Show specific top play ranking (1 - 100, e.g. 1 for #1 top play)',
+    cmd_profile_desc: 'Display modern visual profile card with skill breakdown and Bancho stats',
+    cmd_profile_player: 'osu! player username (optional if already linked)',
+    cmd_compare_desc: 'Compare / display a player\'s personal best score on a beatmap (reply to a score message or provide beatmap)',
+    cmd_compare_player: 'osu! player username (optional, defaults to linked user or replied message player)',
+    cmd_compare_beatmap: 'Beatmap URL or Beatmap ID (optional if replying to a score/beatmap message)',
     cmd_language_desc: 'Choose your preferred language (English / Bahasa Indonesia)',
     cmd_language_option: 'Select language',
 
@@ -45,6 +50,14 @@ const translations = {
     top_not_linked: '❌ You have not linked your osu! account yet.\nUse `/link username:<name>` first, or specify a player using `/top player:<name>`.',
     top_no_scores: 'ℹ️ No top plays found for player **{username}**.',
     top_error: '❌ Failed to fetch top scores: {message}',
+
+    profile_not_linked: '❌ You have not linked your osu! account yet.\nUse `/link username:<name>` first, or specify a player using `/profile player:<name>` or `;pcard <name>`.',
+    profile_error: '❌ Failed to generate profile card: {message}',
+
+    compare_no_beatmap: '❌ Could not find an osu! beatmap! Please reply to a message containing a score/beatmap (from any bot), or provide a beatmap link/ID.',
+    compare_no_player: '❌ Could not determine player! Please specify a player (e.g. `;c <player>`) or link your account with `/link`.',
+    compare_no_score: 'ℹ️ No scores found for **{username}** on **{beatmap}**.',
+    compare_error: '❌ Failed to compare score: {message}',
 
     beatmap_invalid_input: '❌ Invalid input format! Please enter a valid osu! beatmap URL or numeric Beatmap ID.',
     beatmap_error: '❌ Failed to fetch beatmap: {message}',
@@ -108,6 +121,11 @@ const translations = {
     cmd_miniscorecard_player: 'Nama pemain osu! (opsional jika sudah /link)',
     cmd_miniscorecard_link: 'Link skor osu! (cth: https://osu.ppy.sh/scores/7265198407) atau Score ID',
     cmd_miniscorecard_top: 'Tampilkan ranking top play tertentu (1 - 100, cth: 1 untuk top play #1)',
+    cmd_profile_desc: 'Tampilkan kartu profil osu! modern dengan breakdown skill (Aim, Speed, Acc) dan statistik Bancho',
+    cmd_profile_player: 'Nama pemain osu! (opsional jika sudah /link)',
+    cmd_compare_desc: 'Bandingkan / tampilkan top skor seorang pemain pada beatmap tertentu (reply pesan skor atau masukkan beatmap)',
+    cmd_compare_player: 'Nama pemain osu! (opsional, default: akun kamu atau pemain dari pesan yang di-reply)',
+    cmd_compare_beatmap: 'Link beatmap atau ID beatmap (opsional jika me-reply pesan skor/beatmap)',
     cmd_language_desc: 'Ubah preferensi bahasa bot (Inggris / Bahasa Indonesia)',
     cmd_language_option: 'Pilih bahasa',
 
@@ -124,6 +142,14 @@ const translations = {
     top_not_linked: '❌ Kamu belum menautkan akun osu!\nGunakan `/link username:<nama_osu>` terlebih dahulu, atau masukkan nama pemain dengan opsi `/top player:<nama>`.',
     top_no_scores: 'ℹ️ Tidak ada top plays yang ditemukan untuk pemain **{username}**.',
     top_error: '❌ Gagal mengambil top scores: {message}',
+
+    profile_not_linked: '❌ Kamu belum menautkan akun osu!\nGunakan `/link username:<nama_osu>` terlebih dahulu, atau masukkan nama pemain dengan opsi `/profile player:<nama>` atau `;pcard <nama>`.',
+    profile_error: '❌ Gagal membuat kartu profil: {message}',
+
+    compare_no_beatmap: '❌ Tidak dapat menemukan beatmap osu! Harap reply pesan yang memuat skor/beatmap (dari bot apa pun), atau masukkan link/ID beatmap.',
+    compare_no_player: '❌ Tidak dapat menentukan pemain! Silakan masukkan nama pemain (cth: `;c <nama>`) atau tautkan akun dengan `/link`.',
+    compare_no_score: 'ℹ️ **{username}** belum memiliki skor di beatmap **{beatmap}**.',
+    compare_error: '❌ Gagal membandingkan skor: {message}',
 
     beatmap_invalid_input: '❌ Format input tidak valid! Masukkan URL beatmap osu! yang sah atau Beatmap ID angka.',
     beatmap_error: '❌ Gagal mengambil beatmap: {message}',

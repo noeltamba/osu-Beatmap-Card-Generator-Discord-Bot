@@ -818,6 +818,191 @@ function getLazerModBadges(mods) {
   return badges;
 }
 
+/**
+ * Extract beatmap ID from a message (attachment names, buttons, embeds, or content).
+ * Works reliably across Columbina Bot, Bathbot, owo, and generic osu! bots.
+ * @param {import('discord.js').Message} targetMessage 
+ * @param {object} [osuApi] 
+ * @returns {Promise<number|null>} beatmapId
+ */
+async function extractBeatmapFromMessage(targetMessage, osuApi = null) {
+  if (!targetMessage) return null;
+
+  // 1. Check Attachments (Columbina Bot filenames)
+  if (targetMessage.attachments && targetMessage.attachments.size > 0) {
+    for (const [, att] of targetMessage.attachments) {
+      const name = att.name || '';
+
+      // Direct bm pattern: e.g. recent_User_bm12345_score.png, beatmap_12345.png
+      const matchExplicitBm = name.match(/bm(\d+)/i) || name.match(/beatmap_(\d+)/i);
+      if (matchExplicitBm) {
+        return parseInt(matchExplicitBm[1], 10);
+      }
+
+      // Pattern: compare_User_12345.png
+      const matchCompare = name.match(/compare_.*_(\d+)\.png$/i);
+      if (matchCompare) {
+        return parseInt(matchCompare[1], 10);
+      }
+
+      // Pattern: recent_User_scoreId.png or miniscore_User_scoreId.png
+      const matchScore = name.match(/(?:recent|miniscore|score)_.*_(\d+)\.png$/i);
+      if (matchScore && osuApi) {
+        const sId = matchScore[1];
+        try {
+          const sc = await osuApi.getScore(sId);
+          if (sc?.beatmap?.id) return sc.beatmap.id;
+        } catch (_) {}
+      }
+    }
+  }
+
+  // 2. Check ActionRow Components (Buttons)
+  if (targetMessage.components && targetMessage.components.length > 0) {
+    for (const row of targetMessage.components) {
+      if (!row.components) continue;
+      for (const comp of row.components) {
+        const u = comp.url || comp.data?.url || '';
+        if (!u) continue;
+
+        // 2A. Direct beatmap link (e.g. https://osu.ppy.sh/b/12345 or /beatmapsets/123#osu/456)
+        const parsedBm = parseBeatmapInput(u);
+        if (parsedBm?.type === 'beatmap' && parsedBm.id) {
+          return parsedBm.id;
+        }
+        if (parsedBm?.type === 'beatmapset' && parsedBm.id && osuApi) {
+          try {
+            const resolved = await osuApi.resolveBeatmap(parsedBm);
+            if (resolved?.id) return resolved.id;
+          } catch (_) {}
+        }
+
+        // 2B. Direct score link (e.g. https://osu.ppy.sh/scores/12345)
+        const parsedScore = parseScoreInput(u);
+        if (parsedScore && osuApi) {
+          const sId = typeof parsedScore === 'object' ? parsedScore.id : parsedScore;
+          try {
+            const sc = await osuApi.getScore(sId);
+            if (sc?.beatmap?.id) return sc.beatmap.id;
+          } catch (_) {}
+        }
+
+        // 2C. Beatconnect link (e.g. https://beatconnect.io/b/12345)
+        const matchBc = u.match(/beatconnect\.io\/b\/(\d+)/i);
+        if (matchBc && osuApi) {
+          try {
+            const resolved = await osuApi.resolveBeatmap({ type: 'beatmapset', id: parseInt(matchBc[1], 10) });
+            if (resolved?.id) return resolved.id;
+          } catch (_) {}
+        }
+      }
+    }
+  }
+
+  // 3. Check Embeds (Bathbot, owo, etc.)
+  if (targetMessage.embeds && targetMessage.embeds.length > 0) {
+    for (const emb of targetMessage.embeds) {
+      // 3A. Embed URL (Bathbot puts https://osu.ppy.sh/b/{id} or /beatmapsets/{id}#{mode}/{id} in embed.url)
+      if (emb.url) {
+        const p = parseBeatmapInput(emb.url);
+        if (p?.type === 'beatmap' && p.id) return p.id;
+        if (p?.type === 'beatmapset' && p.id && osuApi) {
+          try {
+            const resolved = await osuApi.resolveBeatmap(p);
+            if (resolved?.id) return resolved.id;
+          } catch (_) {}
+        }
+      }
+
+      // 3B. Author URL
+      if (emb.author?.url) {
+        const p = parseBeatmapInput(emb.author.url);
+        if (p?.type === 'beatmap' && p.id) return p.id;
+      }
+
+      // 3C. Description (Markdown links [Song](https://osu.ppy.sh/...))
+      if (emb.description) {
+        const urls = extractAllOsuUrls(emb.description);
+        for (const u of urls) {
+          const p = parseBeatmapInput(u);
+          if (p?.type === 'beatmap' && p.id) return p.id;
+        }
+      }
+
+      // 3D. Fields
+      if (emb.fields && emb.fields.length > 0) {
+        for (const f of emb.fields) {
+          const urls = extractAllOsuUrls(`${f.name || ''} ${f.value || ''}`);
+          for (const u of urls) {
+            const p = parseBeatmapInput(u);
+            if (p?.type === 'beatmap' && p.id) return p.id;
+          }
+        }
+      }
+
+      // 3E. Thumbnail / Image (e.g. assets.ppy.sh/beatmaps/12345/covers/...)
+      const coverUrl = emb.thumbnail?.url || emb.image?.url || '';
+      const matchCover = coverUrl.match(/beatmaps\/(\d+)\/covers/i);
+      if (matchCover && osuApi) {
+        try {
+          const resolved = await osuApi.resolveBeatmap({ type: 'beatmapset', id: parseInt(matchCover[1], 10) });
+          if (resolved?.id) return resolved.id;
+        } catch (_) {}
+      }
+    }
+  }
+
+  // 4. Check Message Content
+  if (targetMessage.content) {
+    const urls = extractAllOsuUrls(targetMessage.content);
+    for (const u of urls) {
+      const p = parseBeatmapInput(u);
+      if (p?.type === 'beatmap' && p.id) return p.id;
+      if (p?.type === 'beatmapset' && p.id && osuApi) {
+        try {
+          const resolved = await osuApi.resolveBeatmap(p);
+          if (resolved?.id) return resolved.id;
+        } catch (_) {}
+      }
+    }
+
+    if (osuApi) {
+      const sUrls = extractAllScoreUrls(targetMessage.content);
+      for (const su of sUrls) {
+        const p = parseScoreInput(su);
+        if (p) {
+          const sId = typeof p === 'object' ? p.id : p;
+          try {
+            const sc = await osuApi.getScore(sId);
+            if (sc?.beatmap?.id) return sc.beatmap.id;
+          } catch (_) {}
+        }
+      }
+    }
+  }
+
+  // 5. If targetMessage itself is a reply to another message, check the parent message recursively
+  if (targetMessage.reference && targetMessage.reference.messageId && targetMessage.channel?.messages) {
+    try {
+      const parentMsg = await targetMessage.channel.messages.fetch(targetMessage.reference.messageId);
+      if (parentMsg) {
+        const parentBmId = await extractBeatmapFromMessage(parentMsg, osuApi);
+        if (parentBmId) return parentBmId;
+      }
+    } catch (_) {}
+  }
+
+  return null;
+}
+
+/**
+ * Backward compatibility wrapper
+ */
+async function extractBeatmapAndPlayerFromMessage(targetMessage, osuApi = null) {
+  const beatmapId = await extractBeatmapFromMessage(targetMessage, osuApi);
+  return { beatmapId, detectedPlayer: null };
+}
+
 module.exports = {
   parseBeatmapInput,
   extractAllOsuUrls,
@@ -840,6 +1025,8 @@ module.exports = {
   getCanonicalScoreUrl,
   detectScoreClient,
   calculateLazerScore,
-  calculateStandardScore
+  calculateStandardScore,
+  extractBeatmapFromMessage,
+  extractBeatmapAndPlayerFromMessage
 };
 

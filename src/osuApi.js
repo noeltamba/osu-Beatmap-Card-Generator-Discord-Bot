@@ -219,6 +219,32 @@ class OsuApi {
     return await response.json();
   }
 
+  async getUserBeatmapScore(beatmapId, userId, mode = null) {
+    const token = await this.getAccessToken();
+    const cleanUser = String(userId).trim();
+    const query = mode ? `?mode=${mode}` : '';
+
+    try {
+      const response = await fetch(`https://osu.ppy.sh/api/v2/beatmaps/${beatmapId}/scores/users/${encodeURIComponent(cleanUser)}${query}`, {
+        headers: this.getDefaultHeaders(token)
+      });
+
+      if (response.status === 404) {
+        return null;
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data?.score || null;
+    } catch (err) {
+      if (err.message?.includes('404')) return null;
+      throw err;
+    }
+  }
+
   async getScore(scoreId, mode = null) {
     const token = await this.getAccessToken();
     const modernHeaders = this.getDefaultHeaders(token);
@@ -288,7 +314,7 @@ class OsuApi {
 
     // 1. Ensure full beatmap details exist (especially max_combo and base stats)
     if (score.beatmap && score.beatmap.id) {
-      if (!score.beatmap.max_combo || !score.beatmap.difficulty_rating || score.beatmap.count_circles == null) {
+      if (!score.beatmap.max_combo || !score.beatmap.difficulty_rating || score.beatmap.count_circles == null || !score.beatmapset) {
         try {
           const fullBm = await this.getBeatmap(score.beatmap.id);
           score.beatmap = {
@@ -300,6 +326,12 @@ class OsuApi {
             count_sliders: fullBm.count_sliders ?? score.beatmap.count_sliders,
             count_spinners: fullBm.count_spinners ?? score.beatmap.count_spinners
           };
+          if (!score.beatmapset && fullBm.beatmapset) {
+            score.beatmapset = fullBm.beatmapset;
+          }
+          if (!score.beatmap.beatmapset && fullBm.beatmapset) {
+            score.beatmap.beatmapset = fullBm.beatmapset;
+          }
         } catch (_) {}
       }
     }

@@ -10,6 +10,7 @@ const { generateBeatmapCard } = require('./cardGenerator');
 const { generateScoreCard } = require('./scoreCardGenerator');
 const { generateTopPlaysCard } = require('./topCardGenerator');
 const { generateMiniScoreCard } = require('./miniScoreCardGenerator');
+const { generateProfileCard } = require('./profileCardGenerator');
 const {
   getLinkedUser,
   linkUser,
@@ -22,7 +23,9 @@ const {
   parseMods,
   extractModsFromText,
   getCanonicalBeatmapUrl,
-  getCanonicalScoreUrl
+  getCanonicalScoreUrl,
+  extractBeatmapFromMessage,
+  extractBeatmapAndPlayerFromMessage
 } = require('./utils');
 const { t } = require('./i18n');
 
@@ -94,7 +97,9 @@ async function handlePrefixCommand(message, osuApi) {
   const lang = getUserLanguage(message.author.id);
   const content = message.content.trim();
 
-  // Strip prefix ';'
+  // Support prefix ';'
+  if (!content.startsWith(';')) return false;
+
   const body = content.slice(1).trim();
   if (!body) return false;
 
@@ -204,7 +209,7 @@ async function handlePrefixCommand(message, osuApi) {
       } catch (_) {}
 
       const imageBuffer = await generateMiniScoreCard(score, user, { lang, topRank });
-      const attachment = new AttachmentBuilder(imageBuffer, { name: `miniscore_${user.username}_${score.id || 'recent'}.png` });
+      const attachment = new AttachmentBuilder(imageBuffer, { name: `miniscore_${user.username}_bm${score.beatmap?.id || ''}_${score.id || 'recent'}.png` });
       const row = createScoreButtons(score, null, lang);
       return message.reply({ files: [attachment], components: [row] });
     } catch (err) {
@@ -232,7 +237,7 @@ async function handlePrefixCommand(message, osuApi) {
       const score = scores[0];
       await osuApi.enrichScoreWithBeatmapAndMods(score);
       const imageBuffer = await generateScoreCard(score, user, { lang });
-      const attachment = new AttachmentBuilder(imageBuffer, { name: `recent_${user.username}_${score.id || 'score'}.png` });
+      const attachment = new AttachmentBuilder(imageBuffer, { name: `recent_${user.username}_bm${score.beatmap?.id || ''}_${score.id || 'score'}.png` });
       const row = createScoreButtons(score, null, lang);
       return message.reply({ files: [attachment], components: [row] });
     } catch (err) {
@@ -316,7 +321,7 @@ async function handlePrefixCommand(message, osuApi) {
       await osuApi.enrichScoreWithBeatmapAndMods(score);
       const user = score.user || (score.user_id ? await osuApi.getUser(score.user_id) : {});
       const imageBuffer = await generateScoreCard(score, user, { lang });
-      const attachment = new AttachmentBuilder(imageBuffer, { name: `score_${score.id}.png` });
+      const attachment = new AttachmentBuilder(imageBuffer, { name: `score_${score.id}_bm${score.beatmap?.id || ''}.png` });
       const row = createScoreButtons(score, input, lang);
       return message.reply({ files: [attachment], components: [row] });
     } catch (err) {
@@ -325,7 +330,135 @@ async function handlePrefixCommand(message, osuApi) {
     }
   }
 
-  // 5. Beatmap: ;b, ;map, ;beatmap
+  // 5. Profile Card: ;pcard, ;profile, ;p, ;user
+  if (['pcard', 'profile', 'p', 'user'].includes(cmd)) {
+    let player = args.length > 0 ? args.join(' ') : null;
+    if (!player) {
+      const linked = getLinkedUser(message.author.id);
+      if (!linked) return message.reply({ content: t(lang, 'profile_not_linked') });
+      player = linked.osuUsername;
+    }
+
+    try {
+      await message.channel.sendTyping().catch(() => {});
+      const user = await osuApi.getUser(player);
+      const topScores = await osuApi.getUserBestScore(user.id, 25).catch(() => []);
+
+      const imageBuffer = await generateProfileCard(user, topScores, { lang });
+      const attachment = new AttachmentBuilder(imageBuffer, { name: `profile_${user.username}.png` });
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel(t(lang, 'btn_open_profile'))
+          .setStyle(ButtonStyle.Link)
+          .setURL(`https://osu.ppy.sh/users/${user.id}`)
+      );
+      return message.reply({ files: [attachment], components: [row] });
+    } catch (err) {
+      console.error(`Error in ;${cmd}:`, err.message);
+      return message.reply({ content: t(lang, 'profile_error', { message: err.message }) }).catch(() => {});
+    }
+  }
+
+  // 6. Compare Command: ;c, ;compare
+  if (['c', 'compare'].includes(cmd)) {
+    let specifiedPlayer = null;
+    let specifiedBeatmap = null;
+
+    // Check args for beatmap or player
+    for (const arg of args) {
+      const parsedBm = parseBeatmapInput(arg);
+      if (parsedBm) {
+        specifiedBeatmap = parsedBm;
+      } else {
+        specifiedPlayer = specifiedPlayer ? `${specifiedPlayer} ${arg}` : arg;
+      }
+    }
+
+    // Determine target player:
+    // ALWAYS check our own score (the command author's linked osu! account)
+    // unless an explicit player argument was passed (e.g. ;c Utami)
+    let playerQuery = specifiedPlayer;
+    if (!playerQuery) {
+      const linked = getLinkedUser(message.author.id);
+      if (linked) {
+        playerQuery = linked.osuUsername;
+      }
+    }
+
+    if (!playerQuery) {
+      return message.reply({ content: t(lang, 'compare_no_player') });
+    }
+
+    let beatmapId = null;
+
+    if (specifiedBeatmap) {
+      try {
+        const resolved = await osuApi.resolveBeatmap(specifiedBeatmap);
+        if (resolved?.id) beatmapId = resolved.id;
+      } catch (_) {}
+    }
+
+    // Try to find target message (reply reference)
+    if (!beatmapId) {
+      let targetMessage = null;
+      if (message.reference && message.reference.messageId) {
+        targetMessage = await message.channel?.messages?.fetch(message.reference.messageId).catch(() => null);
+      }
+
+      if (targetMessage) {
+        beatmapId = await extractBeatmapFromMessage(targetMessage, osuApi);
+      }
+    }
+
+    // If still no beatmap and no reply was made, check the last 15 messages in the channel
+    if (!beatmapId && !message.reference) {
+      const channelMsgs = await message.channel?.messages?.fetch({ limit: 15 }).catch(() => null);
+      if (channelMsgs) {
+        for (const [, m] of channelMsgs) {
+          if (m.id === message.id) continue;
+          beatmapId = await extractBeatmapFromMessage(m, osuApi);
+          if (beatmapId) break;
+        }
+      }
+    }
+
+    if (!beatmapId) {
+      return message.reply({ content: t(lang, 'compare_no_beatmap') });
+    }
+
+    try {
+      await message.channel.sendTyping().catch(() => {});
+      const user = await osuApi.getUser(playerQuery);
+      const score = await osuApi.getUserBeatmapScore(beatmapId, user.id);
+
+      if (!score) {
+        const bm = await osuApi.getBeatmap(beatmapId).catch(() => null);
+        const mapTitle = bm
+          ? `${bm.beatmapset?.title || bm.title} [${bm.version}]`
+          : `Beatmap #${beatmapId}`;
+        return message.reply({
+          content: t(lang, 'compare_no_score', {
+            username: user.username,
+            beatmap: mapTitle
+          })
+        });
+      }
+
+      score.user = user;
+      await osuApi.enrichScoreWithBeatmapAndMods(score);
+
+      const imageBuffer = await generateScoreCard(score, user, { lang });
+      const attachment = new AttachmentBuilder(imageBuffer, { name: `compare_${user.username}_bm${beatmapId}_${score.id || 'score'}.png` });
+      const row = createScoreButtons(score, null, lang);
+
+      return message.reply({ files: [attachment], components: [row] });
+    } catch (err) {
+      console.error(`Error in ;${cmd}:`, err.message);
+      return message.reply({ content: t(lang, 'compare_error', { message: err.message }) }).catch(() => {});
+    }
+  }
+
+  // 7. Beatmap: ;b, ;map, ;beatmap
   if (['b', 'map', 'beatmap'].includes(cmd)) {
     if (args.length === 0) {
       return message.reply({ content: t(lang, 'beatmap_invalid_input') });
@@ -400,8 +533,10 @@ async function handlePrefixCommand(message, osuApi) {
           inline: false
         },
         {
-          name: isId ? '📊 Skor Penuh & Leaderboard' : '📊 Full Score & Leaderboard',
-          value: '`;r [player]` - ' + (isId ? 'Kartu skor terbaru detail penuh' : 'Detailed recent score card') + '\n' +
+          name: isId ? '📊 Skor Penuh, Profil & Leaderboard' : '📊 Full Score, Profile & Leaderboard',
+          value: '`;c [player]` - ' + (isId ? 'Bandingkan / cek skor di beatmap (reply pesan bot apa pun)' : 'Compare / check best score on map (reply to any bot message)') + '\n' +
+                 '`;pcard [player]` - ' + (isId ? 'Kartu profil modern & breakdown skill (Aim, Speed, Acc)' : 'Modern profile card with Aim/Speed/Acc breakdown') + '\n' +
+                 '`;r [player]` - ' + (isId ? 'Kartu skor terbaru detail penuh' : 'Detailed recent score card') + '\n' +
                  '`;t [player] [jumlah]` - ' + (isId ? 'Top plays pemain (1-10)' : 'Top performance plays (1-10)') + '\n' +
                  '`;s <link_skor>` - ' + (isId ? 'Kartu skor dari link/ID' : 'Full score card from link/ID'),
           inline: false
@@ -422,6 +557,8 @@ async function handlePrefixCommand(message, osuApi) {
       if (err.code === 50013 || err.message?.includes('Missing Permissions')) {
         const plainHelp = isId
           ? `⚡ **Columbina Bot - Perintah Prefix (;)**\n\n` +
+            `• \`;c [player]\` : Bandingkan top skor di beatmap (reply pesan bot)\n` +
+            `• \`;pcard [player]\` : Kartu Profil Modern (Aim, Speed, Acc Breakdown)\n` +
             `• \`;m [player] [top#]\` : Kartu Mini Skor (cth: \`;m\`, \`;m Utami 1\`)\n` +
             `• \`;r [player]\` : Kartu Skor Terbaru Lengkap\n` +
             `• \`;t [player] [1-10]\` : Top Plays Leaderboard\n` +
@@ -431,6 +568,8 @@ async function handlePrefixCommand(message, osuApi) {
             `• \`;unlink\` : Lepas tautan akun osu!\n\n` +
             `💡 *Tip: Slash command (/) juga tetap aktif dan bisa digunakan kapan saja!*`
           : `⚡ **Columbina Bot - Prefix Commands (;)**\n\n` +
+            `• \`;c [player]\` : Compare personal best on beatmap (reply to bot message)\n` +
+            `• \`;pcard [player]\` : Modern Profile Card (Aim, Speed, Acc Breakdown)\n` +
             `• \`;m [player] [top#]\` : Mini Score Card (e.g. \`;m\`, \`;m Utami 1\`)\n` +
             `• \`;r [player]\` : Detailed Recent Score Card\n` +
             `• \`;t [player] [1-10]\` : Top Performance Plays\n` +

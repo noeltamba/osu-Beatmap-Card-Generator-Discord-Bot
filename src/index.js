@@ -20,6 +20,7 @@ const { generateBeatmapCard } = require('./cardGenerator');
 const { generateScoreCard } = require('./scoreCardGenerator');
 const { generateTopPlaysCard } = require('./topCardGenerator');
 const { generateMiniScoreCard } = require('./miniScoreCardGenerator');
+const { generateProfileCard } = require('./profileCardGenerator');
 const { handlePrefixCommand } = require('./prefixHandler');
 const {
   getLinkedUser,
@@ -278,6 +279,63 @@ const miniscorecardCommand = new SlashCommandBuilder()
       .setRequired(false)
   );
 
+const profileCommand = new SlashCommandBuilder()
+  .setName('profile')
+  .setDescription('Display modern visual profile card with skill breakdown and Bancho stats')
+  .setDescriptionLocalizations({
+    id: 'Tampilkan kartu profil osu! modern dengan breakdown skill (Aim, Speed, Acc) dan statistik Bancho'
+  })
+  .addStringOption(option =>
+    option
+      .setName('player')
+      .setDescription('osu! player username (optional if already linked)')
+      .setDescriptionLocalizations({
+        id: 'Nama pemain osu! (opsional jika sudah /link)'
+      })
+      .setRequired(false)
+  );
+
+const pcardCommand = new SlashCommandBuilder()
+  .setName('pcard')
+  .setDescription('Display modern visual profile card with skill breakdown and Bancho stats')
+  .setDescriptionLocalizations({
+    id: 'Tampilkan kartu profil osu! modern dengan breakdown skill (Aim, Speed, Acc) dan statistik Bancho'
+  })
+  .addStringOption(option =>
+    option
+      .setName('player')
+      .setDescription('osu! player username (optional if already linked)')
+      .setDescriptionLocalizations({
+        id: 'Nama pemain osu! (opsional jika sudah /link)'
+      })
+      .setRequired(false)
+  );
+
+const compareCommand = new SlashCommandBuilder()
+  .setName('compare')
+  .setDescription('Compare / display a player\'s personal best score on a beatmap')
+  .setDescriptionLocalizations({
+    id: 'Bandingkan / tampilkan top skor seorang pemain pada beatmap tertentu'
+  })
+  .addStringOption(option =>
+    option
+      .setName('beatmap')
+      .setDescription('Beatmap link (e.g. https://osu.ppy.sh/b/12345) or Beatmap ID')
+      .setDescriptionLocalizations({
+        id: 'Link beatmap (cth: https://osu.ppy.sh/b/12345) atau Beatmap ID'
+      })
+      .setRequired(true)
+  )
+  .addStringOption(option =>
+    option
+      .setName('player')
+      .setDescription('osu! player username (optional if already linked)')
+      .setDescriptionLocalizations({
+        id: 'Nama pemain osu! (opsional jika sudah /link)'
+      })
+      .setRequired(false)
+  );
+
 function createScoreButtons(score, originalInput = null, lang = 'en') {
   const row = new ActionRowBuilder();
   const beatmap = score.beatmap || {};
@@ -428,7 +486,7 @@ client.once(Events.ClientReady, async () => {
 
   // Register Global Slash Commands
   try {
-    console.log('Registering Slash Commands (/link, /unlink, /language, /recent, /top, /beatmap, /showcase, /scorecard, /miniscorecard)...');
+    console.log('Registering Slash Commands (/link, /unlink, /language, /recent, /top, /beatmap, /showcase, /scorecard, /miniscorecard, /profile, /pcard, /compare)...');
     await client.application.commands.set([
       linkCommand,
       unlinkCommand,
@@ -438,7 +496,10 @@ client.once(Events.ClientReady, async () => {
       beatmapCommand,
       showcaseCommand,
       scorecardCommand,
-      miniscorecardCommand
+      miniscorecardCommand,
+      profileCommand,
+      pcardCommand,
+      compareCommand
     ]);
     console.log('✅ All Slash Commands registered successfully!\n');
   } catch (err) {
@@ -571,7 +632,7 @@ client.on(Events.InteractionCreate, async interaction => {
       const score = scores[0];
       await osuApi.enrichScoreWithBeatmapAndMods(score);
       const imageBuffer = await generateScoreCard(score, user, { lang });
-      const attachment = new AttachmentBuilder(imageBuffer, { name: `recent_${user.username}_${score.id || 'score'}.png` });
+      const attachment = new AttachmentBuilder(imageBuffer, { name: `recent_${user.username}_bm${score.beatmap?.id || ''}_${score.id || 'score'}.png` });
 
       const row = createScoreButtons(score, null, lang);
 
@@ -729,7 +790,7 @@ client.on(Events.InteractionCreate, async interaction => {
       await osuApi.enrichScoreWithBeatmapAndMods(score);
       const user = score.user || (score.user_id ? await osuApi.getUser(score.user_id) : {});
       const imageBuffer = await generateScoreCard(score, user, { lang });
-      const attachment = new AttachmentBuilder(imageBuffer, { name: `score_${score.id}.png` });
+      const attachment = new AttachmentBuilder(imageBuffer, { name: `score_${score.id}_bm${score.beatmap?.id || ''}.png` });
 
       const row = createScoreButtons(score, input, lang);
 
@@ -787,7 +848,7 @@ client.on(Events.InteractionCreate, async interaction => {
         }
 
         const imageBuffer = await generateMiniScoreCard(score, user, { lang, topRank });
-        const attachment = new AttachmentBuilder(imageBuffer, { name: `miniscore_${score.id}.png` });
+        const attachment = new AttachmentBuilder(imageBuffer, { name: `miniscore_${score.id}_bm${score.beatmap?.id || ''}.png` });
         const row = createScoreButtons(score, linkInput, lang);
 
         await interaction.editReply({
@@ -834,7 +895,7 @@ client.on(Events.InteractionCreate, async interaction => {
         await osuApi.enrichScoreWithBeatmapAndMods(score);
 
         const imageBuffer = await generateMiniScoreCard(score, user, { lang, topRank: topIndex });
-        const attachment = new AttachmentBuilder(imageBuffer, { name: `miniscore_${user.username}_top${topIndex}.png` });
+        const attachment = new AttachmentBuilder(imageBuffer, { name: `miniscore_${user.username}_top${topIndex}_bm${score.beatmap?.id || ''}.png` });
         const row = createScoreButtons(score, null, lang);
 
         return interaction.editReply({
@@ -867,7 +928,7 @@ client.on(Events.InteractionCreate, async interaction => {
       } catch (_) {}
 
       const imageBuffer = await generateMiniScoreCard(score, user, { lang, topRank });
-      const attachment = new AttachmentBuilder(imageBuffer, { name: `miniscore_${user.username}_${score.id || 'recent'}.png` });
+      const attachment = new AttachmentBuilder(imageBuffer, { name: `miniscore_${user.username}_bm${score.beatmap?.id || ''}_${score.id || 'recent'}.png` });
       const row = createScoreButtons(score, null, lang);
 
       await interaction.editReply({
@@ -882,13 +943,122 @@ client.on(Events.InteractionCreate, async interaction => {
     }
     return;
   }
+
+  // 10. Handle /profile or /pcard command
+  if (interaction.commandName === 'profile' || interaction.commandName === 'pcard') {
+    let targetPlayer = interaction.options.getString('player');
+
+    if (!targetPlayer) {
+      const linked = getLinkedUser(interaction.user.id);
+      if (!linked) {
+        return interaction.reply({
+          content: t(lang, 'profile_not_linked'),
+          ephemeral: true
+        });
+      }
+      targetPlayer = linked.osuUsername;
+    }
+
+    await interaction.deferReply();
+
+    try {
+      const user = await osuApi.getUser(targetPlayer);
+      const topScores = await osuApi.getUserBestScore(user.id, 25).catch(() => []);
+
+      const imageBuffer = await generateProfileCard(user, topScores, { lang });
+      const attachment = new AttachmentBuilder(imageBuffer, { name: `profile_${user.username}.png` });
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel(t(lang, 'btn_open_profile'))
+          .setStyle(ButtonStyle.Link)
+          .setURL(`https://osu.ppy.sh/users/${user.id}`)
+      );
+
+      return interaction.editReply({
+        files: [attachment],
+        components: [row]
+      });
+    } catch (err) {
+      console.error('Error in /profile command:', err);
+      return interaction.editReply({
+        content: t(lang, 'profile_error', { message: err.message })
+      });
+    }
+  }
+
+  // 11. Handle /compare command
+  if (interaction.commandName === 'compare') {
+    const beatmapInput = interaction.options.getString('beatmap');
+    let targetPlayer = interaction.options.getString('player');
+
+    const parsedBm = parseBeatmapInput(beatmapInput);
+    if (!parsedBm) {
+      return interaction.reply({
+        content: t(lang, 'beatmap_invalid_input'),
+        ephemeral: true
+      });
+    }
+
+    if (!targetPlayer) {
+      const linked = getLinkedUser(interaction.user.id);
+      if (!linked) {
+        return interaction.reply({
+          content: t(lang, 'compare_no_player'),
+          ephemeral: true
+        });
+      }
+      targetPlayer = linked.osuUsername;
+    }
+
+    await interaction.deferReply();
+
+    try {
+      const beatmap = await osuApi.resolveBeatmap(parsedBm);
+      if (!beatmap?.id) {
+        return interaction.editReply({
+          content: t(lang, 'beatmap_error', { message: 'Beatmap not found' })
+        });
+      }
+
+      const user = await osuApi.getUser(targetPlayer);
+      const score = await osuApi.getUserBeatmapScore(beatmap.id, user.id);
+
+      if (!score) {
+        const mapTitle = `${beatmap.beatmapset?.title || beatmap.title} [${beatmap.version}]`;
+        return interaction.editReply({
+          content: t(lang, 'compare_no_score', {
+            username: user.username,
+            beatmap: mapTitle
+          })
+        });
+      }
+
+      score.user = user;
+      score.beatmap = beatmap;
+      await osuApi.enrichScoreWithBeatmapAndMods(score);
+
+      const imageBuffer = await generateScoreCard(score, user, { lang });
+      const attachment = new AttachmentBuilder(imageBuffer, { name: `compare_${user.username}_bm${beatmap.id}_${score.id || 'score'}.png` });
+      const row = createScoreButtons(score, null, lang);
+
+      return interaction.editReply({
+        files: [attachment],
+        components: [row]
+      });
+    } catch (err) {
+      console.error('Error in /compare command:', err);
+      return interaction.editReply({
+        content: t(lang, 'compare_error', { message: err.message })
+      });
+    }
+  }
 });
 
 // Prefix commands (;) & Auto-detect osu! URLs in chat messages
 client.on(Events.MessageCreate, async message => {
   if (message.author.bot) return;
 
-  // 0. Check prefix commands starting with ';' (e.g. ;m, ;r, ;t, ;b, ;help)
+  // 0. Check prefix commands starting with ';' (e.g. ;m, ;r, ;t, ;b, ;c, ;help)
   if (message.content.startsWith(';')) {
     try {
       const handled = await handlePrefixCommand(message, osuApi);
@@ -921,7 +1091,7 @@ client.on(Events.MessageCreate, async message => {
       await osuApi.enrichScoreWithBeatmapAndMods(score);
       const user = score.user || (score.user_id ? await osuApi.getUser(score.user_id) : {});
       const imageBuffer = await generateScoreCard(score, user, { lang });
-      const attachment = new AttachmentBuilder(imageBuffer, { name: `score_${score.id}.png` });
+      const attachment = new AttachmentBuilder(imageBuffer, { name: `score_${score.id}_bm${score.beatmap?.id || ''}.png` });
 
       const row = createScoreButtons(score, targetUrl, lang);
 

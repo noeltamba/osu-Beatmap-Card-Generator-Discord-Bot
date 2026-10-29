@@ -54,7 +54,9 @@ A high-performance Discord bot generating visually stunning, frosted-glass score
 
 | Command | Arguments | Description |
 | :--- | :--- | :--- |
-| **`/miniscorecard`** *(New!)* | `[player]`, `[link]`, `[top]` | Displays a compact, aesthetic mini score card widget with combo badge, star rating, PP, avatar with flag, and mod chips. |
+| **`/profile`** *(New!)* | `[player]` | Displays a modern visual profile card with skill breakdown and Bancho stats. |
+| **`/compare`** *(New!)* | `beatmap`, `[player]` | Displays a player's personal best score on a beatmap. |
+| **`/miniscorecard`** | `[player]`, `[link]`, `[top]` | Displays a compact, aesthetic mini score card widget with combo badge, star rating, PP, avatar with flag, and mod chips. |
 | **`/recent`** | `[player]` | Displays a comprehensive visual score card with full hit judgments (300/100/50/miss), PP breakdown, and modded map stats. |
 | **`/scorecard`** | `link` | Displays a full detailed score card from an osu! score URL or numeric Score ID. |
 | **`/top`** | `[player]`, `[count]` | Displays a leaderboard card of a player's top performance plays (1 to 10 plays). |
@@ -71,6 +73,8 @@ You can also use the lightning-fast `;` prefix directly in chat without opening 
 
 | Prefix Command | Aliases | Description | Example Usage |
 | :--- | :--- | :--- | :--- |
+| ;c | ;compare | Compare/check top score on map (reply to any bot) | ;c • ;c Utami |
+| `;pcard` | `;profile`, `;p`, `;user` | Modern profile card with skill breakdown | `;pcard` • `;pcard Utami` |
 | `;miniscorecard` | `;m`, `;mini` | Compact mini score card | `;m` • `;m Utami` • `;m 1` • `;m Utami 1` |
 | `;recent` | `;r`, `;rs` | Detailed full score card | `;r` • `;r Utami` |
 | `;top` | `;t`, `;best` | Top performance plays card | `;t` • `;t 5` • `;t Utami 5` |
