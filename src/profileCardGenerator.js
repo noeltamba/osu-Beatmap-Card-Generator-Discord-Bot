@@ -76,14 +76,14 @@ function formatJoinDate(isoDate, lang = 'en') {
 
 const PLAYSTYLE_THEMES = {
   speed: {
-    text: '#f43f5e',
-    bg: 'rgba(244, 63, 94, 0.16)',
-    border: 'rgba(244, 63, 94, 0.45)'
-  },
-  aim: {
-    text: '#c084fc', // Ungu / Purple
+    text: '#c084fc', // Ungu / Purple (senada dengan bar Speed)
     bg: 'rgba(192, 132, 252, 0.16)',
     border: 'rgba(192, 132, 252, 0.45)'
+  },
+  aim: {
+    text: '#f43f5e', // Merah-Rose / Coral (senada dengan bar Aim)
+    bg: 'rgba(244, 63, 94, 0.16)',
+    border: 'rgba(244, 63, 94, 0.45)'
   },
   clean_sheet: {
     text: '#34d399', // Hijau / Emerald
