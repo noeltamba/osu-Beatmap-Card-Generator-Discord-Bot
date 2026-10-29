@@ -74,6 +74,34 @@ function formatJoinDate(isoDate, lang = 'en') {
   }
 }
 
+const PLAYSTYLE_THEMES = {
+  speed: {
+    text: '#f43f5e',
+    bg: 'rgba(244, 63, 94, 0.16)',
+    border: 'rgba(244, 63, 94, 0.45)'
+  },
+  aim: {
+    text: '#c084fc', // Ungu / Purple
+    bg: 'rgba(192, 132, 252, 0.16)',
+    border: 'rgba(192, 132, 252, 0.45)'
+  },
+  clean_sheet: {
+    text: '#34d399', // Hijau / Emerald
+    bg: 'rgba(52, 211, 153, 0.16)',
+    border: 'rgba(52, 211, 153, 0.45)'
+  },
+  hybrid: {
+    text: '#38bdf8', // Biru langit / Sky Blue
+    bg: 'rgba(56, 189, 248, 0.16)',
+    border: 'rgba(56, 189, 248, 0.45)'
+  },
+  all_rounder: {
+    text: '#fbbf24', // Emas / Gold
+    bg: 'rgba(251, 191, 36, 0.16)',
+    border: 'rgba(251, 191, 36, 0.45)'
+  }
+};
+
 /**
  * Calculates weighted skill ratings (Aim, Speed, Acc) from user's best scores
  */
@@ -86,7 +114,8 @@ async function calculatePlayerSkills(topScores, lang = 'en') {
       aimPct: 33.3,
       speedPct: 33.3,
       accPct: 33.3,
-      playstyle: lang === 'id' ? 'Serba Bisa' : 'All-Rounder'
+      playstyle: lang === 'id' ? 'Serba Bisa' : 'All-Rounder',
+      archetype: 'all_rounder'
     };
   }
 
@@ -114,14 +143,19 @@ async function calculatePlayerSkills(topScores, lang = 'en') {
   const accPct = totalSkill > 0 ? (totalAccWeighted / totalSkill) * 100 : 33.3;
 
   let playstyle = lang === 'id' ? 'Serba Bisa' : 'All-Rounder';
+  let archetype = 'all_rounder';
   if (aimPct >= 52) {
     playstyle = lang === 'id' ? 'Spesialis Aim' : 'Aim Specialist';
+    archetype = 'aim';
   } else if (speedPct >= 35) {
     playstyle = lang === 'id' ? 'Spesialis Speed' : 'Speed Demon';
+    archetype = 'speed';
   } else if (accPct >= 28) {
     playstyle = 'Clean Sheet';
+    archetype = 'clean_sheet';
   } else if (Math.abs(aimPct - speedPct) < 10) {
     playstyle = lang === 'id' ? 'Hibrida / Versatile' : 'Hybrid / Versatile';
+    archetype = 'hybrid';
   }
 
   return {
@@ -131,7 +165,8 @@ async function calculatePlayerSkills(topScores, lang = 'en') {
     aimPct,
     speedPct,
     accPct,
-    playstyle
+    playstyle,
+    archetype
   };
 }
 
@@ -528,21 +563,22 @@ async function generateProfileCard(user, topScores = [], options = {}) {
   ctx.fillText(isId ? 'PROFIL SKILL (BATHBOT)' : 'SKILL PROFILE (BATHBOT)', col1TitleX, midY + 33);
 
   // Playstyle Tag Badge
+  const theme = PLAYSTYLE_THEMES[skills.archetype] || PLAYSTYLE_THEMES.all_rounder;
   ctx.font = `bold 12px ${FONT_STACK}`;
   const tagW = ctx.measureText(skills.playstyle).width + 20;
   const tagH = 24;
   const tagX = col1X + colW - col1Pad - tagW;
   const tagY = midY + 18;
 
-  ctx.fillStyle = 'rgba(244, 63, 94, 0.16)';
+  ctx.fillStyle = theme.bg;
   ctx.beginPath();
   ctx.roundRect(tagX, tagY, tagW, tagH, 12);
   ctx.fill();
-  ctx.strokeStyle = 'rgba(244, 63, 94, 0.45)';
+  ctx.strokeStyle = theme.border;
   ctx.lineWidth = 1;
   ctx.stroke();
 
-  ctx.fillStyle = '#f43f5e';
+  ctx.fillStyle = theme.text;
   ctx.fillText(skills.playstyle, tagX + 10, tagY + 16);
 
   // Skill Bars: Aim, Speed, Accuracy
