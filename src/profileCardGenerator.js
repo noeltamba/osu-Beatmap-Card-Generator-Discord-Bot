@@ -119,7 +119,7 @@ async function calculatePlayerSkills(topScores, lang = 'en') {
   } else if (speedPct >= 35) {
     playstyle = lang === 'id' ? 'Spesialis Speed' : 'Speed Demon';
   } else if (accPct >= 28) {
-    playstyle = lang === 'id' ? 'Master Akurasi' : 'Rhythm Master';
+    playstyle = 'Clean Sheet';
   } else if (Math.abs(aimPct - speedPct) < 10) {
     playstyle = lang === 'id' ? 'Hibrida / Versatile' : 'Hybrid / Versatile';
   }

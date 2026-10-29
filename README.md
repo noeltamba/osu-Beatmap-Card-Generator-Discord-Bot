@@ -18,7 +18,7 @@ A high-performance Discord bot generating visually stunning, frosted-glass score
 * **🎴 Modern Profile Card (`/profile`, `/pcard`, `;pcard`)**:
   * **Visual Glassmorphism Profile Dashboard (1180×690 px)**: Sleek, high-resolution profile card showcasing player avatar with country flag, supporter badge, global rank, country rank, and peak rank pill.
   * **Skill Profile Breakdown (Bathbot-inspired)**: Calculates weighted skill distributions (**Aim / Jump**, **Speed / Tapping**, and **Accuracy / Timing**) derived from top plays using official `rosu-pp-js` decay formulas ($0.95^n$).
-  * **Dynamic Archetype Tag**: Assigns dynamic player playstyle badges (*Speed Demon*, *Aim Specialist*, *All-Rounder*, *Rhythm Master*, etc.) based on skill ratio thresholds.
+  * **Dynamic Archetype Tag**: Assigns dynamic player playstyle badges (*Speed Demon*, *Aim Specialist*, *All-Rounder*, *Clean Sheet*, etc.) based on skill ratio thresholds.
   * **Official Bathbot & Bancho Logos**: Custom high-resolution vector assets for Bathbot (green shower tub) and Bancho (blue ASCII ship) headers.
   * **Complete Bancho Performance Panel**: Total PP, overall accuracy, play time, play count, profile level with progress bar, ranked score, total hits, and medal count.
   * **Grade Breakdown Counter**: Visual counters for Silver SS, Gold SS, Silver S, Gold S, and A ranks.
