@@ -29,6 +29,8 @@ A high-performance Discord bot generating visually stunning, frosted-glass score
   * **Missing Score Notification**: Politely notifies if no score exists on the targeted beatmap (`ℹ️ [Username] has no scores on [Beatmap]`).
 * **🎨 Lucide Vector Icons Integration**:
   * Integrated `lucide-static` clean SVG icons for crisp, anti-aliased visual rendering without relying on system emoji font fallbacks.
+* **🔄 Automatic 24-Hour Update Presence**:
+  * Broadcasts new v1.3.0 features in the Discord bot presence for 24 hours before automatically reverting to the default status.
 
 ---
 

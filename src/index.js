@@ -397,7 +397,7 @@ function createBeatmapButtons(beatmap, originalInput = null, lang = 'en') {
 
 const STATUS_STATE_FILE = path.join(__dirname, '..', 'data', 'status_state.json');
 const DEFAULT_PRESENCE = ';help | osu! Image Generator ✨';
-const UPDATE_PRESENCE = '✨ v1.2.0 Updated: Accurate SR & Fail Stats! | ;help';
+const UPDATE_PRESENCE = '✨ v1.3.0 Updated: Profile Card & Compare! | ;help';
 
 function setupBotPresence(client) {
   let statusData = null;
@@ -407,10 +407,10 @@ function setupBotPresence(client) {
     }
   } catch (_) {}
 
-  // Inisialisasi jendela update status 12 jam jika belum ada atau sudah usang
-  if (!statusData || !statusData.activeUntil) {
+  // Inisialisasi jendela update status 24 jam jika belum ada, sudah usang, atau status update berubah
+  if (!statusData || !statusData.activeUntil || statusData.updateStatus !== UPDATE_PRESENCE) {
     statusData = {
-      activeUntil: Date.now() + (12 * 60 * 60 * 1000), // 12 jam dari sekarang
+      activeUntil: Date.now() + (24 * 60 * 60 * 1000), // 24 jam dari sekarang
       updateStatus: UPDATE_PRESENCE,
       defaultStatus: DEFAULT_PRESENCE
     };
@@ -440,7 +440,7 @@ function setupBotPresence(client) {
       console.error('Failed to set bot presence:', err.message);
     }
 
-    // Jadwalkan pengembalian otomatis ke default status setelah 12 jam selesai
+    // Jadwalkan pengembalian otomatis ke default status setelah 24 jam selesai
     setTimeout(() => {
       try {
         client.user.setPresence({
@@ -451,7 +451,7 @@ function setupBotPresence(client) {
           }],
           status: 'online'
         });
-        console.log(`🔄 12-Hour update status window selesai. Status bot kembali ke default: "${statusData.defaultStatus || DEFAULT_PRESENCE}"\n`);
+        console.log(`🔄 24-Hour update status window selesai. Status bot kembali ke default: "${statusData.defaultStatus || DEFAULT_PRESENCE}"\n`);
         statusData.activeUntil = null;
         fs.writeFileSync(STATUS_STATE_FILE, JSON.stringify(statusData, null, 2), 'utf-8');
       } catch (err) {
