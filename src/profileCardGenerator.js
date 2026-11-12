@@ -229,9 +229,9 @@ async function generateProfileCard(user, topScores = [], options = {}) {
     loadImage(bobaPath).catch(() => null)
   ]);
 
-  // Card Dimensions (Portrait 900x1320 px)
+  // Card Dimensions (Compact Portrait 900x920 px)
   const width = 900;
-  const height = 1320;
+  const height = 920;
   const radius = 28;
 
   const canvas = createCanvas(width, height);
@@ -247,8 +247,8 @@ async function generateProfileCard(user, topScores = [], options = {}) {
   ctx.fillStyle = '#090d16';
   ctx.fillRect(0, 0, width, height);
 
-  // 2. Background Cover Image
-  const coverUrl = user.cover?.url || user.cover_url || (topScores[0]?.beatmapset?.covers && topScores[0].beatmapset.covers['cover@2x']);
+  // 2. Background Cover Image (The player's own profile banner)
+  const coverUrl = user.cover?.custom_url || user.cover?.url || user.cover_url || (topScores[0]?.beatmapset?.covers && (topScores[0].beatmapset.covers['cover@2x'] || topScores[0].beatmapset.covers.cover)) || null;
   let bgImage = null;
   if (coverUrl) {
     try {
@@ -267,61 +267,68 @@ async function generateProfileCard(user, topScores = [], options = {}) {
     const drawX = (width - drawW) / 2;
     const drawY = (height - drawH) / 2;
 
+    // Draw the banner artwork clearly with a gentle softening blur
     ctx.save();
-    ctx.filter = 'blur(26px)';
+    ctx.filter = 'blur(4px)';
     ctx.drawImage(bgImage, drawX, drawY, drawW, drawH);
     ctx.filter = 'none';
     ctx.restore();
 
-    // Dark semi-transparent tint for clarity
-    ctx.fillStyle = 'rgba(9, 13, 22, 0.86)';
+    // Dark gradient overlay: lighter at top so banner art shines, smoothly darkening for text contrast
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
+    bgGrad.addColorStop(0, 'rgba(9, 13, 22, 0.40)');
+    bgGrad.addColorStop(0.35, 'rgba(9, 13, 22, 0.70)');
+    bgGrad.addColorStop(1, 'rgba(9, 13, 22, 0.88)');
+    ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, width, height);
   }
 
   // 3. Ambient Cozy Radial Glows
   const theme = PLAYSTYLE_THEMES[skills.archetype] || PLAYSTYLE_THEMES.all_rounder;
-  const glowTop = ctx.createRadialGradient(450, 150, 20, 450, 150, 460);
+  const glowTop = ctx.createRadialGradient(450, 120, 20, 450, 120, 420);
   glowTop.addColorStop(0, theme.bg);
   glowTop.addColorStop(1, 'rgba(9, 13, 22, 0)');
   ctx.fillStyle = glowTop;
   ctx.fillRect(0, 0, width, height);
 
   // -------------------------------------------------------------
-  // TOP-RIGHT CORNER WATERMARK
+  // TOP-RIGHT CORNER: COLUMBINA CIRCULAR LOGO ONLY
   // -------------------------------------------------------------
-  const wmText = 'COLUMBINA BOT • OSU!';
-  ctx.save();
-  ctx.font = `bold 11px ${FONT_STACK}`;
-  const wmW = ctx.measureText(wmText).width + 20;
-  const wmH = 24;
-  const wmX = width - 40 - wmW;
-  const wmY = 32;
+  if (bobaImg) {
+    const logoSize = 38;
+    const logoX = width - 40 - logoSize;
+    const logoY = 24;
 
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-  ctx.beginPath();
-  ctx.roundRect(wmX, wmY, wmW, wmH, 12);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(logoX + (logoSize / 2), logoY + (logoSize / 2), logoSize / 2, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(bobaImg, logoX, logoY, logoSize, logoSize);
+    ctx.restore();
 
-  ctx.textAlign = 'center';
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
-  ctx.fillText(wmText, wmX + (wmW / 2), wmY + 16);
-  ctx.restore();
+    ctx.save();
+    ctx.strokeStyle = '#f43f5e';
+    ctx.lineWidth = 1.8;
+    ctx.shadowColor = 'rgba(244, 63, 94, 0.5)';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(logoX + (logoSize / 2), logoY + (logoSize / 2), logoSize / 2, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
 
   // -------------------------------------------------------------
   // SECTION 1: TOP IDENTITY CARD & CENTERED FLOATING AVATAR
   // -------------------------------------------------------------
   const topCardX = 40;
   const topCardW = 820;
-  const topCardY = 118;
-  const topCardH = 152;
+  const topCardY = 76;
+  const topCardH = 138;
 
   ctx.save();
   ctx.fillStyle = 'rgba(15, 23, 42, 0.65)';
   ctx.beginPath();
-  ctx.roundRect(topCardX, topCardY, topCardW, topCardH, 20);
+  ctx.roundRect(topCardX, topCardY, topCardW, topCardH, 18);
   ctx.fill();
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
   ctx.lineWidth = 1;
@@ -329,9 +336,9 @@ async function generateProfileCard(user, topScores = [], options = {}) {
   ctx.restore();
 
   // Avatar (Centered at Top, overlapping top card)
-  const avatarSize = 112;
+  const avatarSize = 96;
   const avatarX = 450 - (avatarSize / 2);
-  const avatarY = 50;
+  const avatarY = 28;
   const avatarUrl = user.avatar_url || `https://a.ppy.sh/${user.id || 1}`;
 
   try {
@@ -346,7 +353,7 @@ async function generateProfileCard(user, topScores = [], options = {}) {
     // Glowing border around avatar
     ctx.save();
     ctx.strokeStyle = theme.text;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2.8;
     ctx.shadowColor = theme.text;
     ctx.shadowBlur = 10;
     ctx.beginPath();
@@ -366,8 +373,8 @@ async function generateProfileCard(user, topScores = [], options = {}) {
     try {
       const flagUrl = `https://osu.ppy.sh/images/flags/${countryCode.toUpperCase()}.png`;
       const flagImg = await loadImage(flagUrl);
-      const flagW = 28;
-      const flagH = 18;
+      const flagW = 26;
+      const flagH = 17;
       const flagX = 450 + (avatarSize / 2) - flagW + 2;
       const flagY = avatarY + avatarSize - flagH + 2;
 
@@ -388,18 +395,18 @@ async function generateProfileCard(user, topScores = [], options = {}) {
 
   // Username (Centered)
   ctx.textAlign = 'center';
-  ctx.font = `bold 25px ${FONT_STACK}`;
+  ctx.font = `bold 23px ${FONT_STACK}`;
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(truncate(ctx, user.username || 'Player', 480), 450, topCardY + 76);
+  ctx.fillText(truncate(ctx, user.username || 'Player', 480), 450, topCardY + 68);
 
   // Subtitle: Country Name & Joined Date
   const countryName = user.country?.name || countryCode || '';
   const joinText = formatJoinDate(user.join_date, lang);
   const subInfo = [countryName, joinText].filter(Boolean).join('   •   ');
 
-  ctx.font = `500 13px ${FONT_STACK}`;
+  ctx.font = `500 12px ${FONT_STACK}`;
   ctx.fillStyle = '#94a3b8';
-  ctx.fillText(subInfo, 450, topCardY + 100);
+  ctx.fillText(subInfo, 450, topCardY + 90);
 
   // Rank Badges row inside Top Card (Clean Vector SVG Icons - No Unicode Tofu)
   const stats = user.statistics || {};
@@ -419,14 +426,14 @@ async function generateProfileCard(user, topScores = [], options = {}) {
   }
 
   ctx.font = `bold 12px ${FONT_STACK}`;
-  const pillH = 22;
-  const pillPad = 10;
-  const pillGap = 10;
+  const pillH = 20;
+  const pillPad = 9;
+  const pillGap = 8;
 
-  const pillWidths = rankPills.map(p => ctx.measureText(p.text).width + (p.icon ? 20 : 0) + (pillPad * 2));
+  const pillWidths = rankPills.map(p => ctx.measureText(p.text).width + (p.icon ? 18 : 0) + (pillPad * 2));
   const totalPillsW = pillWidths.reduce((a, b) => a + b, 0) + ((rankPills.length - 1) * pillGap);
   let pStartX = 450 - (totalPillsW / 2);
-  const pPillY = topCardY + 118;
+  const pPillY = topCardY + 106;
 
   for (let i = 0; i < rankPills.length; i++) {
     const p = rankPills[i];
@@ -435,7 +442,7 @@ async function generateProfileCard(user, topScores = [], options = {}) {
     ctx.save();
     ctx.fillStyle = p.bg;
     ctx.beginPath();
-    ctx.roundRect(pStartX, pPillY, pW, pillH, 11);
+    ctx.roundRect(pStartX, pPillY, pW, pillH, 10);
     ctx.fill();
     ctx.strokeStyle = p.color + '40';
     ctx.lineWidth = 1;
@@ -443,13 +450,13 @@ async function generateProfileCard(user, topScores = [], options = {}) {
 
     let curTextX = pStartX + pillPad;
     if (p.icon) {
-      ctx.drawImage(p.icon, curTextX, pPillY + 4, 13, 13);
-      curTextX += 18;
+      ctx.drawImage(p.icon, curTextX, pPillY + 4, 12, 12);
+      curTextX += 16;
     }
 
     ctx.textAlign = 'left';
     ctx.fillStyle = p.color;
-    ctx.fillText(p.text, curTextX, pPillY + 15);
+    ctx.fillText(p.text, curTextX, pPillY + 14);
     ctx.restore();
 
     pStartX += pW + pillGap;
@@ -460,13 +467,13 @@ async function generateProfileCard(user, topScores = [], options = {}) {
   // -------------------------------------------------------------
   const banchoCardX = 40;
   const banchoCardW = 820;
-  const banchoCardY = 286;
-  const banchoCardH = 310;
+  const banchoCardY = 226;
+  const banchoCardH = 258;
 
   ctx.save();
   ctx.fillStyle = 'rgba(15, 23, 42, 0.65)';
   ctx.beginPath();
-  ctx.roundRect(banchoCardX, banchoCardY, banchoCardW, banchoCardH, 20);
+  ctx.roundRect(banchoCardX, banchoCardY, banchoCardW, banchoCardH, 18);
   ctx.fill();
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
   ctx.lineWidth = 1;
@@ -475,26 +482,26 @@ async function generateProfileCard(user, topScores = [], options = {}) {
 
   // Bancho Header (Bancho Logo + "Bancho" Text Centered)
   const bTitleText = 'Bancho';
-  ctx.font = `bold 18px ${FONT_STACK}`;
+  ctx.font = `bold 16px ${FONT_STACK}`;
   const bTitleW = ctx.measureText(bTitleText).width;
-  const bLogoSize = 22;
+  const bLogoSize = 20;
   const bLogoW = banchoLogoImg ? bLogoSize + 8 : 0;
   const bTotalW = bTitleW + bLogoW;
   const bStartX = 450 - (bTotalW / 2);
 
   if (banchoLogoImg) {
-    ctx.drawImage(banchoLogoImg, bStartX, banchoCardY + 15, bLogoSize, bLogoSize);
+    ctx.drawImage(banchoLogoImg, bStartX, banchoCardY + 13, bLogoSize, bLogoSize);
   }
   ctx.textAlign = 'left';
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(bTitleText, bStartX + bLogoW, banchoCardY + 32);
+  ctx.fillText(bTitleText, bStartX + bLogoW, banchoCardY + 28);
 
   // 4 Stat Cards in 2x2 Grid (Total PP, Accuracy, Play Time, Play Count)
-  const bGridPad = 24;
-  const bGridGap = 16;
+  const bGridPad = 20;
+  const bGridGap = 12;
   const bCardW = (banchoCardW - (bGridPad * 2) - bGridGap) / 2;
-  const bCardH = 70;
-  const bGridStartY = banchoCardY + 48;
+  const bCardH = 58;
+  const bGridStartY = banchoCardY + 42;
 
   const totalPpStr = stats.pp ? `${Math.round(stats.pp).toLocaleString()} pp` : '0 pp';
   const hitAccStr = stats.hit_accuracy ? `${Number(stats.hit_accuracy).toFixed(2)}%` : '0.00%';
@@ -517,44 +524,44 @@ async function generateProfileCard(user, topScores = [], options = {}) {
     ctx.save();
     ctx.fillStyle = 'rgba(255, 255, 255, 0.035)';
     ctx.beginPath();
-    ctx.roundRect(cX, cY, bCardW, bCardH, 12);
+    ctx.roundRect(cX, cY, bCardW, bCardH, 10);
     ctx.fill();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = 1;
     ctx.stroke();
 
     if (banchoCards[idx].icon) {
-      ctx.drawImage(banchoCards[idx].icon, cX + 16, cY + 12, 14, 14);
+      ctx.drawImage(banchoCards[idx].icon, cX + 14, cY + 10, 13, 13);
     }
 
     ctx.textAlign = 'left';
-    ctx.font = `600 12px ${FONT_STACK}`;
+    ctx.font = `600 11px ${FONT_STACK}`;
     ctx.fillStyle = '#94a3b8';
-    ctx.fillText(banchoCards[idx].label, cX + (banchoCards[idx].icon ? 36 : 16), cY + 24);
+    ctx.fillText(banchoCards[idx].label, cX + (banchoCards[idx].icon ? 32 : 14), cY + 20);
 
-    ctx.font = `bold 22px ${FONT_STACK}`;
+    ctx.font = `bold 20px ${FONT_STACK}`;
     ctx.fillStyle = banchoCards[idx].color;
-    ctx.fillText(banchoCards[idx].value, cX + 16, cY + 54);
+    ctx.fillText(banchoCards[idx].value, cX + 14, cY + 46);
     ctx.restore();
   }
 
   // Level & Progress Bar (matching green wireframe bar)
   const levelInfo = stats.level || { current: 1, progress: 0 };
-  const lvlY = bGridStartY + (2 * (bCardH + bGridGap)) + 8;
+  const lvlY = bGridStartY + (2 * (bCardH + bGridGap)) + 6;
   const lvlBarW = banchoCardW - (bGridPad * 2);
 
   ctx.textAlign = 'left';
-  ctx.font = `bold 13px ${FONT_STACK}`;
+  ctx.font = `bold 12px ${FONT_STACK}`;
   ctx.fillStyle = '#f8fafc';
-  ctx.fillText(`Level ${levelInfo.current}`, banchoCardX + bGridPad, lvlY + 12);
+  ctx.fillText(`Level ${levelInfo.current}`, banchoCardX + bGridPad, lvlY + 11);
 
   ctx.textAlign = 'right';
-  ctx.font = `600 13px ${FONT_STACK}`;
+  ctx.font = `600 12px ${FONT_STACK}`;
   ctx.fillStyle = '#4ade80';
-  ctx.fillText(`${levelInfo.progress}%`, banchoCardX + banchoCardW - bGridPad, lvlY + 12);
+  ctx.fillText(`${levelInfo.progress}%`, banchoCardX + banchoCardW - bGridPad, lvlY + 11);
 
   // Level Track Bar
-  const lvlTrackY = lvlY + 20;
+  const lvlTrackY = lvlY + 18;
   const lvlH = 8;
   ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
   ctx.beginPath();
@@ -576,7 +583,7 @@ async function generateProfileCard(user, topScores = [], options = {}) {
   ctx.restore();
 
   // Extra stats under level bar
-  const extraStatsY = lvlTrackY + 22;
+  const extraStatsY = lvlTrackY + 20;
   const rankedScore = formatCompactNumber(stats.ranked_score);
   const totalHits = formatCompactNumber(stats.total_hits);
   const maxCombo = stats.maximum_combo ? `${stats.maximum_combo.toLocaleString()}x` : '-';
@@ -587,62 +594,58 @@ async function generateProfileCard(user, topScores = [], options = {}) {
   ctx.fillText(`Ranked Score: ${rankedScore}   •   Total Hits: ${totalHits}   •   Max Combo: ${maxCombo}`, 450, extraStatsY);
 
   // -------------------------------------------------------------
-  // SECTION 3: SKILL PROFILE CARD (Wireframe: Circular Donut Ratio + 3 Bars)
+  // SECTION 3: SKILL PROFILE (DIAGRAM ON LEFT, PROGRESS BARS ON RIGHT)
   // -------------------------------------------------------------
   const skillCardX = 40;
   const skillCardW = 820;
-  const skillCardY = 612;
-  const skillCardH = 430;
+  const skillCardY = 496;
+  const skillCardH = 196;
 
   ctx.save();
   ctx.fillStyle = 'rgba(15, 23, 42, 0.65)';
   ctx.beginPath();
-  ctx.roundRect(skillCardX, skillCardY, skillCardW, skillCardH, 20);
+  ctx.roundRect(skillCardX, skillCardY, skillCardW, skillCardH, 18);
   ctx.fill();
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
   ctx.lineWidth = 1;
   ctx.stroke();
   ctx.restore();
 
-  // Header: Bathbot Logo + "Skill Profile" Centered + Playstyle Tag
+  // Header: Bathbot Logo + "Skill Profile" on Left + Playstyle Tag on Right
   const sTitleText = isId ? 'Profil Skill (Bathbot)' : 'Skill Profile';
-  ctx.font = `bold 18px ${FONT_STACK}`;
-  const sTitleW = ctx.measureText(sTitleText).width;
-  const sLogoSize = 22;
-  const sLogoW = bathbotLogoImg ? sLogoSize + 8 : 0;
-  const sTotalW = sTitleW + sLogoW;
-  const sStartX = 450 - (sTotalW / 2);
+  ctx.font = `bold 16px ${FONT_STACK}`;
+  const sLogoSize = 20;
+  const sStartX = skillCardX + 22;
 
   if (bathbotLogoImg) {
-    ctx.drawImage(bathbotLogoImg, sStartX, skillCardY + 15, sLogoSize, sLogoSize);
+    ctx.drawImage(bathbotLogoImg, sStartX, skillCardY + 12, sLogoSize, sLogoSize);
   }
   ctx.textAlign = 'left';
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(sTitleText, sStartX + sLogoW, skillCardY + 32);
+  ctx.fillText(sTitleText, sStartX + (bathbotLogoImg ? sLogoSize + 8 : 0), skillCardY + 28);
 
   // Playstyle Tag Badge on top-right of skill card
   ctx.font = `bold 12px ${FONT_STACK}`;
-  const tagW = ctx.measureText(skills.playstyle).width + 22;
-  const tagH = 24;
-  const tagX = skillCardX + skillCardW - 24 - tagW;
-  const tagY = skillCardY + 14;
+  const tagW = ctx.measureText(skills.playstyle).width + 20;
+  const tagH = 22;
+  const tagX = skillCardX + skillCardW - 22 - tagW;
+  const tagY = skillCardY + 12;
 
   ctx.fillStyle = theme.bg;
   ctx.beginPath();
-  ctx.roundRect(tagX, tagY, tagW, tagH, 12);
+  ctx.roundRect(tagX, tagY, tagW, tagH, 11);
   ctx.fill();
   ctx.strokeStyle = theme.border;
   ctx.lineWidth = 1;
   ctx.stroke();
   ctx.fillStyle = theme.text;
-  ctx.fillText(skills.playstyle, tagX + 11, tagY + 16);
+  ctx.fillText(skills.playstyle, tagX + 10, tagY + 15);
 
-  // CIRCULAR DONUT RATIO CHART (Centered)
-  // "Kemudian Skill profil itu coba kamu buatkan warna untuk ratio nya yah"
-  const donutCenterX = 450;
-  const donutCenterY = skillCardY + 122;
-  const outerR = 56;
-  const innerR = 38;
+  // --- LEFT SIDE: CIRCULAR DONUT RATIO CHART (HOLLOW CENTER - NO TEXT) ---
+  const donutCenterX = skillCardX + 105;
+  const donutCenterY = skillCardY + 104;
+  const outerR = 46;
+  const innerR = 28;
 
   const totalPct = (skills.aimPct + skills.speedPct + skills.accPct) || 100;
   const slices = [
@@ -651,8 +654,8 @@ async function generateProfileCard(user, topScores = [], options = {}) {
     { name: 'Accuracy', pct: skills.accPct / totalPct, color: '#10b981', glow: 'rgba(16, 185, 129, 0.35)' }
   ];
 
-  let currentAngle = -Math.PI / 2; // start from top (12 o'clock)
-  const angleGap = 0.05;
+  let currentAngle = -Math.PI / 2; // 12 o'clock
+  const angleGap = 0.06;
 
   for (const sl of slices) {
     const sweepAngle = sl.pct * (2 * Math.PI);
@@ -672,49 +675,37 @@ async function generateProfileCard(user, topScores = [], options = {}) {
 
     currentAngle += sweepAngle;
   }
+  // Note: Hollow center inside donut, NO text as requested ("Text yang ada di dalam diagram hilangkan")
 
-  // Inside Donut Center: Dominant percentage & playstyle name
-  ctx.textAlign = 'center';
-  ctx.font = `bold 12px ${FONT_STACK}`;
-  ctx.fillStyle = theme.text;
-  ctx.fillText(skills.playstyle, donutCenterX, donutCenterY - 4);
-  ctx.font = `600 11px ${FONT_STACK}`;
-  ctx.fillStyle = '#94a3b8';
-  const dominantPct = Math.round(Math.max(skills.aimPct, skills.speedPct, skills.accPct));
-  ctx.fillText(`${dominantPct}% Ratio`, donutCenterX, donutCenterY + 12);
-
-  // Colored Legend Row below Donut Chart
-  const legY = skillCardY + 198;
+  // Legend under the Donut Diagram
+  const legY = skillCardY + 168;
   const legItems = [
-    { label: `Aim ${skills.aimPct.toFixed(1)}%`, color: '#f43f5e' },
-    { label: `Speed ${skills.speedPct.toFixed(1)}%`, color: '#a855f7' },
-    { label: `Accuracy ${skills.accPct.toFixed(1)}%`, color: '#10b981' }
+    { label: `${skills.aimPct.toFixed(0)}%`, color: '#f43f5e' },
+    { label: `${skills.speedPct.toFixed(0)}%`, color: '#a855f7' },
+    { label: `${skills.accPct.toFixed(0)}%`, color: '#10b981' }
   ];
-  ctx.font = `600 12px ${FONT_STACK}`;
-  const legWidths = legItems.map(item => ctx.measureText(item.label).width + 18);
-  const legGap = 20;
-  const totalLegW = legWidths.reduce((a, b) => a + b, 0) + ((legItems.length - 1) * legGap);
-  let legStartX = 450 - (totalLegW / 2);
+  ctx.font = `600 11px ${FONT_STACK}`;
+  const legGap = 10;
+  const legWidths = legItems.map(item => ctx.measureText(item.label).width + 12);
+  const totalLegW = legWidths.reduce((a, b) => a + b, 0) + (legGap * 2);
+  let legStartX = donutCenterX - (totalLegW / 2);
 
   for (let i = 0; i < legItems.length; i++) {
     const item = legItems[i];
-    // Color dot
     ctx.save();
     ctx.fillStyle = item.color;
-    ctx.shadowColor = item.color;
-    ctx.shadowBlur = 6;
     ctx.beginPath();
-    ctx.arc(legStartX + 5, legY, 5, 0, Math.PI * 2);
+    ctx.arc(legStartX + 4, legY, 4, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
     ctx.textAlign = 'left';
     ctx.fillStyle = '#cbd5e1';
-    ctx.fillText(item.label, legStartX + 16, legY + 4);
+    ctx.fillText(item.label, legStartX + 12, legY + 4);
     legStartX += legWidths[i] + legGap;
   }
 
-  // 3 Skill Progress Bars (Below Donut Chart)
+  // --- RIGHT SIDE: 3 SKILL PROGRESS BARS ---
   const skillList = [
     {
       name: isId ? 'AIM / JUMP' : 'AIM / JUMP',
@@ -745,55 +736,55 @@ async function generateProfileCard(user, topScores = [], options = {}) {
     }
   ];
 
-  let skillY = skillCardY + 232;
-  const sBarPad = 24;
-  const sBarW = skillCardW - (sBarPad * 2);
-  const sBarH = 12;
+  const rightStartX = skillCardX + 220;
+  const rightBarW = skillCardW - 240; // ~580px
   const maxSkillPp = Math.max(skills.aim, skills.speed, skills.acc, 1);
+  let skillRowY = skillCardY + 54;
 
   for (const sk of skillList) {
     if (sk.iconImg) {
-      ctx.drawImage(sk.iconImg, skillCardX + sBarPad, skillY - 13, 16, 16);
+      ctx.drawImage(sk.iconImg, rightStartX, skillRowY - 11, 14, 14);
     }
 
     ctx.textAlign = 'left';
-    ctx.font = `600 13px ${FONT_STACK}`;
+    ctx.font = `600 12px ${FONT_STACK}`;
     ctx.fillStyle = '#cbd5e1';
-    ctx.fillText(sk.name, skillCardX + sBarPad + (sk.iconImg ? 24 : 0), skillY);
+    ctx.fillText(sk.name, rightStartX + (sk.iconImg ? 20 : 0), skillRowY);
 
     ctx.textAlign = 'right';
-    ctx.font = `bold 14px ${FONT_STACK}`;
+    ctx.font = `bold 13px ${FONT_STACK}`;
     ctx.fillStyle = sk.color;
-    ctx.fillText(`${sk.pp.toLocaleString()} pp`, skillCardX + skillCardW - sBarPad - 60, skillY);
+    ctx.fillText(`${sk.pp.toLocaleString()} pp`, rightStartX + rightBarW - 55, skillRowY);
 
-    ctx.font = `500 12px ${FONT_STACK}`;
+    ctx.font = `500 11px ${FONT_STACK}`;
     ctx.fillStyle = '#94a3b8';
-    ctx.fillText(`(${sk.pct.toFixed(1)}%)`, skillCardX + skillCardW - sBarPad, skillY);
+    ctx.fillText(`(${sk.pct.toFixed(1)}%)`, rightStartX + rightBarW, skillRowY);
 
-    // Track
-    const trackY = skillY + 8;
+    // Track Bar
+    const trackY = skillRowY + 7;
+    const barH = 7;
     ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.beginPath();
-    ctx.roundRect(skillCardX + sBarPad, trackY, sBarW, sBarH, 6);
+    ctx.roundRect(rightStartX, trackY, rightBarW, barH, 4);
     ctx.fill();
 
-    // Fill
+    // Fill Bar
     const fillRatio = Math.max(0.08, Math.min(1, sk.pp / maxSkillPp));
-    const fillW = Math.max(sBarH, sBarW * fillRatio);
+    const fillW = Math.max(barH, rightBarW * fillRatio);
 
     ctx.save();
-    const skGrad = ctx.createLinearGradient(skillCardX + sBarPad, trackY, skillCardX + sBarPad + fillW, trackY);
+    const skGrad = ctx.createLinearGradient(rightStartX, trackY, rightStartX + fillW, trackY);
     skGrad.addColorStop(0, sk.gradA);
     skGrad.addColorStop(1, sk.gradB);
     ctx.fillStyle = skGrad;
     ctx.shadowColor = sk.gradA;
-    ctx.shadowBlur = 8;
+    ctx.shadowBlur = 6;
     ctx.beginPath();
-    ctx.roundRect(skillCardX + sBarPad, trackY, fillW, sBarH, 6);
+    ctx.roundRect(rightStartX, trackY, fillW, barH, 4);
     ctx.fill();
     ctx.restore();
 
-    skillY += 56;
+    skillRowY += 44;
   }
 
   // -------------------------------------------------------------
@@ -801,13 +792,13 @@ async function generateProfileCard(user, topScores = [], options = {}) {
   // -------------------------------------------------------------
   const medalCardX = 40;
   const medalCardW = 820;
-  const medalCardY = 1058;
-  const medalCardH = 175;
+  const medalCardY = 704;
+  const medalCardH = 146;
 
   ctx.save();
   ctx.fillStyle = 'rgba(15, 23, 42, 0.65)';
   ctx.beginPath();
-  ctx.roundRect(medalCardX, medalCardY, medalCardW, medalCardH, 20);
+  ctx.roundRect(medalCardX, medalCardY, medalCardW, medalCardH, 18);
   ctx.fill();
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
   ctx.lineWidth = 1;
@@ -816,33 +807,33 @@ async function generateProfileCard(user, topScores = [], options = {}) {
 
   // Medal Banner Row (Top of Medal Card)
   const medalsCount = user.user_achievements ? user.user_achievements.length : 0;
-  const mBannerX = medalCardX + 24;
-  const mBannerY = medalCardY + 16;
-  const mBannerW = medalCardW - 48;
-  const mBannerH = 46;
+  const mBannerX = medalCardX + 20;
+  const mBannerY = medalCardY + 12;
+  const mBannerW = medalCardW - 40;
+  const mBannerH = 38;
 
   ctx.save();
   ctx.fillStyle = 'rgba(245, 158, 11, 0.08)';
   ctx.beginPath();
-  ctx.roundRect(mBannerX, mBannerY, mBannerW, mBannerH, 12);
+  ctx.roundRect(mBannerX, mBannerY, mBannerW, mBannerH, 10);
   ctx.fill();
   ctx.strokeStyle = 'rgba(245, 158, 11, 0.30)';
   ctx.lineWidth = 1;
   ctx.stroke();
 
   if (icoMedal) {
-    ctx.drawImage(icoMedal, mBannerX + 16, mBannerY + 9, 28, 28);
+    ctx.drawImage(icoMedal, mBannerX + 14, mBannerY + 7, 24, 24);
   }
 
   ctx.textAlign = 'left';
-  ctx.font = `bold 16px ${FONT_STACK}`;
+  ctx.font = `bold 15px ${FONT_STACK}`;
   ctx.fillStyle = '#fbbf24';
-  ctx.fillText(`${medalsCount} ${isId ? 'Medali Terbuka' : 'Medals Unlocked'}`, mBannerX + 54, mBannerY + 28);
+  ctx.fillText(`${medalsCount} ${isId ? 'Medali Terbuka' : 'Medals Unlocked'}`, mBannerX + 46, mBannerY + 24);
 
   ctx.textAlign = 'right';
-  ctx.font = `500 12px ${FONT_STACK}`;
+  ctx.font = `500 11px ${FONT_STACK}`;
   ctx.fillStyle = '#94a3b8';
-  ctx.fillText(isId ? 'Pencapaian Resmi osu!' : 'Official osu! Achievements', mBannerX + mBannerW - 16, mBannerY + 28);
+  ctx.fillText(isId ? 'Pencapaian Resmi osu!' : 'Official osu! Achievements', mBannerX + mBannerW - 14, mBannerY + 24);
   ctx.restore();
 
   // 5 Grade Badges Row (SS Silver, SS Gold, S Silver, S Gold, A)
@@ -855,38 +846,38 @@ async function generateProfileCard(user, topScores = [], options = {}) {
     { label: 'A', sub: '', count: grades.a || 0, color: '#22c55e', bg: 'rgba(34, 197, 94, 0.08)' }
   ];
 
-  const gGap = 12;
-  const gBoxW = (medalCardW - 48 - (gGap * 4)) / 5;
-  const gBoxH = 68;
-  const gStartY = medalCardY + 78;
+  const gGap = 10;
+  const gBoxW = (medalCardW - 40 - (gGap * 4)) / 5;
+  const gBoxH = 62;
+  const gStartY = medalCardY + 60;
 
   for (let i = 0; i < gradeItems.length; i++) {
     const g = gradeItems[i];
-    const gX = medalCardX + 24 + (i * (gBoxW + gGap));
+    const gX = medalCardX + 20 + (i * (gBoxW + gGap));
 
     ctx.save();
     ctx.fillStyle = g.bg;
     ctx.beginPath();
-    ctx.roundRect(gX, gStartY, gBoxW, gBoxH, 12);
+    ctx.roundRect(gX, gStartY, gBoxW, gBoxH, 10);
     ctx.fill();
     ctx.strokeStyle = g.color + '35';
     ctx.lineWidth = 1;
     ctx.stroke();
 
     ctx.textAlign = 'left';
-    ctx.font = `bold 22px ${FONT_STACK}`;
+    ctx.font = `bold 20px ${FONT_STACK}`;
     ctx.fillStyle = g.color;
-    ctx.fillText(g.label, gX + 12, gStartY + 32);
+    ctx.fillText(g.label, gX + 10, gStartY + 28);
 
     ctx.textAlign = 'right';
-    ctx.font = `bold 16px ${FONT_STACK}`;
+    ctx.font = `bold 15px ${FONT_STACK}`;
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(g.count.toLocaleString(), gX + gBoxW - 12, gStartY + 30);
+    ctx.fillText(g.count.toLocaleString(), gX + gBoxW - 10, gStartY + 27);
 
     if (g.sub) {
       ctx.font = `500 10px ${FONT_STACK}`;
       ctx.fillStyle = '#94a3b8';
-      ctx.fillText(g.sub, gX + gBoxW - 12, gStartY + 48);
+      ctx.fillText(g.sub, gX + gBoxW - 10, gStartY + 44);
     }
     ctx.restore();
   }
@@ -894,12 +885,12 @@ async function generateProfileCard(user, topScores = [], options = {}) {
   // -------------------------------------------------------------
   // FOOTER WATERMARK WITH CIRCULAR COLUMBINA BOBA ICON BESIDE CREDIT
   // -------------------------------------------------------------
-  const footerY = 1262;
+  const footerY = 868;
   const footerText = 'Columbina Bot • osu! Player Profile Showcase';
-  ctx.font = `500 13px ${FONT_STACK}`;
+  ctx.font = `500 12px ${FONT_STACK}`;
   const fTextW = ctx.measureText(footerText).width;
-  const bobaSize = 28;
-  const fTotalW = bobaSize + 12 + fTextW;
+  const bobaSize = 24;
+  const fTotalW = bobaSize + 10 + fTextW;
   const fStartX = 450 - (fTotalW / 2);
 
   if (bobaImg) {
@@ -912,9 +903,9 @@ async function generateProfileCard(user, topScores = [], options = {}) {
 
     ctx.save();
     ctx.strokeStyle = '#f43f5e';
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1.4;
     ctx.shadowColor = 'rgba(244, 63, 94, 0.4)';
-    ctx.shadowBlur = 6;
+    ctx.shadowBlur = 5;
     ctx.beginPath();
     ctx.arc(fStartX + (bobaSize / 2), footerY + (bobaSize / 2), bobaSize / 2, 0, Math.PI * 2);
     ctx.stroke();
@@ -923,7 +914,7 @@ async function generateProfileCard(user, topScores = [], options = {}) {
 
   ctx.textAlign = 'left';
   ctx.fillStyle = '#94a3b8';
-  ctx.fillText(footerText, fStartX + (bobaImg ? bobaSize + 12 : 0), footerY + 18);
+  ctx.fillText(footerText, fStartX + (bobaImg ? bobaSize + 10 : 0), footerY + 16);
 
   // Return PNG Buffer
   return canvas.toBuffer('image/png');
