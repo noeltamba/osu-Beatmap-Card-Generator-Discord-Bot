@@ -7,13 +7,27 @@
   [![Invite Discord Bot](https://img.shields.io/badge/Invite_Bot-Click_Here-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/oauth2/authorize?client_id=1562307139274416178&permissions=274878286912&integration_type=0&scope=applications.commands+bot)
 
 </div>
-# 🎮 osu! Beatmap Card Generator - Release v1.4.0
+# 🎮 osu! Beatmap Card Generator - Release v1.4.1
 
 A high-performance Discord bot generating visually stunning, frosted-glass score and beatmap cards. Featuring ultra-fast prefix commands (`;`), accurate osu! API v2 score modeling, and stream-ready mini widgets.
 
 ---
 
-### ✨ What's New in v1.4.0?
+### ✨ What's New in v1.4.1?
+
+* **🎴 Portrait Profile Card Redesign (`/profile`, `/pcard`, `;p`, `;pcard`)**:
+  * **Modern Portrait Dashboard (900 × 1320 px)**: Full visual overhaul transitioning from horizontal landscape to a clean, mobile-friendly vertical layout inspired by custom wireframe designs.
+  * **Circular Donut Ratio Chart**: An eye-catching circular skill distribution chart displaying the 3 core playstyle components: **Aim** (Rose Red `#f43f5e`), **Speed** (Violet `#a855f7`), and **Accuracy** (Mint `#10b981`), centered around the dominant archetype badge and percentage.
+  * **Dedicated Medals & Grades Showcase**: Moved the official osu! achievements banner (`🏅 X Medals Unlocked`) and 5 Bancho grade counters (Silver/Gold SS, Silver/Gold S, A) directly below the Skill Profile section.
+  * **Dual Brand Watermarks**: Added a frosted top-right corner watermark tag (`COLUMBINA BOT • OSU!`) and a refined footer credit with a circular `Columbina Boba.jpg` avatar icon.
+  * **SVG Vector Rank Pills**: Replaced unicode emojis in the top identity card with native Lucide SVG vectors, eliminating font tofu glyphs (`[-]`).
+* **⚔️ Cozy Red & Blue Duel Polish (`/versus`, `;vs`)**:
+  * Applied soothing, non-glare **Cozy Rose Red (`#f43f5e`)** for Player 1 and **Cozy Sky Blue (`#38bdf8`)** for Player 2 across both Profile Showdown and Beatmap Duel modes.
+  * Perfectly symmetrical right-aligned stats on Player 2 top card with normalized rank formatting.
+
+---
+
+### 🌟 Release v1.4.0 Highlights
 
 * **⚔️ Head-to-Head Versus Duel Card (`/versus`, `/vs`, `;vs`)**:
   * **TCG-Inspired 3:4 Portrait Ratio (900 × 1200 px)**: High-resolution vertical battle card layout designed for head-to-head score and profile showdowns.

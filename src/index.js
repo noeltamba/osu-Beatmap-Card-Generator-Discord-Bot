@@ -473,7 +473,7 @@ function createBeatmapButtons(beatmap, originalInput = null, lang = 'en') {
 
 const STATUS_STATE_FILE = path.join(__dirname, '..', 'data', 'status_state.json');
 const DEFAULT_PRESENCE = ';help | osu! Image Generator ✨';
-const UPDATE_PRESENCE = '✨ v1.4.0 Updated: Versus Duel (;vs) & /github! | ;help';
+const UPDATE_PRESENCE = '✨ v1.4.1 Updated: Portrait Profile (;p) & Cozy Duel (;vs)! | ;help';
 
 function setupBotPresence(client) {
   let statusData = null;
