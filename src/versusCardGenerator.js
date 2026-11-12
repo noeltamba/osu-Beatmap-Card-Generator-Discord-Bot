@@ -89,9 +89,39 @@ function drawStar(ctx, cx, cy, spikes, outerRadius, innerRadius, color) {
 }
 
 /**
- * Cozy Archetype Palettes derived from player PP breakdown
+ * Cozy Red & Blue Duel Palettes (Warm, comfortable, and easy on the eyes)
+ */
+const COZY_PALETTES = {
+  p1: {
+    name: 'Cozy Rose Red',
+    accent: '#f43f5e', // Warm rose red / soft crimson (calm, cozy, non-glare)
+    glow: 'rgba(244, 63, 94, 0.22)',
+    bgTint: 'rgba(244, 63, 94, 0.12)',
+    subtle: 'rgba(244, 63, 94, 0.05)',
+    border: 'rgba(244, 63, 94, 0.35)',
+    badgeBg: 'rgba(244, 63, 94, 0.18)',
+    text: '#ffe4e6',
+    contrastText: '#ffffff'
+  },
+  p2: {
+    name: 'Cozy Sky Blue',
+    accent: '#38bdf8', // Calm sky blue / soft cyan azure (serene, readable, eye-pleasing)
+    glow: 'rgba(56, 189, 248, 0.22)',
+    bgTint: 'rgba(56, 189, 248, 0.12)',
+    subtle: 'rgba(56, 189, 248, 0.05)',
+    border: 'rgba(56, 189, 248, 0.35)',
+    badgeBg: 'rgba(56, 189, 248, 0.18)',
+    text: '#e0f2fe',
+    contrastText: '#090d16'
+  }
+};
+
+/**
+ * Archetype Palettes (Supports custom overrides or PP archetype mapping)
  */
 const ARCHETYPE_PALETTES = {
+  red: COZY_PALETTES.p1,
+  blue: COZY_PALETTES.p2,
   all_rounder: {
     name: 'All-Rounder',
     accent: '#fbbf24', // Cozy warm gold / amber
@@ -155,7 +185,6 @@ const ARCHETYPE_PALETTES = {
 async function drawPlayerAvatar(ctx, user, x, y, size, accentColor, isRightAligned = false) {
   const avatarUrl = user?.avatar_url || `https://a.ppy.sh/${user?.id || 1}`;
 
-  // Avatar Image
   try {
     const avImg = await loadImage(avatarUrl);
     ctx.save();
@@ -165,7 +194,6 @@ async function drawPlayerAvatar(ctx, user, x, y, size, accentColor, isRightAlign
     ctx.drawImage(avImg, x, y, size, size);
     ctx.restore();
 
-    // Outer glow border
     ctx.save();
     ctx.strokeStyle = accentColor;
     ctx.lineWidth = 2.5;
@@ -182,7 +210,6 @@ async function drawPlayerAvatar(ctx, user, x, y, size, accentColor, isRightAlign
     ctx.fill();
   }
 
-  // Country Flag
   const countryCode = user?.country?.code || user?.country_code;
   if (countryCode) {
     try {
@@ -248,16 +275,12 @@ function drawWinnerBadge(ctx, x, y, text = 'WINNER', icoCrown = null) {
 
 /**
  * Generate Head-to-Head Versus Card (3:4 Ratio, 900x1200 px)
- * @param {object} params
- * @param {object} params.user1
- * @param {object} params.user2
- * @param {object} [params.score1]
- * @param {object} [params.score2]
- * @param {object} [params.beatmap]
- * @param {Array} [params.topScores1]
- * @param {Array} [params.topScores2]
- * @param {object} [options]
- * @returns {Promise<Buffer>}
+ * Follows the wireframe layout:
+ * - Top: Clean Title
+ * - Upper: Two distinct player cards with [Nama], #Rank, #Rank(Country), #PP, #Acc
+ * - Middle: ONE BIG UNIFIED CONTAINER with 2 central vertical divider lines
+ * - Bottom: ONE CONTAINER with 7 round blocks
+ * - Footer: Columbina Boba circular icon beside credit
  */
 async function generateVersusCard({
   user1,
@@ -280,15 +303,13 @@ async function generateVersusCard({
     calculatePlayerSkills(topScores2, lang).catch(() => ({ archetype: 'speed' }))
   ]);
 
-  let p1Archetype = p1ArchetypeOverride || skills1?.archetype || 'all_rounder';
-  let p2Archetype = p2ArchetypeOverride || skills2?.archetype || 'speed';
-  if (!p1ArchetypeOverride && !p2ArchetypeOverride && p1Archetype === p2Archetype) {
-    // Give player 2 a contrasting complementary palette if both have identical archetypes
-    p2Archetype = (p1Archetype === 'speed') ? 'aim' : (p1Archetype === 'all_rounder' ? 'speed' : 'all_rounder');
-  }
-
-  const p1Theme = ARCHETYPE_PALETTES[p1Archetype] || ARCHETYPE_PALETTES.all_rounder;
-  const p2Theme = ARCHETYPE_PALETTES[p2Archetype] || ARCHETYPE_PALETTES.speed;
+  // Color Palette: Player 1 = Cozy Red (#f43f5e), Player 2 = Cozy Blue (#38bdf8)
+  const p1Theme = (p1ArchetypeOverride && ARCHETYPE_PALETTES[p1ArchetypeOverride]) 
+    ? ARCHETYPE_PALETTES[p1ArchetypeOverride] 
+    : COZY_PALETTES.p1;
+  const p2Theme = (p2ArchetypeOverride && ARCHETYPE_PALETTES[p2ArchetypeOverride]) 
+    ? ARCHETYPE_PALETTES[p2ArchetypeOverride] 
+    : COZY_PALETTES.p2;
 
   // Preload clean vector icons and Columbina Boba credit image
   const bobaPath = path.join(__dirname, '..', 'assets', 'images', 'Columbina Boba.jpg');
@@ -318,13 +339,13 @@ async function generateVersusCard({
   ctx.fillRect(0, 0, width, height);
 
   // 2. Soft Ambient Radial Glows (Player 1 on Top-Left, Player 2 on Top-Right)
-  const glow1 = ctx.createRadialGradient(200, 200, 20, 200, 200, 380);
+  const glow1 = ctx.createRadialGradient(200, 200, 20, 200, 200, 420);
   glow1.addColorStop(0, p1Theme.glow);
   glow1.addColorStop(1, 'rgba(9, 13, 22, 0)');
   ctx.fillStyle = glow1;
   ctx.fillRect(0, 0, width, height);
 
-  const glow2 = ctx.createRadialGradient(700, 200, 20, 700, 200, 380);
+  const glow2 = ctx.createRadialGradient(700, 200, 20, 700, 200, 420);
   glow2.addColorStop(0, p2Theme.glow);
   glow2.addColorStop(1, 'rgba(9, 13, 22, 0)');
   ctx.fillStyle = glow2;
@@ -361,9 +382,9 @@ async function generateVersusCard({
     const sr = Number(beatmap.modded_difficulty_rating || beatmap.difficulty_rating || 0);
     const srInfo = getStarRatingColor(sr);
 
-    // 1. TOP HEADER: Beatmap Details (Y: 32, H: 124)
-    const headerY = 32;
-    const headerH = 124;
+    // 1. TOP TITLE / BEATMAP HEADER (Y: 28)
+    const headerY = 28;
+    const headerH = 110;
 
     ctx.save();
     ctx.fillStyle = 'rgba(15, 23, 42, 0.65)';
@@ -375,26 +396,22 @@ async function generateVersusCard({
     ctx.stroke();
     ctx.restore();
 
-    // Beatmap Title
     ctx.textAlign = 'left';
     ctx.font = `bold 22px ${FONT_STACK}`;
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(truncate(ctx, `${title} [${version}]`, headerW - 160), headerX + 22, headerY + 38);
+    ctx.fillText(truncate(ctx, `${title} [${version}]`, headerW - 160), headerX + 22, headerY + 36);
 
-    // Artist & Creator
     ctx.font = `500 14px ${FONT_STACK}`;
     ctx.fillStyle = '#94a3b8';
     const mapper = set.creator || beatmap.creator || 'Unknown';
-    ctx.fillText(truncate(ctx, `${artist} • mapped by ${mapper}`, headerW - 160), headerX + 22, headerY + 66);
+    ctx.fillText(truncate(ctx, `${artist} • mapped by ${mapper}`, headerW - 160), headerX + 22, headerY + 62);
 
-    // Beatmap Meta Pills (BPM, Length, CS, AR, OD)
     const bpm = Math.round(beatmap.bpm || 0);
     const len = formatDuration(beatmap.hit_length || beatmap.total_length || 0);
     ctx.font = `600 12px ${FONT_STACK}`;
     ctx.fillStyle = '#cbd5e1';
-    ctx.fillText(`${len}   •   ${bpm} BPM   •   CS ${beatmap.cs || 4}   AR ${beatmap.ar || 9}   OD ${beatmap.accuracy || 8}`, headerX + 22, headerY + 98);
+    ctx.fillText(`${len}   •   ${bpm} BPM   •   CS ${beatmap.cs || 4}   AR ${beatmap.ar || 9}   OD ${beatmap.accuracy || 8}`, headerX + 22, headerY + 90);
 
-    // Star Rating Capsule
     const srPillW = 96;
     const srPillH = 34;
     const srPillX = headerX + headerW - srPillW - 20;
@@ -416,8 +433,8 @@ async function generateVersusCard({
     ctx.fillText(`${sr.toFixed(2)}★`, srPillX + 56, srPillY + 23);
     ctx.restore();
 
-    // Determine Winner for Beatmap Score
-    let winner = null; // 1, 2, or 'tie'
+    // Determine Winner
+    let winner = null;
     const s1Score = Number(score1?.total_score ?? score1?.score ?? 0);
     const s2Score = Number(score2?.total_score ?? score2?.score ?? 0);
     const s1Pp = Math.round(Number(score1?.pp || 0));
@@ -437,25 +454,31 @@ async function generateVersusCard({
       }
     }
 
-    // 2. PLAYER PROFILE HEADER CARDS (Left: Left-aligned, Right: Right-aligned)
-    const topCardY = headerY + headerH + 20; // 176
-    const topCardH = 118;
-    const topCardW = 356;
+    // 2. TOP PLAYER CARDS (Wireframe Style: [Nama], #Rank, #Rank(Country), #PP, #Acc)
+    const topCardY = headerY + headerH + 18; // 156
+    const topCardH = 136;
+    const topCardW = 390;
     const p1X = headerX;
-    const p2X = headerX + headerW - topCardW; // 508
+    const p2X = headerX + headerW - topCardW; // 474
 
     const p1RankStr = user1.statistics?.global_rank ? `#${user1.statistics.global_rank.toLocaleString()}` : '#-';
     const p2RankStr = user2.statistics?.global_rank ? `#${user2.statistics.global_rank.toLocaleString()}` : '#-';
+    const p1CountryRank = user1.statistics?.country_rank ? `#${user1.statistics.country_rank.toLocaleString()}` : '#-';
+    const p2CountryRank = user2.statistics?.country_rank ? `#${user2.statistics.country_rank.toLocaleString()}` : '#-';
+    const p1CountryCode = user1.country?.code || '';
+    const p2CountryCode = user2.country?.code || '';
     const p1PpTotal = Math.round(Number(user1.statistics?.pp || 0));
     const p2PpTotal = Math.round(Number(user2.statistics?.pp || 0));
+    const p1HitAcc = Number(user1.statistics?.hit_accuracy || 0).toFixed(2);
+    const p2HitAcc = Number(user2.statistics?.hit_accuracy || 0).toFixed(2);
 
-    // Player 1 Card (Left - Normal Left-aligned)
+    // Player 1 Card (Left)
     ctx.save();
     ctx.fillStyle = winner === 1 ? p1Theme.bgTint : 'rgba(15, 23, 42, 0.6)';
     ctx.beginPath();
     ctx.roundRect(p1X, topCardY, topCardW, topCardH, 18);
     ctx.fill();
-    ctx.strokeStyle = winner === 1 ? p1Theme.border : 'rgba(255, 255, 255, 0.07)';
+    ctx.strokeStyle = winner === 1 ? p1Theme.border : 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = winner === 1 ? 1.8 : 1;
     if (winner === 1) {
       ctx.shadowColor = p1Theme.glow;
@@ -464,49 +487,41 @@ async function generateVersusCard({
     ctx.stroke();
     ctx.restore();
 
-    const avSize = 72;
+    const avSize = 78;
     const p1AvX = p1X + 18;
-    const p1AvY = topCardY + 23;
+    const p1AvY = topCardY + 28;
     await drawPlayerAvatar(ctx, user1, p1AvX, p1AvY, avSize, p1Theme.accent, false);
 
-    const p1TextX = p1AvX + avSize + 14;
+    const p1TextX = p1AvX + avSize + 16;
     ctx.textAlign = 'left';
     ctx.font = `bold 20px ${FONT_STACK}`;
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(truncate(ctx, user1.username, winner === 1 ? 130 : 210), p1TextX, topCardY + 36);
+    ctx.fillText(truncate(ctx, user1.username, winner === 1 ? 140 : 210), p1TextX, topCardY + 30);
 
-    ctx.font = `500 13px ${FONT_STACK}`;
+    ctx.font = `600 12px ${FONT_STACK}`;
     ctx.fillStyle = '#94a3b8';
-    ctx.fillText(truncate(ctx, user1.country?.name || user1.country?.code || '', 180), p1TextX, topCardY + 58);
+    ctx.fillText(p1RankStr, p1TextX, topCardY + 52);
+    ctx.fillText(`${p1CountryRank} (${p1CountryCode})`, p1TextX, topCardY + 72);
 
-    // Rank & PP Chip Pill (P1)
-    const p1ChipW = 160;
-    const p1ChipH = 24;
-    ctx.save();
-    ctx.fillStyle = p1Theme.badgeBg;
-    ctx.beginPath();
-    ctx.roundRect(p1TextX, topCardY + 70, p1ChipW, p1ChipH, 6);
-    ctx.fill();
-    ctx.strokeStyle = p1Theme.border;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.font = `bold 11px ${FONT_STACK}`;
+    ctx.font = `bold 13px ${FONT_STACK}`;
     ctx.fillStyle = p1Theme.accent;
-    ctx.textAlign = 'center';
-    ctx.fillText(`${p1RankStr}  •  ${p1PpTotal.toLocaleString()} pp`, p1TextX + (p1ChipW / 2), topCardY + 86);
-    ctx.restore();
+    ctx.fillText(`${p1PpTotal.toLocaleString()} pp`, p1TextX, topCardY + 94);
+
+    ctx.font = `600 12px ${FONT_STACK}`;
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillText(`${p1HitAcc}% Acc`, p1TextX, topCardY + 114);
 
     if (winner === 1) {
       drawWinnerBadge(ctx, p1X + topCardW - 104, topCardY + 12, 'WINNER', icoCrown);
     }
 
-    // Player 2 Card (Right - ALIGNED TO RATA KANAN)
+    // Player 2 Card (Right - RATA KANAN)
     ctx.save();
     ctx.fillStyle = winner === 2 ? p2Theme.bgTint : 'rgba(15, 23, 42, 0.6)';
     ctx.beginPath();
     ctx.roundRect(p2X, topCardY, topCardW, topCardH, 18);
     ctx.fill();
-    ctx.strokeStyle = winner === 2 ? p2Theme.border : 'rgba(255, 255, 255, 0.07)';
+    ctx.strokeStyle = winner === 2 ? p2Theme.border : 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = winner === 2 ? 1.8 : 1;
     if (winner === 2) {
       ctx.shadowColor = p2Theme.glow;
@@ -515,83 +530,64 @@ async function generateVersusCard({
     ctx.stroke();
     ctx.restore();
 
-    const p2AvX = p2X + topCardW - 18 - avSize; // Far right of card
-    const p2AvY = topCardY + 23;
+    const p2AvX = p2X + topCardW - 18 - avSize;
+    const p2AvY = topCardY + 28;
     await drawPlayerAvatar(ctx, user2, p2AvX, p2AvY, avSize, p2Theme.accent, true);
 
-    const p2TextX = p2AvX - 14; // Text anchor for right alignment
+    const p2TextX = p2AvX - 16;
     ctx.textAlign = 'right';
     ctx.font = `bold 20px ${FONT_STACK}`;
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(truncate(ctx, user2.username, winner === 2 ? 130 : 210), p2TextX, topCardY + 36);
+    ctx.fillText(truncate(ctx, user2.username, winner === 2 ? 140 : 210), p2TextX, topCardY + 30);
 
-    ctx.font = `500 13px ${FONT_STACK}`;
+    ctx.font = `600 12px ${FONT_STACK}`;
     ctx.fillStyle = '#94a3b8';
-    ctx.fillText(truncate(ctx, user2.country?.name || user2.country?.code || '', 180), p2TextX, topCardY + 58);
+    ctx.fillText(p2RankStr, p2TextX, topCardY + 52);
+    ctx.fillText(`${p2CountryRank} (${p2CountryCode})`, p2TextX, topCardY + 72);
 
-    // Rank & PP Chip Pill (P2 - Rata Kanan)
-    const p2ChipW = 160;
-    const p2ChipH = 24;
-    ctx.save();
-    ctx.fillStyle = p2Theme.badgeBg;
-    ctx.beginPath();
-    ctx.roundRect(p2TextX - p2ChipW, topCardY + 70, p2ChipW, p2ChipH, 6);
-    ctx.fill();
-    ctx.strokeStyle = p2Theme.border;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.font = `bold 11px ${FONT_STACK}`;
+    ctx.font = `bold 13px ${FONT_STACK}`;
     ctx.fillStyle = p2Theme.accent;
-    ctx.textAlign = 'center';
-    ctx.fillText(`${p2PpTotal.toLocaleString()} pp  •  ${p2RankStr}`, p2TextX - (p2ChipW / 2), topCardY + 86);
-    ctx.restore();
+    ctx.fillText(`${p2PpTotal.toLocaleString()} pp`, p2TextX, topCardY + 94);
+
+    ctx.font = `600 12px ${FONT_STACK}`;
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillText(`${p2HitAcc}% Acc`, p2TextX, topCardY + 114);
 
     if (winner === 2) {
       drawWinnerBadge(ctx, p2X + 16, topCardY + 12, 'WINNER', icoCrown);
     }
 
-    // Center VS Diamond
-    const vsSize = 48;
-    const vsY = topCardY + 42;
+    // 3. MIDDLE CARD: ONE BIG UNIFIED CONTAINER WITH 2 VERTICAL DIVIDER LINES
+    const midCardY = topCardY + topCardH + 18; // 310
+    const midCardH = 556;
 
     ctx.save();
-    ctx.translate(centerX, vsY);
-    ctx.rotate(Math.PI / 4);
-    const crestGrad = ctx.createLinearGradient(-vsSize / 2, -vsSize / 2, vsSize / 2, vsSize / 2);
-    crestGrad.addColorStop(0, p1Theme.accent);
-    crestGrad.addColorStop(1, p2Theme.accent);
-
-    ctx.shadowColor = p2Theme.glow;
-    ctx.shadowBlur = 14;
-    ctx.fillStyle = crestGrad;
-    ctx.fillRect(-vsSize / 2, -vsSize / 2, vsSize, vsSize);
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.65)';
+    ctx.beginPath();
+    ctx.roundRect(headerX, midCardY, headerW, midCardH, 20);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
     ctx.restore();
 
-    ctx.textAlign = 'center';
-    ctx.font = `bold 22px ${FONT_STACK}`;
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-    ctx.shadowBlur = 6;
-    ctx.fillText('VS', centerX, vsY + 8);
-    ctx.shadowBlur = 0;
+    // Two vertical lines down the middle
+    const colW = 210;
+    const lineX1 = centerX - (colW / 2); // 345
+    const lineX2 = centerX + (colW / 2); // 555
+    const lineStartY = midCardY + 16;
+    const lineEndY = midCardY + midCardH - 16;
 
-    // Delta indicator below VS diamond
-    if (score1 && score2) {
-      const scoreDiff = s1Score - s2Score;
-      ctx.font = `bold 12px ${FONT_STACK}`;
-      ctx.fillStyle = scoreDiff > 0 ? p1Theme.accent : (scoreDiff < 0 ? p2Theme.accent : '#94a3b8');
-      const arrow = scoreDiff > 0 ? '◄' : (scoreDiff < 0 ? '►' : '=');
-      ctx.fillText(`${arrow} ${formatCompactNumber(Math.abs(scoreDiff))}`, centerX, vsY + 46);
-    }
-
-    // 3. 7 UNIFIED COMPARISON ROWS (1 Card per metric)
-    // Left: Left-aligned at X:60, Center: Label Pill, Right: Right-aligned at X:840
-    const listStartY = topCardY + topCardH + 20; // 314
-    const rowH = 70;
-    const rowGap = 12;
-    const pillW = 230;
-    const pillH = 34;
-    const pillX = centerX - (pillW / 2);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(lineX1, lineStartY);
+    ctx.lineTo(lineX1, lineEndY);
+    ctx.moveTo(lineX2, lineStartY);
+    ctx.lineTo(lineX2, lineEndY);
+    ctx.stroke();
+    ctx.restore();
 
     const s1Mods = formatMods(Array.isArray(score1?.mods) ? score1.mods : parseMods(score1?.mods));
     const s2Mods = formatMods(Array.isArray(score2?.mods) ? score2.mods : parseMods(score2?.mods));
@@ -600,7 +596,7 @@ async function generateVersusCard({
 
     const scoreMetrics = [
       {
-        name: isId ? 'TOTAL SKOR' : 'TOTAL SCORE',
+        name: isId ? 'Total Skor' : 'Total Score',
         short: 'SCORE',
         v1: s1Score,
         v2: s2Score,
@@ -609,7 +605,7 @@ async function generateVersusCard({
         isP2Win: s2Score > s1Score
       },
       {
-        name: 'PERFORMANCE',
+        name: 'Performance',
         short: 'PP',
         v1: s1Pp,
         v2: s2Pp,
@@ -618,7 +614,7 @@ async function generateVersusCard({
         isP2Win: s2Pp > s1Pp
       },
       {
-        name: isId ? 'AKURASI' : 'HIT ACCURACY',
+        name: isId ? 'Akurasi' : 'Hit Accuracy',
         short: 'ACC',
         v1: Number(s1Acc),
         v2: Number(s2Acc),
@@ -627,7 +623,7 @@ async function generateVersusCard({
         isP2Win: Number(s2Acc) > Number(s1Acc)
       },
       {
-        name: 'MAX COMBO',
+        name: 'Max Combo',
         short: 'COMBO',
         v1: score1?.max_combo || 0,
         v2: score2?.max_combo || 0,
@@ -636,7 +632,7 @@ async function generateVersusCard({
         isP2Win: (score2?.max_combo || 0) > (score1?.max_combo || 0)
       },
       {
-        name: isId ? 'GRADE & MOD' : 'GRADE & MODS',
+        name: isId ? 'Grade & Mod' : 'Grade & Mods',
         short: 'MODS',
         v1: score1 ? `[${s1Grade.label}] ${s1Mods}` : '-',
         v2: score2 ? `[${s2Grade.label}] ${s2Mods}` : '-',
@@ -645,7 +641,7 @@ async function generateVersusCard({
         isP2Win: winner === 2
       },
       {
-        name: 'MISS COUNT',
+        name: 'Miss Count',
         short: 'MISS',
         v1: score1?.statistics?.count_miss || 0,
         v2: score2?.statistics?.count_miss || 0,
@@ -664,72 +660,37 @@ async function generateVersusCard({
       }
     ];
 
+    const rowH = (midCardH - 32) / scoreMetrics.length; // ~74.8px
+
     for (let i = 0; i < scoreMetrics.length; i++) {
       const item = scoreMetrics[i];
-      const rowY = listStartY + (i * (rowH + rowGap));
+      const rowCenterY = midCardY + 16 + (i * rowH) + (rowH / 2);
       const isP1Win = item.isP1Win;
       const isP2Win = item.isP2Win;
       const isTie = !isP1Win && !isP2Win;
 
-      // Card Container
-      ctx.save();
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.55)';
-      ctx.beginPath();
-      ctx.roundRect(headerX, rowY, headerW, rowH, 14);
-      ctx.fill();
-
-      // Winner side glow with dominant PP color tint
+      // Soft row highlight
       if (isP1Win) {
-        const winGrad = ctx.createLinearGradient(headerX, rowY, pillX, rowY);
-        winGrad.addColorStop(0, p1Theme.bgTint);
-        winGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        ctx.fillStyle = winGrad;
-        ctx.fillRect(headerX, rowY, pillX - headerX, rowH);
-        ctx.strokeStyle = p1Theme.border;
+        const leftGrad = ctx.createLinearGradient(headerX, rowCenterY - (rowH / 2), lineX1, rowCenterY - (rowH / 2));
+        leftGrad.addColorStop(0, p1Theme.bgTint);
+        leftGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = leftGrad;
+        ctx.fillRect(headerX + 2, rowCenterY - (rowH / 2), lineX1 - headerX - 2, rowH);
       } else if (isP2Win) {
-        const winGrad = ctx.createLinearGradient(pillX + pillW, rowY, headerX + headerW, rowY);
-        winGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-        winGrad.addColorStop(1, p2Theme.bgTint);
-        ctx.fillStyle = winGrad;
-        ctx.fillRect(pillX + pillW, rowY, (headerX + headerW) - (pillX + pillW), rowH);
-        ctx.strokeStyle = p2Theme.border;
-      } else {
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+        const rightGrad = ctx.createLinearGradient(lineX2, rowCenterY - (rowH / 2), headerX + headerW, rowCenterY - (rowH / 2));
+        rightGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        rightGrad.addColorStop(1, p2Theme.bgTint);
+        ctx.fillStyle = rightGrad;
+        ctx.fillRect(lineX2, rowCenterY - (rowH / 2), (headerX + headerW) - lineX2 - 2, rowH);
       }
 
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.roundRect(headerX, rowY, headerW, rowH, 14);
-      ctx.stroke();
-      ctx.restore();
-
-      // Center Label Pill
-      ctx.save();
-      const pillY = rowY + ((rowH - pillH) / 2);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-      ctx.beginPath();
-      ctx.roundRect(pillX, pillY, pillW, pillH, 8);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      // Separators "||"
-      ctx.font = `600 13px ${FONT_STACK}`;
-      ctx.fillStyle = '#64748b';
-      ctx.textAlign = 'right';
-      ctx.fillText('||', pillX - 12, rowY + 41);
-      ctx.textAlign = 'left';
-      ctx.fillText('||', pillX + pillW + 12, rowY + 41);
-
-      // Metric Label
+      // Center Metric Label
       ctx.textAlign = 'center';
-      ctx.font = `bold 12px ${FONT_STACK}`;
+      ctx.font = `bold 14px ${FONT_STACK}`;
       ctx.fillStyle = '#cbd5e1';
-      ctx.fillText(item.name, centerX, rowY + 41);
-      ctx.restore();
+      ctx.fillText(item.name, centerX, rowCenterY + 5);
 
-      // Player 1 Value (Left-aligned at X = 60)
+      // Player 1 Value (Left)
       const p1ValStr = item.raw ? String(item.v1) : item.fmt(item.v1);
       ctx.save();
       ctx.textAlign = 'left';
@@ -738,13 +699,13 @@ async function generateVersusCard({
       if (isP1Win) {
         ctx.shadowColor = p1Theme.glow;
         ctx.shadowBlur = 8;
-        ctx.fillText(`${p1ValStr}   ▲`, headerX + 24, rowY + 42);
+        ctx.fillText(`${p1ValStr}   ▲`, headerX + 28, rowCenterY + 6);
       } else {
-        ctx.fillText(p1ValStr, headerX + 24, rowY + 42);
+        ctx.fillText(p1ValStr, headerX + 28, rowCenterY + 6);
       }
       ctx.restore();
 
-      // Player 2 Value (RIGHT-ALIGNED at X = 840)
+      // Player 2 Value (Right - Rata Kanan)
       const p2ValStr = item.raw ? String(item.v2) : item.fmt(item.v2);
       ctx.save();
       ctx.textAlign = 'right';
@@ -753,21 +714,33 @@ async function generateVersusCard({
       if (isP2Win) {
         ctx.shadowColor = p2Theme.glow;
         ctx.shadowBlur = 8;
-        ctx.fillText(`▲   ${p2ValStr}`, headerX + headerW - 24, rowY + 42);
+        ctx.fillText(`▲   ${p2ValStr}`, headerX + headerW - 28, rowCenterY + 6);
       } else {
-        ctx.fillText(p2ValStr, headerX + headerW - 24, rowY + 42);
+        ctx.fillText(p2ValStr, headerX + headerW - 28, rowCenterY + 6);
       }
       ctx.restore();
+
+      // Subtle horizontal divider guide
+      if (i < scoreMetrics.length - 1) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(headerX + 16, rowCenterY + (rowH / 2));
+        ctx.lineTo(headerX + headerW - 16, rowCenterY + (rowH / 2));
+        ctx.stroke();
+        ctx.restore();
+      }
     }
 
-    // 4. BOTTOM MATCH VERDICT CONTAINER WITH 7 BLOCKS (Y: 896, H: 180)
-    const verdictY = listStartY + (scoreMetrics.length * (rowH + rowGap)) + 12; // 898
-    const verdictH = 176;
+    // 4. BOTTOM ROUNDED RECTANGLE CARD WITH 7 BLOCKS
+    const bottomCardY = midCardY + midCardH + 18; // 884
+    const bottomCardH = 176;
 
     ctx.save();
     ctx.fillStyle = 'rgba(15, 23, 42, 0.7)';
     ctx.beginPath();
-    ctx.roundRect(headerX, verdictY, headerW, verdictH, 18);
+    ctx.roundRect(headerX, bottomCardY, headerW, bottomCardH, 20);
     ctx.fill();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = 1;
@@ -797,25 +770,24 @@ async function generateVersusCard({
     const vStartX = centerX - (vTotalW / 2);
 
     if (verdictIcon) {
-      ctx.drawImage(verdictIcon, vStartX, verdictY + 18, 20, 20);
+      ctx.drawImage(verdictIcon, vStartX, bottomCardY + 18, 20, 20);
     }
     ctx.textAlign = 'left';
     ctx.fillStyle = verdictColor;
-    ctx.fillText(verdictTitle, vStartX + vIconW, verdictY + 34);
+    ctx.fillText(verdictTitle, vStartX + vIconW, bottomCardY + 34);
 
-    // Subtitle
     const scoreDiff = Math.abs(s1Score - s2Score);
     const ppDiff = Math.abs(s1Pp - s2Pp);
     ctx.font = `500 13px ${FONT_STACK}`;
     ctx.fillStyle = '#94a3b8';
     ctx.textAlign = 'center';
     if (score1 && score2) {
-      ctx.fillText(`${isId ? 'Selisih Skor' : 'Score Lead'}: +${scoreDiff.toLocaleString()} pts   •   ${isId ? 'Selisih PP' : 'PP Diff'}: +${ppDiff} pp`, centerX, verdictY + 58);
+      ctx.fillText(`${isId ? 'Selisih Skor' : 'Score Lead'}: +${scoreDiff.toLocaleString()} pts   •   ${isId ? 'Selisih PP' : 'PP Diff'}: +${ppDiff} pp`, centerX, bottomCardY + 58);
     } else {
-      ctx.fillText(isId ? 'Hanya satu pemain yang memiliki skor tercatat' : 'Only one player has a recorded score on this map', centerX, verdictY + 58);
+      ctx.fillText(isId ? 'Hanya satu pemain yang memiliki skor tercatat' : 'Only one player has a recorded score on this map', centerX, bottomCardY + 58);
     }
 
-    // 7 BLOCKS: One block per metric with category label above each
+    // 7 Blocks
     const blockAreaW = 744;
     const blockGap = 12;
     const blockW = Math.floor((blockAreaW - (blockGap * 6)) / 7); // ~96px
@@ -826,13 +798,11 @@ async function generateVersusCard({
       const item = scoreMetrics[k];
       const bX = blockStartX + k * (blockW + blockGap);
 
-      // Label above block
       ctx.font = `bold 11px ${FONT_STACK}`;
       ctx.fillStyle = '#94a3b8';
       ctx.textAlign = 'center';
-      ctx.fillText(item.short, bX + (blockW / 2), verdictY + 88);
+      ctx.fillText(item.short, bX + (blockW / 2), bottomCardY + 88);
 
-      // Block Pill
       ctx.save();
       let blockBg = 'rgba(255, 255, 255, 0.08)';
       let blockBorder = 'rgba(255, 255, 255, 0.1)';
@@ -842,14 +812,14 @@ async function generateVersusCard({
       if (item.isP1Win) {
         blockBg = p1Theme.accent;
         blockBorder = p1Theme.border;
-        blockText = truncate(ctx, user1.username, 76);
+        blockText = truncate(ctx, user1.username, 80);
         blockTextColor = p1Theme.contrastText;
         ctx.shadowColor = p1Theme.glow;
         ctx.shadowBlur = 8;
       } else if (item.isP2Win) {
         blockBg = p2Theme.accent;
         blockBorder = p2Theme.border;
-        blockText = truncate(ctx, user2.username, 76);
+        blockText = truncate(ctx, user2.username, 80);
         blockTextColor = p2Theme.contrastText;
         ctx.shadowColor = p2Theme.glow;
         ctx.shadowBlur = 8;
@@ -857,30 +827,32 @@ async function generateVersusCard({
 
       ctx.fillStyle = blockBg;
       ctx.beginPath();
-      ctx.roundRect(bX, verdictY + 98, blockW, blockH, 8);
+      ctx.roundRect(bX, bottomCardY + 98, blockW, blockH, 8);
       ctx.fill();
       ctx.strokeStyle = blockBorder;
       ctx.lineWidth = 1;
       ctx.stroke();
 
       ctx.textAlign = 'center';
-      ctx.font = `bold 12px ${FONT_STACK}`;
+      ctx.textBaseline = 'middle';
+      ctx.font = `bold ${blockText.length > 9 ? 10 : 11}px ${FONT_STACK}`;
       ctx.fillStyle = blockTextColor;
-      ctx.fillText(blockText, bX + (blockW / 2), verdictY + 120);
+      ctx.fillText(blockText, bX + (blockW / 2), bottomCardY + 98 + (blockH / 2));
       ctx.restore();
     }
 
-    // Score comparison summary pill under the blocks
-    ctx.textAlign = 'center';
+    ctx.textAlign = 'right';
     ctx.font = `bold 12px ${FONT_STACK}`;
     ctx.fillStyle = p1Theme.accent;
-    ctx.fillText(`${user1.username} (${s1Score > s2Score ? 'LEAD' : 'SCORE'})`, centerX - 100, verdictY + 154);
+    ctx.fillText(`${user1.username} (${s1Score > s2Score ? 'LEAD' : 'SCORE'})`, centerX - 18, bottomCardY + 154);
     ctx.fillStyle = '#64748b';
-    ctx.fillText('•', centerX, verdictY + 154);
+    ctx.textAlign = 'center';
+    ctx.fillText('•', centerX, bottomCardY + 154);
+    ctx.textAlign = 'left';
     ctx.fillStyle = p2Theme.accent;
-    ctx.fillText(`(${s2Score > s1Score ? 'LEAD' : 'SCORE'}) ${user2.username}`, centerX + 100, verdictY + 154);
+    ctx.fillText(`${user2.username} (${s2Score > s1Score ? 'LEAD' : 'SCORE'})`, centerX + 18, bottomCardY + 154);
 
-    // 5. FOOTER WITH CIRCULAR COLUMBINA BOBA ICON BESIDE CREDIT (Y: 1110)
+    // 5. FOOTER WITH CIRCULAR COLUMBINA BOBA ICON BESIDE CREDIT
     const footerY = 1118;
     const footerText = 'Columbina Bot • osu! Head-to-Head Versus Duel';
     ctx.font = `500 13px ${FONT_STACK}`;
@@ -913,36 +885,26 @@ async function generateVersusCard({
     ctx.fillText(footerText, textStartX, footerY + 18);
 
   // =========================================================================
-  // MODE B: PROFILE VERSUS (Comparing general user profiles)
+  // MODE B: PROFILE VERSUS (Comparing general user profiles - Exactly matching user wireframe)
   // =========================================================================
   } else {
-    // 1. TOP HEADER: Profile Showdown (Y: 32)
+    // 1. TOP TITLE (Wireframe: Head-To-Head Osu! Profile Showdown)
     const headerY = 32;
 
-    const titleText = isId ? 'PERBANDINGAN PROFIL OSU! HEAD-TO-HEAD' : 'HEAD-TO-HEAD OSU! PROFILE SHOWDOWN';
-    ctx.font = `bold 22px ${FONT_STACK}`;
-    const titleW = ctx.measureText(titleText).width;
-    const swordsW = icoSwords ? 32 : 0;
-    const totalTitleW = titleW + swordsW;
-    const titleStartX = (width - totalTitleW) / 2;
-
-    if (icoSwords) {
-      ctx.drawImage(icoSwords, titleStartX, headerY + 6, 24, 24);
-    }
-
-    ctx.textAlign = 'left';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(titleText, titleStartX + swordsW, headerY + 25);
-
+    const titleText = isId ? 'Head-To-Head Osu! Profile Showdown' : 'Head-To-Head Osu! Profile Showdown';
+    ctx.font = `bold 24px ${FONT_STACK}`;
     ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(titleText, centerX, headerY + 28);
+
     ctx.font = `500 13px ${FONT_STACK}`;
     ctx.fillStyle = '#94a3b8';
-    ctx.fillText(isId ? 'Perbandingan Statistik Bancho & Performa' : 'Comparing Bancho Statistics & Performance Metrics', centerX, headerY + 48);
+    ctx.fillText(isId ? 'Perbandingan Statistik Bancho & Performa' : 'Comparing Bancho Statistics & Performance Metrics', centerX, headerY + 52);
 
     // Metrics array to compare
     const metrics = [
       {
-        name: isId ? 'GLOBAL RANK' : 'GLOBAL RANK',
+        name: isId ? 'Global Rank' : 'Global Rank',
         short: 'RANK',
         v1: user1.statistics?.global_rank || 9999999,
         v2: user2.statistics?.global_rank || 9999999,
@@ -950,42 +912,42 @@ async function generateVersusCard({
         fmt: (v) => v ? `#${v.toLocaleString()}` : '#-'
       },
       {
-        name: 'TOTAL PP',
+        name: 'Total PP',
         short: 'PP',
         v1: Math.round(user1.statistics?.pp || 0),
         v2: Math.round(user2.statistics?.pp || 0),
         fmt: (v) => `${v.toLocaleString()} pp`
       },
       {
-        name: isId ? 'AKURASI KESELURUHAN' : 'HIT ACCURACY',
+        name: isId ? 'Hit Accuracy' : 'Hit Accuracy',
         short: 'ACC',
         v1: Number(user1.statistics?.hit_accuracy || 0),
         v2: Number(user2.statistics?.hit_accuracy || 0),
         fmt: (v) => `${v.toFixed(2)}%`
       },
       {
-        name: isId ? 'WAKTU BERMAIN' : 'PLAY TIME',
+        name: isId ? 'Play Time' : 'Play Time',
         short: 'TIME',
         v1: user1.statistics?.play_time || 0,
         v2: user2.statistics?.play_time || 0,
         fmt: (v) => `${Math.floor(v / 3600)}h`
       },
       {
-        name: 'PLAY COUNT',
+        name: 'Play Count',
         short: 'PLAYS',
         v1: user1.statistics?.play_count || 0,
         v2: user2.statistics?.play_count || 0,
         fmt: (v) => v.toLocaleString()
       },
       {
-        name: isId ? 'SKOR RANKED' : 'RANKED SCORE',
+        name: isId ? 'Ranked Score' : 'Ranked Score',
         short: 'SCORE',
         v1: user1.statistics?.ranked_score || 0,
         v2: user2.statistics?.ranked_score || 0,
         fmt: (v) => formatCompactNumber(v)
       },
       {
-        name: isId ? 'TOTAL GRADE SS & S' : 'TOTAL SS & S GRADES',
+        name: isId ? 'Total SS & S grades' : 'Total SS & S grades',
         short: 'GRADES',
         v1: (user1.statistics?.grade_counts?.ss || 0) + (user1.statistics?.grade_counts?.ssh || 0) + (user1.statistics?.grade_counts?.s || 0) + (user1.statistics?.grade_counts?.sh || 0),
         v2: (user2.statistics?.grade_counts?.ss || 0) + (user2.statistics?.grade_counts?.ssh || 0) + (user2.statistics?.grade_counts?.s || 0) + (user2.statistics?.grade_counts?.sh || 0),
@@ -1007,25 +969,31 @@ async function generateVersusCard({
 
     const overallWinner = p1Wins > p2Wins ? 1 : p2Wins > p1Wins ? 2 : 'tie';
 
-    // 2. PLAYER PROFILE CARDS (Left: Left-aligned, Right: Right-aligned)
-    const topCardY = 96;
-    const topCardH = 118;
-    const topCardW = 356;
+    // 2. TOP PLAYER CARDS (Wireframe: [Nama], #Rank, #Rank(Country), #PP, #Acc)
+    const topCardY = headerY + 68; // 100
+    const topCardH = 136;
+    const topCardW = 390;
     const p1X = headerX;
-    const p2X = headerX + headerW - topCardW; // 508
+    const p2X = headerX + headerW - topCardW; // 474
 
     const p1RankStr = user1.statistics?.global_rank ? `#${user1.statistics.global_rank.toLocaleString()}` : '#-';
     const p2RankStr = user2.statistics?.global_rank ? `#${user2.statistics.global_rank.toLocaleString()}` : '#-';
+    const p1CountryRank = user1.statistics?.country_rank ? `#${user1.statistics.country_rank.toLocaleString()}` : '#-';
+    const p2CountryRank = user2.statistics?.country_rank ? `#${user2.statistics.country_rank.toLocaleString()}` : '#-';
+    const p1CountryCode = user1.country?.code || '';
+    const p2CountryCode = user2.country?.code || '';
     const p1PpTotal = Math.round(Number(user1.statistics?.pp || 0));
     const p2PpTotal = Math.round(Number(user2.statistics?.pp || 0));
+    const p1HitAcc = Number(user1.statistics?.hit_accuracy || 0).toFixed(2);
+    const p2HitAcc = Number(user2.statistics?.hit_accuracy || 0).toFixed(2);
 
-    // Player 1 Card (Left - Normal Left-aligned)
+    // Player 1 Card (Left - Avatar on Left, Text on Right)
     ctx.save();
     ctx.fillStyle = overallWinner === 1 ? p1Theme.bgTint : 'rgba(15, 23, 42, 0.6)';
     ctx.beginPath();
     ctx.roundRect(p1X, topCardY, topCardW, topCardH, 18);
     ctx.fill();
-    ctx.strokeStyle = overallWinner === 1 ? p1Theme.border : 'rgba(255, 255, 255, 0.07)';
+    ctx.strokeStyle = overallWinner === 1 ? p1Theme.border : 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = overallWinner === 1 ? 1.8 : 1;
     if (overallWinner === 1) {
       ctx.shadowColor = p1Theme.glow;
@@ -1034,49 +1002,41 @@ async function generateVersusCard({
     ctx.stroke();
     ctx.restore();
 
-    const avSize = 72;
+    const avSize = 78;
     const p1AvX = p1X + 18;
-    const p1AvY = topCardY + 23;
+    const p1AvY = topCardY + 28;
     await drawPlayerAvatar(ctx, user1, p1AvX, p1AvY, avSize, p1Theme.accent, false);
 
-    const p1TextX = p1AvX + avSize + 14;
+    const p1TextX = p1AvX + avSize + 16;
     ctx.textAlign = 'left';
     ctx.font = `bold 20px ${FONT_STACK}`;
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(truncate(ctx, user1.username, overallWinner === 1 ? 130 : 210), p1TextX, topCardY + 36);
+    ctx.fillText(truncate(ctx, user1.username, overallWinner === 1 ? 140 : 210), p1TextX, topCardY + 30);
 
-    ctx.font = `500 13px ${FONT_STACK}`;
+    ctx.font = `600 12px ${FONT_STACK}`;
     ctx.fillStyle = '#94a3b8';
-    ctx.fillText(truncate(ctx, user1.country?.name || user1.country?.code || '', 180), p1TextX, topCardY + 58);
+    ctx.fillText(p1RankStr, p1TextX, topCardY + 52);
+    ctx.fillText(`${p1CountryRank} (${p1CountryCode})`, p1TextX, topCardY + 72);
 
-    // Rank & PP Chip Pill (P1)
-    const p1ChipW = 160;
-    const p1ChipH = 24;
-    ctx.save();
-    ctx.fillStyle = p1Theme.badgeBg;
-    ctx.beginPath();
-    ctx.roundRect(p1TextX, topCardY + 70, p1ChipW, p1ChipH, 6);
-    ctx.fill();
-    ctx.strokeStyle = p1Theme.border;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.font = `bold 11px ${FONT_STACK}`;
+    ctx.font = `bold 13px ${FONT_STACK}`;
     ctx.fillStyle = p1Theme.accent;
-    ctx.textAlign = 'center';
-    ctx.fillText(`${p1RankStr}  •  ${p1PpTotal.toLocaleString()} pp`, p1TextX + (p1ChipW / 2), topCardY + 86);
-    ctx.restore();
+    ctx.fillText(`${p1PpTotal.toLocaleString()} pp`, p1TextX, topCardY + 94);
+
+    ctx.font = `600 12px ${FONT_STACK}`;
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillText(`${p1HitAcc}% Acc`, p1TextX, topCardY + 114);
 
     if (overallWinner === 1) {
       drawWinnerBadge(ctx, p1X + topCardW - 104, topCardY + 12, `${p1Wins} WINS`, icoCrown);
     }
 
-    // Player 2 Card (Right - ALIGNED TO RATA KANAN)
+    // Player 2 Card (Right - Text on Left, Avatar on Right - RATA KANAN)
     ctx.save();
     ctx.fillStyle = overallWinner === 2 ? p2Theme.bgTint : 'rgba(15, 23, 42, 0.6)';
     ctx.beginPath();
     ctx.roundRect(p2X, topCardY, topCardW, topCardH, 18);
     ctx.fill();
-    ctx.strokeStyle = overallWinner === 2 ? p2Theme.border : 'rgba(255, 255, 255, 0.07)';
+    ctx.strokeStyle = overallWinner === 2 ? p2Theme.border : 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = overallWinner === 2 ? 1.8 : 1;
     if (overallWinner === 2) {
       ctx.shadowColor = p2Theme.glow;
@@ -1085,84 +1045,66 @@ async function generateVersusCard({
     ctx.stroke();
     ctx.restore();
 
-    const p2AvX = p2X + topCardW - 18 - avSize; // Far right of card
-    const p2AvY = topCardY + 23;
+    const p2AvX = p2X + topCardW - 18 - avSize;
+    const p2AvY = topCardY + 28;
     await drawPlayerAvatar(ctx, user2, p2AvX, p2AvY, avSize, p2Theme.accent, true);
 
-    const p2TextX = p2AvX - 14; // Text anchor for right alignment
+    const p2TextX = p2AvX - 16;
     ctx.textAlign = 'right';
     ctx.font = `bold 20px ${FONT_STACK}`;
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(truncate(ctx, user2.username, overallWinner === 2 ? 130 : 210), p2TextX, topCardY + 36);
+    ctx.fillText(truncate(ctx, user2.username, overallWinner === 2 ? 140 : 210), p2TextX, topCardY + 30);
 
-    ctx.font = `500 13px ${FONT_STACK}`;
+    ctx.font = `600 12px ${FONT_STACK}`;
     ctx.fillStyle = '#94a3b8';
-    ctx.fillText(truncate(ctx, user2.country?.name || user2.country?.code || '', 180), p2TextX, topCardY + 58);
+    ctx.fillText(p2RankStr, p2TextX, topCardY + 52);
+    ctx.fillText(`${p2CountryRank} (${p2CountryCode})`, p2TextX, topCardY + 72);
 
-    // Rank & PP Chip Pill (P2 - Rata Kanan)
-    const p2ChipW = 160;
-    const p2ChipH = 24;
-    ctx.save();
-    ctx.fillStyle = p2Theme.badgeBg;
-    ctx.beginPath();
-    ctx.roundRect(p2TextX - p2ChipW, topCardY + 70, p2ChipW, p2ChipH, 6);
-    ctx.fill();
-    ctx.strokeStyle = p2Theme.border;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.font = `bold 11px ${FONT_STACK}`;
+    ctx.font = `bold 13px ${FONT_STACK}`;
     ctx.fillStyle = p2Theme.accent;
-    ctx.textAlign = 'center';
-    ctx.fillText(`${p2PpTotal.toLocaleString()} pp  •  ${p2RankStr}`, p2TextX - (p2ChipW / 2), topCardY + 86);
-    ctx.restore();
+    ctx.fillText(`${p2PpTotal.toLocaleString()} pp`, p2TextX, topCardY + 94);
+
+    ctx.font = `600 12px ${FONT_STACK}`;
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillText(`${p2HitAcc}% Acc`, p2TextX, topCardY + 114);
 
     if (overallWinner === 2) {
       drawWinnerBadge(ctx, p2X + 16, topCardY + 12, `${p2Wins} WINS`, icoCrown);
     }
 
-    // Center VS Diamond
-    const vsSize = 48;
-    const vsY = topCardY + 42;
+    // 3. MIDDLE CARD: ONE BIG UNIFIED CONTAINER WITH 2 VERTICAL DIVIDER LINES
+    const midCardY = topCardY + topCardH + 18; // 254
+    const midCardH = 580;
 
     ctx.save();
-    ctx.translate(centerX, vsY);
-    ctx.rotate(Math.PI / 4);
-    const crestGrad = ctx.createLinearGradient(-vsSize / 2, -vsSize / 2, vsSize / 2, vsSize / 2);
-    crestGrad.addColorStop(0, p1Theme.accent);
-    crestGrad.addColorStop(1, p2Theme.accent);
-
-    ctx.shadowColor = p2Theme.glow;
-    ctx.shadowBlur = 14;
-    ctx.fillStyle = crestGrad;
-    ctx.fillRect(-vsSize / 2, -vsSize / 2, vsSize, vsSize);
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.65)';
+    ctx.beginPath();
+    ctx.roundRect(headerX, midCardY, headerW, midCardH, 20);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
     ctx.restore();
 
-    ctx.textAlign = 'center';
-    ctx.font = `bold 22px ${FONT_STACK}`;
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-    ctx.shadowBlur = 6;
-    ctx.fillText('VS', centerX, vsY + 8);
-    ctx.shadowBlur = 0;
+    // Two vertical lines down the middle
+    const colW = 210;
+    const lineX1 = centerX - (colW / 2); // 345
+    const lineX2 = centerX + (colW / 2); // 555
+    const lineStartY = midCardY + 16;
+    const lineEndY = midCardY + midCardH - 16;
 
-    // Scoreboard: e.g. 5 - 2
-    const scoreY = vsY + 46;
-    ctx.font = `bold 16px ${FONT_STACK}`;
-    ctx.fillStyle = p1Theme.accent;
-    ctx.fillText(`${p1Wins}`, centerX - 18, scoreY);
-    ctx.fillStyle = '#64748b';
-    ctx.fillText('-', centerX, scoreY);
-    ctx.fillStyle = p2Theme.accent;
-    ctx.fillText(`${p2Wins}`, centerX + 18, scoreY);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(lineX1, lineStartY);
+    ctx.lineTo(lineX1, lineEndY);
+    ctx.moveTo(lineX2, lineStartY);
+    ctx.lineTo(lineX2, lineEndY);
+    ctx.stroke();
+    ctx.restore();
 
-    // 3. 7 UNIFIED METRIC COMPARISON ROWS (1 CARD PER METRIC)
-    // Left: Left-aligned at X:60, Center: Label Pill, Right: Right-aligned at X:840
-    const listStartY = topCardY + topCardH + 20; // 234
-    const rowH = 72;
-    const rowGap = 12;
-    const pillW = 230;
-    const pillH = 34;
-    const pillX = centerX - (pillW / 2);
+    const rowH = (midCardH - 32) / metrics.length; // ~78.2px
 
     for (let i = 0; i < metrics.length; i++) {
       const item = metrics[i];
@@ -1171,67 +1113,30 @@ async function generateVersusCard({
       const isP1Win = item.invert ? v1 < v2 : v1 > v2;
       const isP2Win = item.invert ? v2 < v1 : v2 > v1;
       const isTie = !isP1Win && !isP2Win;
-      const rowY = listStartY + (i * (rowH + rowGap));
+      const rowCenterY = midCardY + 16 + (i * rowH) + (rowH / 2);
 
-      // 1 Card Container for the entire row
-      ctx.save();
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.55)';
-      ctx.beginPath();
-      ctx.roundRect(headerX, rowY, headerW, rowH, 14);
-      ctx.fill();
-
-      // Winning side background gradient highlight with player dominant theme
+      // Soft row highlight
       if (isP1Win) {
-        const winGrad = ctx.createLinearGradient(headerX, rowY, pillX, rowY);
-        winGrad.addColorStop(0, p1Theme.bgTint);
-        winGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        ctx.fillStyle = winGrad;
-        ctx.fillRect(headerX, rowY, pillX - headerX, rowH);
-        ctx.strokeStyle = p1Theme.border;
+        const leftGrad = ctx.createLinearGradient(headerX, rowCenterY - (rowH / 2), lineX1, rowCenterY - (rowH / 2));
+        leftGrad.addColorStop(0, p1Theme.bgTint);
+        leftGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = leftGrad;
+        ctx.fillRect(headerX + 2, rowCenterY - (rowH / 2), lineX1 - headerX - 2, rowH);
       } else if (isP2Win) {
-        const winGrad = ctx.createLinearGradient(pillX + pillW, rowY, headerX + headerW, rowY);
-        winGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-        winGrad.addColorStop(1, p2Theme.bgTint);
-        ctx.fillStyle = winGrad;
-        ctx.fillRect(pillX + pillW, rowY, (headerX + headerW) - (pillX + pillW), rowH);
-        ctx.strokeStyle = p2Theme.border;
-      } else {
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+        const rightGrad = ctx.createLinearGradient(lineX2, rowCenterY - (rowH / 2), headerX + headerW, rowCenterY - (rowH / 2));
+        rightGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        rightGrad.addColorStop(1, p2Theme.bgTint);
+        ctx.fillStyle = rightGrad;
+        ctx.fillRect(lineX2, rowCenterY - (rowH / 2), (headerX + headerW) - lineX2 - 2, rowH);
       }
 
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.roundRect(headerX, rowY, headerW, rowH, 14);
-      ctx.stroke();
-      ctx.restore();
-
-      // Center Label Pill
-      ctx.save();
-      const pillY = rowY + ((rowH - pillH) / 2);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-      ctx.beginPath();
-      ctx.roundRect(pillX, pillY, pillW, pillH, 8);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      // Separator Indicators "||"
-      ctx.font = `600 13px ${FONT_STACK}`;
-      ctx.fillStyle = '#64748b';
-      ctx.textAlign = 'right';
-      ctx.fillText('||', pillX - 12, rowY + 41);
-      ctx.textAlign = 'left';
-      ctx.fillText('||', pillX + pillW + 12, rowY + 41);
-
-      // Centered Label Text
+      // Center Metric Label (Centered between lineX1 and lineX2)
       ctx.textAlign = 'center';
-      ctx.font = `bold 12px ${FONT_STACK}`;
+      ctx.font = `bold 14px ${FONT_STACK}`;
       ctx.fillStyle = '#cbd5e1';
-      ctx.fillText(item.name, centerX, rowY + 41);
-      ctx.restore();
+      ctx.fillText(item.name, centerX, rowCenterY + 5);
 
-      // Player 1 Value (Left-aligned at X = 60)
+      // Player 1 Value (Left)
       ctx.save();
       ctx.textAlign = 'left';
       ctx.font = `bold 19px ${FONT_STACK}`;
@@ -1239,13 +1144,13 @@ async function generateVersusCard({
       if (isP1Win) {
         ctx.shadowColor = p1Theme.glow;
         ctx.shadowBlur = 8;
-        ctx.fillText(`${item.fmt(v1)}   ▲`, headerX + 24, rowY + 42);
+        ctx.fillText(`${item.fmt(v1)}   ▲`, headerX + 28, rowCenterY + 6);
       } else {
-        ctx.fillText(item.fmt(v1), headerX + 24, rowY + 42);
+        ctx.fillText(item.fmt(v1), headerX + 28, rowCenterY + 6);
       }
       ctx.restore();
 
-      // Player 2 Value (RIGHT-ALIGNED at X = 840)
+      // Player 2 Value (Right - Rata Kanan)
       ctx.save();
       ctx.textAlign = 'right';
       ctx.font = `bold 19px ${FONT_STACK}`;
@@ -1253,21 +1158,33 @@ async function generateVersusCard({
       if (isP2Win) {
         ctx.shadowColor = p2Theme.glow;
         ctx.shadowBlur = 8;
-        ctx.fillText(`▲   ${item.fmt(v2)}`, headerX + headerW - 24, rowY + 42);
+        ctx.fillText(`▲   ${item.fmt(v2)}`, headerX + headerW - 28, rowCenterY + 6);
       } else {
-        ctx.fillText(item.fmt(v2), headerX + headerW - 24, rowY + 42);
+        ctx.fillText(item.fmt(v2), headerX + headerW - 28, rowCenterY + 6);
       }
       ctx.restore();
+
+      // Subtle horizontal divider guide
+      if (i < metrics.length - 1) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(headerX + 16, rowCenterY + (rowH / 2));
+        ctx.lineTo(headerX + headerW - 16, rowCenterY + (rowH / 2));
+        ctx.stroke();
+        ctx.restore();
+      }
     }
 
-    // 4. BOTTOM MATCH VERDICT CONTAINER WITH 7 BLOCKS (Y: 826, H: 180)
-    const verdictY = listStartY + (metrics.length * (rowH + rowGap)) + 16; // 826
-    const verdictH = 176;
+    // 4. BOTTOM ROUNDED RECTANGLE CARD WITH 7 BLOCKS (Wireframe: One Rounded Card with 7 Blocks)
+    const bottomCardY = midCardY + midCardH + 18; // 852
+    const bottomCardH = 176;
 
     ctx.save();
     ctx.fillStyle = 'rgba(15, 23, 42, 0.7)';
     ctx.beginPath();
-    ctx.roundRect(headerX, verdictY, headerW, verdictH, 18);
+    ctx.roundRect(headerX, bottomCardY, headerW, bottomCardH, 20);
     ctx.fill();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = 1;
@@ -1297,11 +1214,11 @@ async function generateVersusCard({
     const vStartX = centerX - (vTotalW / 2);
 
     if (verdictIcon) {
-      ctx.drawImage(verdictIcon, vStartX, verdictY + 18, 20, 20);
+      ctx.drawImage(verdictIcon, vStartX, bottomCardY + 18, 20, 20);
     }
     ctx.textAlign = 'left';
     ctx.fillStyle = verdictColor;
-    ctx.fillText(verdictTitle, vStartX + vIconW, verdictY + 34);
+    ctx.fillText(verdictTitle, vStartX + vIconW, bottomCardY + 34);
 
     // Subtitle
     const leadCount = Math.max(p1Wins, p2Wins);
@@ -1310,12 +1227,12 @@ async function generateVersusCard({
     ctx.fillStyle = '#94a3b8';
     ctx.textAlign = 'center';
     if (overallWinner !== 'tie') {
-      ctx.fillText(isId ? `${leaderName} unggul dalam ${leadCount} dari ${metrics.length} metrik statistik Bancho` : `${leaderName} leads in ${leadCount} out of ${metrics.length} Bancho performance metrics`, centerX, verdictY + 58);
+      ctx.fillText(isId ? `${leaderName} unggul dalam ${leadCount} dari ${metrics.length} metrik statistik Bancho` : `${leaderName} leads in ${leadCount} out of ${metrics.length} Bancho performance metrics`, centerX, bottomCardY + 58);
     } else {
-      ctx.fillText(isId ? `Kedua pemain seimbang dengan ${p1Wins} kemenangan metrik masing-masing` : `Both players tied with ${p1Wins} category wins each`, centerX, verdictY + 58);
+      ctx.fillText(isId ? `Kedua pemain seimbang dengan ${p1Wins} kemenangan metrik masing-masing` : `Both players tied with ${p1Wins} category wins each`, centerX, bottomCardY + 58);
     }
 
-    // 7 BLOCKS: One block per metric with category label above each
+    // 7 Blocks
     const blockAreaW = 744;
     const blockGap = 12;
     const blockW = Math.floor((blockAreaW - (blockGap * 6)) / 7); // ~96px
@@ -1332,7 +1249,7 @@ async function generateVersusCard({
       ctx.font = `bold 11px ${FONT_STACK}`;
       ctx.fillStyle = '#94a3b8';
       ctx.textAlign = 'center';
-      ctx.fillText(item.short, bX + (blockW / 2), verdictY + 88);
+      ctx.fillText(item.short, bX + (blockW / 2), bottomCardY + 88);
 
       // Block Pill
       ctx.save();
@@ -1344,14 +1261,14 @@ async function generateVersusCard({
       if (isP1Win) {
         blockBg = p1Theme.accent;
         blockBorder = p1Theme.border;
-        blockText = truncate(ctx, user1.username, 76);
+        blockText = truncate(ctx, user1.username, 80);
         blockTextColor = p1Theme.contrastText;
         ctx.shadowColor = p1Theme.glow;
         ctx.shadowBlur = 8;
       } else if (isP2Win) {
         blockBg = p2Theme.accent;
         blockBorder = p2Theme.border;
-        blockText = truncate(ctx, user2.username, 76);
+        blockText = truncate(ctx, user2.username, 80);
         blockTextColor = p2Theme.contrastText;
         ctx.shadowColor = p2Theme.glow;
         ctx.shadowBlur = 8;
@@ -1359,31 +1276,34 @@ async function generateVersusCard({
 
       ctx.fillStyle = blockBg;
       ctx.beginPath();
-      ctx.roundRect(bX, verdictY + 98, blockW, blockH, 8);
+      ctx.roundRect(bX, bottomCardY + 98, blockW, blockH, 8);
       ctx.fill();
       ctx.strokeStyle = blockBorder;
       ctx.lineWidth = 1;
       ctx.stroke();
 
       ctx.textAlign = 'center';
-      ctx.font = `bold 12px ${FONT_STACK}`;
+      ctx.textBaseline = 'middle';
+      ctx.font = `bold ${blockText.length > 9 ? 10 : 11}px ${FONT_STACK}`;
       ctx.fillStyle = blockTextColor;
-      ctx.fillText(blockText, bX + (blockW / 2), verdictY + 120);
+      ctx.fillText(blockText, bX + (blockW / 2), bottomCardY + 98 + (blockH / 2));
       ctx.restore();
     }
 
     // Score comparison summary pill under the blocks
-    ctx.textAlign = 'center';
+    ctx.textAlign = 'right';
     ctx.font = `bold 12px ${FONT_STACK}`;
     ctx.fillStyle = p1Theme.accent;
-    ctx.fillText(`${user1.username} (${p1Wins} WINS)`, centerX - 100, verdictY + 154);
+    ctx.fillText(`${user1.username} (${p1Wins} WINS)`, centerX - 18, bottomCardY + 154);
     ctx.fillStyle = '#64748b';
-    ctx.fillText('•', centerX, verdictY + 154);
+    ctx.textAlign = 'center';
+    ctx.fillText('•', centerX, bottomCardY + 154);
+    ctx.textAlign = 'left';
     ctx.fillStyle = p2Theme.accent;
-    ctx.fillText(`(${p2Wins} WINS) ${user2.username}`, centerX + 100, verdictY + 154);
+    ctx.fillText(`${user2.username} (${p2Wins} WINS)`, centerX + 18, bottomCardY + 154);
 
-    // 5. FOOTER WITH CIRCULAR COLUMBINA BOBA ICON BESIDE CREDIT (Y: 1060)
-    const footerY = 1070;
+    // 5. FOOTER WITH CIRCULAR COLUMBINA BOBA ICON BESIDE CREDIT
+    const footerY = 1118;
     const footerText = 'Columbina Bot • osu! Head-to-Head Versus Duel';
     ctx.font = `500 13px ${FONT_STACK}`;
     const fTextW = ctx.measureText(footerText).width;
