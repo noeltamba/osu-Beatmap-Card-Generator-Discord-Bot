@@ -11,6 +11,7 @@ const { generateScoreCard } = require('./scoreCardGenerator');
 const { generateTopPlaysCard } = require('./topCardGenerator');
 const { generateMiniScoreCard } = require('./miniScoreCardGenerator');
 const { generateProfileCard } = require('./profileCardGenerator');
+const { generateVersusCard } = require('./versusCardGenerator');
 const {
   getLinkedUser,
   linkUser,
@@ -458,7 +459,138 @@ async function handlePrefixCommand(message, osuApi) {
     }
   }
 
-  // 7. Beatmap: ;b, ;map, ;beatmap
+  // 7. Versus Command: ;vs, ;versus
+  if (['vs', 'versus'].includes(cmd)) {
+    let specifiedBeatmap = null;
+    const playerTokens = [];
+
+    for (const arg of args) {
+      const parsedBm = parseBeatmapInput(arg);
+      if (parsedBm) {
+        specifiedBeatmap = parsedBm;
+      } else {
+        playerTokens.push(arg);
+      }
+    }
+
+    let beatmapId = null;
+    if (specifiedBeatmap) {
+      try {
+        const resolved = await osuApi.resolveBeatmap(specifiedBeatmap);
+        if (resolved?.id) beatmapId = resolved.id;
+      } catch (_) {}
+    }
+
+    // If no beatmap in args, check if this message is a reply to a message containing a beatmap
+    if (!beatmapId && message.reference && message.reference.messageId) {
+      const targetMessage = await message.channel?.messages?.fetch(message.reference.messageId).catch(() => null);
+      if (targetMessage) {
+        beatmapId = await extractBeatmapFromMessage(targetMessage, osuApi);
+      }
+    }
+
+    // Determine Player 1 and Player 2
+    let p1 = null;
+    let p2 = null;
+
+    if (playerTokens.length >= 2) {
+      p1 = playerTokens[0];
+      p2 = playerTokens.slice(1).join(' ');
+    } else if (playerTokens.length === 1) {
+      const linked = getLinkedUser(message.author.id);
+      if (linked) {
+        p1 = linked.osuUsername;
+        p2 = playerTokens[0];
+      } else {
+        return message.reply({ content: t(lang, 'versus_no_players') });
+      }
+    } else {
+      return message.reply({ content: t(lang, 'versus_no_players') });
+    }
+
+    try {
+      await message.channel.sendTyping().catch(() => {});
+
+      const [u1, u2] = await Promise.all([
+        osuApi.getUser(p1),
+        osuApi.getUser(p2)
+      ]);
+
+      const [topScores1, topScores2] = await Promise.all([
+        osuApi.getUserBestScore(u1.id, 25).catch(() => []),
+        osuApi.getUserBestScore(u2.id, 25).catch(() => [])
+      ]);
+
+      if (u1.id === u2.id) {
+        return message.reply({ content: t(lang, 'versus_same_player') });
+      }
+
+      // Case A: Beatmap Versus Mode
+      if (beatmapId) {
+        const bm = await osuApi.getBeatmap(beatmapId).catch(() => null);
+        if (!bm) {
+          return message.reply({ content: t(lang, 'beatmap_error', { message: 'Beatmap not found' }) });
+        }
+
+        const [sc1, sc2] = await Promise.all([
+          osuApi.getUserBeatmapScore(beatmapId, u1.id).catch(() => null),
+          osuApi.getUserBeatmapScore(beatmapId, u2.id).catch(() => null)
+        ]);
+
+        if (!sc1 && !sc2) {
+          const mapTitle = `${bm.beatmapset?.title || bm.title} [${bm.version}]`;
+          return message.reply({
+            content: t(lang, 'versus_neither_scores', {
+              p1: u1.username,
+              p2: u2.username,
+              beatmap: mapTitle
+            })
+          });
+        }
+
+        if (sc1) {
+          sc1.user = u1;
+          sc1.beatmap = bm;
+          await osuApi.enrichScoreWithBeatmapAndMods(sc1);
+        }
+
+        if (sc2) {
+          sc2.user = u2;
+          sc2.beatmap = bm;
+          await osuApi.enrichScoreWithBeatmapAndMods(sc2);
+        }
+
+        const imageBuffer = await generateVersusCard({
+          user1: u1,
+          user2: u2,
+          score1: sc1,
+          score2: sc2,
+          beatmap: bm,
+          topScores1,
+          topScores2
+        }, { lang });
+
+        const attachment = new AttachmentBuilder(imageBuffer, { name: `versus_${u1.username}_vs_${u2.username}_bm${beatmapId}.png` });
+        return message.reply({ files: [attachment] });
+      }
+
+      // Case B: Profile Showdown Mode (No Beatmap)
+      const imageBuffer = await generateVersusCard({
+        user1: u1,
+        user2: u2,
+        topScores1,
+        topScores2
+      }, { lang });
+
+      const attachment = new AttachmentBuilder(imageBuffer, { name: `versus_${u1.username}_vs_${u2.username}.png` });
+      return message.reply({ files: [attachment] });
+    } catch (err) {
+      console.error(`Error in ;${cmd}:`, err.message);
+      return message.reply({ content: t(lang, 'versus_error', { message: err.message }) }).catch(() => {});
+    }
+  }
+
+  // 8. Beatmap: ;b, ;map, ;beatmap
   if (['b', 'map', 'beatmap'].includes(cmd)) {
     if (args.length === 0) {
       return message.reply({ content: t(lang, 'beatmap_invalid_input') });
@@ -506,13 +638,35 @@ async function handlePrefixCommand(message, osuApi) {
     }
   }
 
-  // 7. Unlink Account: ;unlink
+  // 8. Unlink Account: ;unlink
   if (cmd === 'unlink') {
     const success = unlinkUser(message.author.id);
     return message.reply({ content: success ? t(lang, 'unlink_success') : t(lang, 'unlink_not_linked') });
   }
 
-  // 8. Help: ;help, ;h, ;commands
+  // 9. GitHub Repository: ;github, ;repo
+  if (['github', 'repo'].includes(cmd)) {
+    const embed = new EmbedBuilder()
+      .setColor('#38bdf8')
+      .setTitle(t(lang, 'github_embed_title'))
+      .setDescription(t(lang, 'github_embed_desc'))
+      .setThumbnail('https://i.imgur.com/WujKXUK.jpeg')
+      .setFooter({ text: 'Created with ❤️ by @noeltamba & @hyzity' });
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel(t(lang, 'btn_view_github'))
+        .setStyle(ButtonStyle.Link)
+        .setURL('https://github.com/noeltamba/osu-Beatmap-Card-Generator-Discord-Bot')
+    );
+
+    return message.reply({
+      embeds: [embed],
+      components: [row]
+    });
+  }
+
+  // 10. Help: ;help, ;h, ;commands
   if (['help', 'h', 'commands'].includes(cmd)) {
     const isId = lang === 'id';
     const embed = new EmbedBuilder()
@@ -534,7 +688,8 @@ async function handlePrefixCommand(message, osuApi) {
         },
         {
           name: isId ? '📊 Skor Penuh, Profil & Leaderboard' : '📊 Full Score, Profile & Leaderboard',
-          value: '`;c [player]` - ' + (isId ? 'Bandingkan / cek skor di beatmap (reply pesan bot apa pun)' : 'Compare / check best score on map (reply to any bot message)') + '\n' +
+          value: '`;vs <player>` - ' + (isId ? 'Tanding skor / profil head-to-head (opsional: reply beatmap)' : 'Head-to-head showdown on beatmap / profile') + '\n' +
+                 '`;c [player]` - ' + (isId ? 'Bandingkan / cek skor di beatmap (reply pesan bot apa pun)' : 'Compare / check best score on map (reply to any bot message)') + '\n' +
                  '`;pcard [player]` - ' + (isId ? 'Kartu profil modern & breakdown skill (Aim, Speed, Acc)' : 'Modern profile card with Aim/Speed/Acc breakdown') + '\n' +
                  '`;r [player]` - ' + (isId ? 'Kartu skor terbaru detail penuh' : 'Detailed recent score card') + '\n' +
                  '`;t [player] [jumlah]` - ' + (isId ? 'Top plays pemain (1-10)' : 'Top performance plays (1-10)') + '\n' +
@@ -545,7 +700,8 @@ async function handlePrefixCommand(message, osuApi) {
           name: isId ? '🗺️ Beatmap & Profil' : '🗺️ Beatmap & Profile',
           value: '`;b <link/id> [+mods]` - ' + (isId ? 'Kartu informasi beatmap' : 'Beatmap info card with mods') + '\n' +
                  '`;link <username>` - ' + (isId ? 'Tautkan akun osu! kamu' : 'Link your osu! account') + '\n' +
-                 '`;unlink` - ' + (isId ? 'Lepas tautan akun osu!' : 'Unlink your osu! account'),
+                 '`;unlink` - ' + (isId ? 'Lepas tautan akun osu!' : 'Unlink your osu! account') + '\n' +
+                 '`;github` - ' + (isId ? 'Link repositori GitHub bot' : 'Official GitHub repository link'),
           inline: false
         }
       )
@@ -557,6 +713,7 @@ async function handlePrefixCommand(message, osuApi) {
       if (err.code === 50013 || err.message?.includes('Missing Permissions')) {
         const plainHelp = isId
           ? `⚡ **Columbina Bot - Perintah Prefix (;)**\n\n` +
+            `• \`;vs <player> [player2]\` : Tanding skor/profil head-to-head (opsional reply beatmap)\n` +
             `• \`;c [player]\` : Bandingkan top skor di beatmap (reply pesan bot)\n` +
             `• \`;pcard [player]\` : Kartu Profil Modern (Aim, Speed, Acc Breakdown)\n` +
             `• \`;m [player] [top#]\` : Kartu Mini Skor (cth: \`;m\`, \`;m Utami 1\`)\n` +
@@ -568,6 +725,7 @@ async function handlePrefixCommand(message, osuApi) {
             `• \`;unlink\` : Lepas tautan akun osu!\n\n` +
             `💡 *Tip: Slash command (/) juga tetap aktif dan bisa digunakan kapan saja!*`
           : `⚡ **Columbina Bot - Prefix Commands (;)**\n\n` +
+            `• \`;vs <player> [player2]\` : Head-to-head showdown on beatmap/profile\n` +
             `• \`;c [player]\` : Compare personal best on beatmap (reply to bot message)\n` +
             `• \`;pcard [player]\` : Modern Profile Card (Aim, Speed, Acc Breakdown)\n` +
             `• \`;m [player] [top#]\` : Mini Score Card (e.g. \`;m\`, \`;m Utami 1\`)\n` +

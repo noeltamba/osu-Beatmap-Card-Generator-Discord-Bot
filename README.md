@@ -7,13 +7,31 @@
   [![Invite Discord Bot](https://img.shields.io/badge/Invite_Bot-Click_Here-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/oauth2/authorize?client_id=1562307139274416178&permissions=274878286912&integration_type=0&scope=applications.commands+bot)
 
 </div>
-# 🎮 osu! Beatmap Card Generator - Release v1.3.0
+# 🎮 osu! Beatmap Card Generator - Release v1.4.0
 
 A high-performance Discord bot generating visually stunning, frosted-glass score and beatmap cards. Featuring ultra-fast prefix commands (`;`), accurate osu! API v2 score modeling, and stream-ready mini widgets.
 
 ---
 
-### ✨ What's New in v1.3.0?
+### ✨ What's New in v1.4.0?
+
+* **⚔️ Head-to-Head Versus Duel Card (`/versus`, `/vs`, `;vs`)**:
+  * **TCG-Inspired 3:4 Portrait Ratio (900 × 1200 px)**: High-resolution vertical battle card layout designed for head-to-head score and profile showdowns.
+  * **Dynamic PP Archetype Palette (Cozy Style)**: Automatically tailors card accent colors and ambient radial illumination based on both players' dominant PP playstyles (*All-Rounder: Warm Gold, Speed Demon: Soft Purple, Aim Specialist: Coral/Rose, Clean Sheet: Emerald/Mint, Hybrid: Calm Sky Blue*).
+  * **Symmetrical Right-Aligned Player 2**: Player 2's top profile card (avatar, flag, username, and PP/rank badge) and comparison metrics are cleanly right-aligned for refined visual symmetry.
+  * **7-Block Match Round Tracker**: Replaced continuous progress bars with 7 individual category blocks labeled (`RANK`, `PP`, `ACC`, `TIME`, `PLAYS`, `SCORE`, `GRADES`), dynamically glowing in the winning player's archetype color with their username.
+  * **Beatmap Score Duel**: Compare personal bests between two players on the same beatmap (supports replying to any bot score message to challenge the player!).
+  * **Profile Showdown**: Compare overall Bancho statistics across 7 core metrics (*Global Rank, Total PP, Hit Accuracy, Play Time, Play Count, Ranked Score, and Total SS/S Grades*).
+  * **Unified 1-Card Centered Row**: Formatted cleanly as `{Player 1 Value} || Metric || {Player 2 Value}` with glowing highlights for the winning side.
+  * **Native Lucide SVG Icons & Boba Footer**: Crisp vector rendering for swords, crowns, and trophies with zero tofu characters (`[-]`), plus a circular Columbina Boba credit avatar.
+* **🌐 Official GitHub Command (`/github`, `;github`, `;repo`)**:
+  * Provides quick access to the official open-source GitHub repository with an interactive direct link button.
+* **🔄 Automatic 24-Hour Update Presence**:
+  * Broadcasts new v1.4.0 features in the Discord bot presence for 24 hours before automatically reverting to default status.
+
+---
+
+### 🌟 Release v1.3.0 Highlights
 
 * **🎴 Modern Profile Card (`/profile`, `/pcard`, `;pcard`)**:
   * **Visual Glassmorphism Profile Dashboard (1180×690 px)**: Sleek, high-resolution profile card showcasing player avatar with country flag, supporter badge, global rank, country rank, and peak rank pill.
@@ -75,6 +93,7 @@ A high-performance Discord bot generating visually stunning, frosted-glass score
 
 | Command | Arguments | Description |
 | :--- | :--- | :--- |
+| **`/versus`** *(New!)* | `player2`, `[player1]`, `[beatmap]` | Displays a split-screen head-to-head versus card comparing scores on a beatmap or profiles. |
 | **`/profile`** *(New!)* | `[player]` | Displays a modern visual profile card with skill breakdown and Bancho stats. |
 | **`/compare`** *(New!)* | `beatmap`, `[player]` | Displays a player's personal best score on a beatmap. |
 | **`/miniscorecard`** | `[player]`, `[link]`, `[top]` | Displays a compact, aesthetic mini score card widget with combo badge, star rating, PP, avatar with flag, and mod chips. |
@@ -85,6 +104,7 @@ A high-performance Discord bot generating visually stunning, frosted-glass score
 | **`/showcase`** | `link`, `[player]`, `[mods]` | Displays a dedicated beatmap showcase card for gameplay showcases with a golden crown badge. |
 | **`/link`** | `username` | Links your Discord account to your osu! profile for seamless usage without typing your username. |
 | **`/unlink`** | - | Unlinks your osu! account from your Discord profile. |
+| **`/github`** | - | Displays official GitHub repository link with interactive button. |
 | **`/language`** | `[set]` | Configures your preferred bot language (🇬🇧 English / 🇮🇩 Bahasa Indonesia). |
 
 ---
@@ -94,6 +114,7 @@ You can also use the lightning-fast `;` prefix directly in chat without opening 
 
 | Prefix Command | Aliases | Description | Example Usage |
 | :--- | :--- | :--- | :--- |
+| `;vs` | `;versus` | Head-to-head duel on beatmap or profile (supports map replies) | `;vs BTMC` • `;vs BTMC mrekk` |
 | `;c` | `;compare` | Compare/check personal best score on map (reply to any bot) | `;c` • `;c Utami` |
 | `;pcard` | `;profile`, `;p`, `;user` | Modern profile card with skill breakdown | `;pcard` • `;pcard Utami` |
 | `;miniscorecard` | `;m`, `;mini` | Compact mini score card | `;m` • `;m Utami` • `;m 1` • `;m Utami 1` |
@@ -103,6 +124,7 @@ You can also use the lightning-fast `;` prefix directly in chat without opening 
 | `;beatmap` | `;b`, `;map` | Beatmap info card with mods | `;b 129891 +HDDT` |
 | `;link` | - | Link Discord account to osu! user | `;link Utami` |
 | `;unlink` | - | Unlink osu! account | `;unlink` |
+| `;github` | `;repo` | Official GitHub repository link | `;github` |
 | `;help` | `;h` | Display prefix commands help embed | `;help` |
 
 ---

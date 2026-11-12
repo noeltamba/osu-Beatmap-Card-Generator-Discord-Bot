@@ -21,6 +21,7 @@ const { generateScoreCard } = require('./scoreCardGenerator');
 const { generateTopPlaysCard } = require('./topCardGenerator');
 const { generateMiniScoreCard } = require('./miniScoreCardGenerator');
 const { generateProfileCard } = require('./profileCardGenerator');
+const { generateVersusCard } = require('./versusCardGenerator');
 const { handlePrefixCommand } = require('./prefixHandler');
 const {
   getLinkedUser,
@@ -336,6 +337,81 @@ const compareCommand = new SlashCommandBuilder()
       .setRequired(false)
   );
 
+const versusCommand = new SlashCommandBuilder()
+  .setName('versus')
+  .setDescription('Compare two players head-to-head (scores on beatmap or profiles)')
+  .setDescriptionLocalizations({
+    id: 'Bandingkan dua pemain secara head-to-head (skor di beatmap atau profil)'
+  })
+  .addStringOption(option =>
+    option
+      .setName('player2')
+      .setDescription('Second osu! player to compare against')
+      .setDescriptionLocalizations({
+        id: 'Pemain osu! kedua yang ingin ditantang'
+      })
+      .setRequired(true)
+  )
+  .addStringOption(option =>
+    option
+      .setName('player1')
+      .setDescription('First osu! player (defaults to your linked account)')
+      .setDescriptionLocalizations({
+        id: 'Pemain osu! pertama (default: akun kamu yang terhubung)'
+      })
+      .setRequired(false)
+  )
+  .addStringOption(option =>
+    option
+      .setName('beatmap')
+      .setDescription('Beatmap link or ID (optional, compares profiles if omitted)')
+      .setDescriptionLocalizations({
+        id: 'Link atau ID beatmap (opsional, membandingkan profil jika kosong)'
+      })
+      .setRequired(false)
+  );
+
+const vsCommand = new SlashCommandBuilder()
+  .setName('vs')
+  .setDescription('Compare two players head-to-head (scores on beatmap or profiles)')
+  .setDescriptionLocalizations({
+    id: 'Bandingkan dua pemain secara head-to-head (skor di beatmap atau profil)'
+  })
+  .addStringOption(option =>
+    option
+      .setName('player2')
+      .setDescription('Second osu! player to compare against')
+      .setDescriptionLocalizations({
+        id: 'Pemain osu! kedua yang ingin ditantang'
+      })
+      .setRequired(true)
+  )
+  .addStringOption(option =>
+    option
+      .setName('player1')
+      .setDescription('First osu! player (defaults to your linked account)')
+      .setDescriptionLocalizations({
+        id: 'Pemain osu! pertama (default: akun kamu yang terhubung)'
+      })
+      .setRequired(false)
+  )
+  .addStringOption(option =>
+    option
+      .setName('beatmap')
+      .setDescription('Beatmap link or ID (optional, compares profiles if omitted)')
+      .setDescriptionLocalizations({
+        id: 'Link atau ID beatmap (opsional, membandingkan profil jika kosong)'
+      })
+      .setRequired(false)
+  );
+
+const githubCommand = new SlashCommandBuilder()
+  .setName('github')
+  .setDescription('Get the official GitHub repository link of Columbina Bot')
+  .setDescriptionLocalizations({
+    id: 'Dapatkan link repositori GitHub resmi Columbina Bot'
+  });
+
 function createScoreButtons(score, originalInput = null, lang = 'en') {
   const row = new ActionRowBuilder();
   const beatmap = score.beatmap || {};
@@ -397,7 +473,7 @@ function createBeatmapButtons(beatmap, originalInput = null, lang = 'en') {
 
 const STATUS_STATE_FILE = path.join(__dirname, '..', 'data', 'status_state.json');
 const DEFAULT_PRESENCE = ';help | osu! Image Generator ✨';
-const UPDATE_PRESENCE = '✨ v1.3.0 Updated: Profile Card & Compare! | ;help';
+const UPDATE_PRESENCE = '✨ v1.4.0 Updated: Versus Duel (;vs) & /github! | ;help';
 
 function setupBotPresence(client) {
   let statusData = null;
@@ -486,7 +562,7 @@ client.once(Events.ClientReady, async () => {
 
   // Register Global Slash Commands
   try {
-    console.log('Registering Slash Commands (/link, /unlink, /language, /recent, /top, /beatmap, /showcase, /scorecard, /miniscorecard, /profile, /pcard, /compare)...');
+    console.log('Registering Slash Commands (/link, /unlink, /language, /recent, /top, /beatmap, /showcase, /scorecard, /miniscorecard, /profile, /pcard, /compare, /versus, /vs, /github)...');
     await client.application.commands.set([
       linkCommand,
       unlinkCommand,
@@ -499,7 +575,10 @@ client.once(Events.ClientReady, async () => {
       miniscorecardCommand,
       profileCommand,
       pcardCommand,
-      compareCommand
+      compareCommand,
+      versusCommand,
+      vsCommand,
+      githubCommand
     ]);
     console.log('✅ All Slash Commands registered successfully!\n');
   } catch (err) {
@@ -1051,6 +1130,133 @@ client.on(Events.InteractionCreate, async interaction => {
         content: t(lang, 'compare_error', { message: err.message })
       });
     }
+  }
+
+  // 12. Handle /versus or /vs command
+  if (interaction.commandName === 'versus' || interaction.commandName === 'vs') {
+    const p2Name = interaction.options.getString('player2');
+    let p1Name = interaction.options.getString('player1');
+    const beatmapInput = interaction.options.getString('beatmap');
+
+    if (!p1Name) {
+      const linked = getLinkedUser(interaction.user.id);
+      if (!linked) {
+        return interaction.reply({
+          content: t(lang, 'versus_no_players'),
+          ephemeral: true
+        });
+      }
+      p1Name = linked.osuUsername;
+    }
+
+    await interaction.deferReply();
+
+    try {
+      const [u1, u2] = await Promise.all([
+        osuApi.getUser(p1Name),
+        osuApi.getUser(p2Name)
+      ]);
+
+      const [topScores1, topScores2] = await Promise.all([
+        osuApi.getUserBestScore(u1.id, 25).catch(() => []),
+        osuApi.getUserBestScore(u2.id, 25).catch(() => [])
+      ]);
+
+      if (u1.id === u2.id) {
+        return interaction.editReply({
+          content: t(lang, 'versus_same_player')
+        });
+      }
+
+      let beatmap = null;
+      if (beatmapInput) {
+        const parsedBm = parseBeatmapInput(beatmapInput);
+        if (parsedBm) {
+          beatmap = await osuApi.resolveBeatmap(parsedBm).catch(() => null);
+        }
+      }
+
+      if (beatmap && beatmap.id) {
+        const [sc1, sc2] = await Promise.all([
+          osuApi.getUserBeatmapScore(beatmap.id, u1.id).catch(() => null),
+          osuApi.getUserBeatmapScore(beatmap.id, u2.id).catch(() => null)
+        ]);
+
+        if (!sc1 && !sc2) {
+          const mapTitle = `${beatmap.beatmapset?.title || beatmap.title} [${beatmap.version}]`;
+          return interaction.editReply({
+            content: t(lang, 'versus_neither_scores', {
+              p1: u1.username,
+              p2: u2.username,
+              beatmap: mapTitle
+            })
+          });
+        }
+
+        if (sc1) {
+          sc1.user = u1;
+          sc1.beatmap = beatmap;
+          await osuApi.enrichScoreWithBeatmapAndMods(sc1);
+        }
+
+        if (sc2) {
+          sc2.user = u2;
+          sc2.beatmap = beatmap;
+          await osuApi.enrichScoreWithBeatmapAndMods(sc2);
+        }
+
+        const imageBuffer = await generateVersusCard({
+          user1: u1,
+          user2: u2,
+          score1: sc1,
+          score2: sc2,
+          beatmap,
+          topScores1,
+          topScores2
+        }, { lang });
+
+        const attachment = new AttachmentBuilder(imageBuffer, { name: `versus_${u1.username}_vs_${u2.username}_bm${beatmap.id}.png` });
+        return interaction.editReply({ files: [attachment] });
+      }
+
+      // Profile showdown
+      const imageBuffer = await generateVersusCard({
+        user1: u1,
+        user2: u2,
+        topScores1,
+        topScores2
+      }, { lang });
+
+      const attachment = new AttachmentBuilder(imageBuffer, { name: `versus_${u1.username}_vs_${u2.username}.png` });
+      return interaction.editReply({ files: [attachment] });
+    } catch (err) {
+      console.error('Error in /versus command:', err);
+      return interaction.editReply({
+        content: t(lang, 'versus_error', { message: err.message })
+      });
+    }
+  }
+
+  // 13. Handle /github command
+  if (interaction.commandName === 'github') {
+    const embed = new EmbedBuilder()
+      .setColor('#38bdf8')
+      .setTitle(t(lang, 'github_embed_title'))
+      .setDescription(t(lang, 'github_embed_desc'))
+      .setThumbnail('https://i.imgur.com/WujKXUK.jpeg')
+      .setFooter({ text: 'Created with ❤️ by @noeltamba & @hyzity' });
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel(t(lang, 'btn_view_github'))
+        .setStyle(ButtonStyle.Link)
+        .setURL('https://github.com/noeltamba/osu-Beatmap-Card-Generator-Discord-Bot')
+    );
+
+    return interaction.reply({
+      embeds: [embed],
+      components: [row]
+    });
   }
 });
 

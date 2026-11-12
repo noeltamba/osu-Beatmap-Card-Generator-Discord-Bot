@@ -6,6 +6,7 @@ const translations = {
     btn_open_on_osu: 'Open on osu!',
     btn_download: 'Download (Beatconnect)',
     btn_open_profile: 'Open osu! Profile',
+    btn_view_github: 'View on GitHub',
 
     // Slash Commands description localizations
     cmd_link_desc: 'Link your Discord account to your osu! profile for easier /recent and /top commands',
@@ -34,6 +35,11 @@ const translations = {
     cmd_compare_desc: 'Compare / display a player\'s personal best score on a beatmap (reply to a score message or provide beatmap)',
     cmd_compare_player: 'osu! player username (optional, defaults to linked user or replied message player)',
     cmd_compare_beatmap: 'Beatmap URL or Beatmap ID (optional if replying to a score/beatmap message)',
+    cmd_versus_desc: 'Compare two players head-to-head (scores on beatmap or profiles)',
+    cmd_versus_player1: 'First osu! player (defaults to your linked account)',
+    cmd_versus_player2: 'Second osu! player to compare against',
+    cmd_versus_beatmap: 'Beatmap URL or ID (optional, compares profiles if omitted)',
+    cmd_github_desc: 'Get the official GitHub repository link of Columbina Bot',
     cmd_language_desc: 'Choose your preferred language (English / Bahasa Indonesia)',
     cmd_language_option: 'Select language',
 
@@ -58,6 +64,14 @@ const translations = {
     compare_no_player: '❌ Could not determine player! Please specify a player (e.g. `;c <player>`) or link your account with `/link`.',
     compare_no_score: 'ℹ️ No scores found for **{username}** on **{beatmap}**.',
     compare_error: '❌ Failed to compare score: {message}',
+
+    versus_no_players: '❌ Please specify at least one opponent player to compare against (e.g. `;vs <opponent>`) or link your account with `/link`.',
+    versus_same_player: '❌ You cannot compare a player against themselves! Please specify two different players.',
+    versus_neither_scores: 'ℹ️ Neither **{p1}** nor **{p2}** have a recorded score on **{beatmap}**.',
+    versus_error: '❌ Failed to generate versus comparison: {message}',
+
+    github_embed_title: '🌸 Columbina Bot - GitHub Repository',
+    github_embed_desc: 'Columbina Bot is an open-source, high-performance osu! visual card generator for Discord.\n\n⭐ **Repository URL:**\nhttps://github.com/noeltamba/osu-Beatmap-Card-Generator-Discord-Bot\n\nFeel free to star the repo, report issues, or contribute!',
 
     beatmap_invalid_input: '❌ Invalid input format! Please enter a valid osu! beatmap URL or numeric Beatmap ID.',
     beatmap_error: '❌ Failed to fetch beatmap: {message}',
@@ -98,6 +112,7 @@ const translations = {
     btn_open_on_osu: 'Buka di osu!',
     btn_download: 'Download (Beatconnect)',
     btn_open_profile: 'Buka Profil osu!',
+    btn_view_github: 'Buka di GitHub',
 
     // Slash Commands description localizations
     cmd_link_desc: 'Tautkan akun Discord kamu ke akun osu! kamu untuk mempermudah /recent dan /top',
@@ -126,6 +141,11 @@ const translations = {
     cmd_compare_desc: 'Bandingkan / tampilkan top skor seorang pemain pada beatmap tertentu (reply pesan skor atau masukkan beatmap)',
     cmd_compare_player: 'Nama pemain osu! (opsional, default: akun kamu atau pemain dari pesan yang di-reply)',
     cmd_compare_beatmap: 'Link beatmap atau ID beatmap (opsional jika me-reply pesan skor/beatmap)',
+    cmd_versus_desc: 'Bandingkan dua pemain secara head-to-head (skor di beatmap atau profil)',
+    cmd_versus_player1: 'Pemain osu! pertama (default: akun kamu yang terhubung)',
+    cmd_versus_player2: 'Pemain osu! kedua yang ingin ditantang',
+    cmd_versus_beatmap: 'Link atau ID beatmap (opsional, membandingkan profil jika kosong)',
+    cmd_github_desc: 'Dapatkan link repositori GitHub resmi Columbina Bot',
     cmd_language_desc: 'Ubah preferensi bahasa bot (Inggris / Bahasa Indonesia)',
     cmd_language_option: 'Pilih bahasa',
 
@@ -150,6 +170,14 @@ const translations = {
     compare_no_player: '❌ Tidak dapat menentukan pemain! Silakan masukkan nama pemain (cth: `;c <nama>`) atau tautkan akun dengan `/link`.',
     compare_no_score: 'ℹ️ **{username}** belum memiliki skor di beatmap **{beatmap}**.',
     compare_error: '❌ Gagal membandingkan skor: {message}',
+
+    versus_no_players: '❌ Harap sebutkan minimal satu pemain lawan untuk dibandingkan (cth: `;vs <lawan>`) atau tautkan akun dengan `/link`.',
+    versus_same_player: '❌ Tidak bisa membandingkan pemain dengan dirinya sendiri! Harap masukkan dua pemain yang berbeda.',
+    versus_neither_scores: 'ℹ️ Baik **{p1}** maupun **{p2}** belum memiliki skor di beatmap **{beatmap}**.',
+    versus_error: '❌ Gagal membuat perbandingan versus: {message}',
+
+    github_embed_title: '🌸 Columbina Bot - Repositori GitHub',
+    github_embed_desc: 'Columbina Bot adalah bot Discord generator kartu visual osu! berkinerja tinggi dan open-source.\n\n⭐ **URL Repositori:**\nhttps://github.com/noeltamba/osu-Beatmap-Card-Generator-Discord-Bot\n\nJangan lupa beri bintang (star) di GitHub, laporkan saran/masalah, atau berkontribusi!',
 
     beatmap_invalid_input: '❌ Format input tidak valid! Masukkan URL beatmap osu! yang sah atau Beatmap ID angka.',
     beatmap_error: '❌ Gagal mengambil beatmap: {message}',
