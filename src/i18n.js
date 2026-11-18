@@ -8,6 +8,7 @@ const translations = {
     btn_open_profile: 'Open osu! Profile',
     btn_view_github: 'View on GitHub',
     btn_invite_bot: 'Invite Columbina',
+    btn_official_website: 'Official Website',
     btn_osu_web: 'osu! Website',
 
     // Slash Commands description localizations
@@ -100,6 +101,7 @@ const translations = {
       'Special thanks to the osu! community and Bathbot for inspiration.',
     about_field_links_title: '🔗 Useful Links',
     about_field_links_desc:
+      '• [Official Website & Showcase]({websiteUrl})\n' +
       '• [Invite Columbina to Your Server]({inviteUrl})\n' +
       '• [Official GitHub Repository]({githubUrl})\n' +
       '• [osu! Official Site](https://osu.ppy.sh)',
@@ -148,6 +150,7 @@ const translations = {
     btn_open_profile: 'Buka Profil osu!',
     btn_view_github: 'Buka di GitHub',
     btn_invite_bot: 'Undang Columbina',
+    btn_official_website: 'Website Resmi',
     btn_osu_web: 'Website Resmi osu!',
 
     // Slash Commands description localizations
@@ -240,6 +243,7 @@ const translations = {
       'Terima kasih banyak untuk komunitas osu! dan inspirasi Bathbot.',
     about_field_links_title: '🔗 Tautan Resmi',
     about_field_links_desc:
+      '• [Website Resmi & Showcase]({websiteUrl})\n' +
       '• [Undang Bot ke Server Kamu]({inviteUrl})\n' +
       '• [Repositori GitHub (Open Source)]({githubUrl})\n' +
       '• [Website Resmi osu!](https://osu.ppy.sh)',

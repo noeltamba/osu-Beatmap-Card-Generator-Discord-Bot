@@ -8,6 +8,7 @@ const { t } = require('./i18n');
 
 const DEFAULT_CLIENT_ID = '1562307139274416178';
 const GITHUB_REPO_URL = 'https://github.com/noeltamba/osu-Beatmap-Card-Generator-Discord-Bot';
+const OFFICIAL_WEBSITE_URL = 'https://noeltamba.github.io/osu-Beatmap-Card-Generator-Discord-Bot/';
 
 /**
  * Build the rich About Embed with interactive link buttons
@@ -19,6 +20,7 @@ function createAboutMessage(lang = 'en', botId = null) {
   const targetId = botId || DEFAULT_CLIENT_ID;
   const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${targetId}&permissions=274878286912&integration_type=0&scope=applications.commands+bot`;
   const githubUrl = GITHUB_REPO_URL;
+  const websiteUrl = OFFICIAL_WEBSITE_URL;
 
   const embed = new EmbedBuilder()
     .setColor('#f43f5e')
@@ -43,7 +45,7 @@ function createAboutMessage(lang = 'en', botId = null) {
       },
       {
         name: t(lang, 'about_field_links_title'),
-        value: t(lang, 'about_field_links_desc', { inviteUrl, githubUrl }),
+        value: t(lang, 'about_field_links_desc', { inviteUrl, githubUrl, websiteUrl }),
         inline: false
       }
     )
@@ -59,6 +61,11 @@ function createAboutMessage(lang = 'en', botId = null) {
       .setURL(inviteUrl)
       .setEmoji('📨'),
     new ButtonBuilder()
+      .setLabel(t(lang, 'btn_official_website'))
+      .setStyle(ButtonStyle.Link)
+      .setURL(websiteUrl)
+      .setEmoji('🌐'),
+    new ButtonBuilder()
       .setLabel(t(lang, 'btn_view_github'))
       .setStyle(ButtonStyle.Link)
       .setURL(githubUrl)
@@ -67,7 +74,7 @@ function createAboutMessage(lang = 'en', botId = null) {
       .setLabel(t(lang, 'btn_osu_web'))
       .setStyle(ButtonStyle.Link)
       .setURL('https://osu.ppy.sh')
-      .setEmoji('🌐')
+      .setEmoji('🎮')
   );
 
   return {
