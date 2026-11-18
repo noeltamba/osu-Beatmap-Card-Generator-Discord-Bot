@@ -8,7 +8,7 @@ const COMMANDS_DATA = [
     category: 'profile',
     descEn: 'Compare two players head-to-head on a beatmap score or overall profile showdown (supports map replies).',
     descId: 'Tanding duel 1v1 antar pemain pada skor beatmap atau profil Bancho secara langsung.',
-    example: ';vs BTMC'
+    example: ';vs mrekk Lifeline'
   },
   {
     prefix: ';pcard',
@@ -35,7 +35,7 @@ const COMMANDS_DATA = [
     category: 'score',
     descEn: 'Aesthetic stream-ready mini score card widget with combo badge, star rating, mods, and accurate PP.',
     descId: 'Kartu mini skor estetis dan ringkas dengan badge kombo, rating bintang, mods, dan PP akurat.',
-    example: ';m BTMC 1'
+    example: ';m mrekk 1'
   },
   {
     prefix: ';r',
@@ -44,7 +44,7 @@ const COMMANDS_DATA = [
     category: 'score',
     descEn: 'Comprehensive full score card with 300/100/50/miss judgments, fail detection (Fail %), and modded map stats.',
     descId: 'Kartu skor lengkap dengan statistik hit (300/100/50/miss), deteksi fail akurat (Fail %), dan rating kesulitan mod.',
-    example: ';r BTMC'
+    example: ';r RyuK'
   },
   {
     prefix: ';t',
@@ -62,7 +62,7 @@ const COMMANDS_DATA = [
     category: 'beatmap',
     descEn: 'Display modern beatmap specifications with modded attributes (DT, HR, HD, EZ) and download buttons.',
     descId: 'Tampilkan kartu informasi beatmap dengan kalkulasi atribut mod (DT, HR, HD, EZ) dan tombol unduh.',
-    example: ';b 129891 +HDDT'
+    example: ';b 129891 +HDHR'
   },
   {
     prefix: ';s',
@@ -102,42 +102,161 @@ const COMMANDS_DATA = [
   }
 ];
 
+// Simulated Showcase Tabs featuring real pro players (BTMC, mrekk, Lifeline, RyuK)
 const SHOWCASE_TABS = {
   profile: {
     img: 'assets/images/preview-profile.png',
-    badgeEn: 'Portrait Profile Dashboard (900 × 920 px)',
-    badgeId: 'Dashboard Profil Portrait Modern (900 × 920 px)',
-    titleEn: 'Circular Donut Skill Breakdown & Bancho Stats',
-    titleId: 'Diagram Donat Rasio Skill & Statistik Bancho',
-    descEn: 'Calculates weighted Aim, Speed, and Accuracy skill ratios from top plays using official rosu-pp decay algorithms. Features a hollow circular donut chart, level progress bar, medals showcase, and official Bancho grade counters.',
-    descId: 'Menganalisis rasio skill Aim, Speed, dan Akurasi dari top plays menggunakan formula pembobotan decay rosu-pp. Dilengkapi diagram donat lingkar berlubang, progress bar level, pameran medali, dan penghitung grade Bancho resmi.'
+    simUser: 'BTMC Fan',
+    simCmd: ';p BTMC',
+    badgeEn: 'BTMC (#306 Global • Aim Specialist)',
+    badgeId: 'BTMC (#306 Global • Spesialis Aim)',
+    titleEn: 'Portrait Profile Dashboard (900 × 920 px)',
+    titleId: 'Dashboard Profil Portrait Modern (900 × 920 px)',
+    descEn: 'Simulated profile inspection for BTMC. Shows hollow donut skill breakdown (Aim: 56%, Speed: 20%, Acc: 24%), Bancho performance cards, level progress bar, medals unlocked, and grade showcase.',
+    descId: 'Simulasi kartu profil untuk BTMC. Menampilkan diagram donat rasio skill (Aim: 56%, Speed: 20%, Acc: 24%), statistik Bancho, level progress bar, medali, dan grade SS/S/A.'
   },
   versus: {
     img: 'assets/images/preview-versus.png',
-    badgeEn: '1v1 Head-to-Head Duel (3:4 TCG Ratio)',
-    badgeId: 'Tanding 1v1 Head-to-Head (Rasio 3:4 TCG)',
-    titleEn: 'Cozy Red & Blue Showdown with 7-Block Match Tracker',
-    titleId: 'Adu Skor & Profil Cozy Merah-Biru dengan 7-Block Tracker',
-    descEn: 'Challenge friends or rival players in a direct showdown. Supports comparing personal bests on the same beatmap (reply to any score to challenge!) or comparing 7 core Bancho profile metrics with glowing round winner blocks.',
-    descId: 'Tantang teman atau rival secara langsung. Mendukung adu top skor pada beatmap yang sama (cukup reply pesan skor untuk menantang!) atau adu 7 metrik profil Bancho dengan 7 blok pemenang ronde yang menyala.'
-  },
-  beatmap: {
-    img: 'assets/images/preview-beatmap.png',
-    badgeEn: 'Modern Beatmap Info Card',
-    badgeId: 'Kartu Informasi Beatmap Modern',
-    titleEn: 'Comprehensive Difficulty Stats & Modded Calculation',
-    titleId: 'Statistik Lengkap Beatmap & Kalkulasi Mod Otomatis',
-    descEn: 'Get clean, anti-aliased visual summaries for any osu! beatmap. Automatically computes modded Star Rating, CS, AR, OD, HP, and BPM for mod combinations like DT, HR, EZ, or HT, with direct Beatconnect download buttons.',
-    descId: 'Dapatkan kartu ringkasan visual beatmap osu! yang jernih. Otomatis menghitung perubahan Star Rating, CS, AR, OD, HP, dan BPM untuk kombinasi mod seperti DT, HR, EZ, atau HT, lengkap dengan tombol unduh Beatconnect.'
+    simUser: 'Tournament Host',
+    simCmd: ';vs mrekk Lifeline',
+    badgeEn: 'mrekk (#1) vs Lifeline (#2) Showdown',
+    badgeId: 'Tanding mrekk (#1) vs Lifeline (#2)',
+    titleEn: '1v1 Head-to-Head Duel (Cozy Red & Blue)',
+    titleId: 'Duel Head-to-Head 1v1 (Cozy Merah & Biru)',
+    descEn: 'Simulated high-stakes battle between #1 mrekk and #2 Lifeline. Features dynamic glowing 7-block round winner indicators across Rank, PP, Acc, Play Time, Plays, Score, and Grades.',
+    descId: 'Simulasi duel sengit antara rank 1 dunia mrekk dan rank 2 Lifeline. Dilengkapi indikator 7 blok pemenang ronde yang menyala untuk Rank, PP, Acc, Play Time, Plays, Score, dan Grades.'
   },
   mini: {
     img: 'assets/images/preview-mini.png',
-    badgeEn: 'Stream-Ready Mini Widget',
-    badgeId: 'Widget Mini Skor Ringkas & Elegan',
-    titleEn: 'Compact Score Summary for Active Communities',
-    titleId: 'Ringkasan Skor Minimalis untuk Obrolan Komunitas',
-    descEn: 'Ultra-fast mini widget engineered for high-frequency gameplay sharing and livestream overlays. Highlights player avatar with country flag, accuracy, combo badge, mod chips, and real performance points.',
-    descId: 'Widget mini super cepat yang dirancang untuk berbagi skor santai di server Discord maupun overlay streaming. Menampilkan avatar & bendera pemain, akurasi, kombo, chip mods, dan PP performa asli.'
+    simUser: 'Twitch Streamer',
+    simCmd: ';m mrekk 1',
+    badgeEn: 'mrekk • 1,352pp (+HDDT) • TUYU',
+    badgeId: 'mrekk • 1,352pp (+HDDT) • TUYU',
+    titleEn: 'Stream-Ready Mini Score Widget',
+    titleId: 'Widget Mini Skor Ringkas & Elegan',
+    descEn: 'Simulated top play #1 for mrekk on TUYU - Anoyo-iki no Bus ni Notte Saraba (+HDDT 9.85★). Compact layout with combo badge, star rating, mod chips, and real PP calculation.',
+    descId: 'Simulasi skor top #1 mrekk pada map TUYU - Anoyo-iki no Bus ni Notte Saraba (+HDDT 9.85★). Desain ringkas dengan badge kombo, rating bintang, mod chips, dan kalkulasi PP asli.'
+  },
+  recent: {
+    img: 'assets/images/preview-score.png',
+    simUser: 'Speed Fan',
+    simCmd: ';r RyuK',
+    badgeEn: 'RyuK • 945pp (+HDDT) • Goodbye',
+    badgeId: 'RyuK • 945pp (+HDDT) • Goodbye',
+    titleEn: 'Detailed Full Score Card with Fail Tracking',
+    titleId: 'Kartu Skor Penuh dengan Deteksi Fail',
+    descEn: 'Simulated recent score inspection for RyuK on The Eden Project - Goodbye (+HDDT 8.42★). Displays 300/100/50/miss judgments, exact completion percentage if failed, and mod attributes.',
+    descId: 'Simulasi skor terbaru RyuK pada beatmap The Eden Project - Goodbye (+HDDT 8.42★). Memuat penilaian hit (300/100/50/miss), persentase progres fail jika gagal, dan atribut mod.'
+  },
+  beatmap: {
+    img: 'assets/images/preview-beatmap.png',
+    simUser: 'Multiplayer Lobby',
+    simCmd: ';b 129891 +HDHR',
+    badgeEn: 'xi - FREEDOM DiVE [FOUR DIMENSIONS] (+HDHR)',
+    badgeId: 'xi - FREEDOM DiVE [FOUR DIMENSIONS] (+HDHR)',
+    titleEn: 'Modern Beatmap Specifications & Difficulty',
+    titleId: 'Kartu Spesifikasi Beatmap & Kalkulasi Mod',
+    descEn: 'Simulated beatmap card for FREEDOM DiVE. Automatically calculates modded difficulty attributes for HDHR (8.35★, CS 5.2, AR 10, OD 10) with direct download button.',
+    descId: 'Simulasi kartu beatmap FREEDOM DiVE. Otomatis menghitung penyesuaian kesulitan mod untuk HDHR (8.35★, CS 5.2, AR 10, OD 10) lengkap dengan tombol unduh.'
+  }
+};
+
+// Chunk definitions for on-demand loading in Command Explorer
+// Images are NEVER requested until a user clicks a command card!
+const COMMAND_CHUNKS = {
+  ';vs': {
+    type: 'image',
+    src: 'assets/images/preview-versus.png',
+    simCmd: ';vs mrekk Lifeline',
+    titleEn: '1v1 Versus Duel Preview (mrekk vs Lifeline)',
+    titleId: 'Pratinjau Duel 1v1 Versus (mrekk vs Lifeline)',
+    descEn: 'Head-to-head showdown comparison across 7 core metrics with glowing round winner blocks.',
+    descId: 'Perbandingan duel 1v1 pada 7 metrik performa dengan blok pemenang ronde yang menyala.'
+  },
+  ';pcard': {
+    type: 'image',
+    src: 'assets/images/preview-profile.png',
+    simCmd: ';p BTMC',
+    titleEn: 'Portrait Profile Card Preview (BTMC)',
+    titleId: 'Pratinjau Kartu Profil Portrait (BTMC)',
+    descEn: 'Compact 900x920 portrait profile dashboard with hollow donut skill breakdown and player cover background.',
+    descId: 'Dashboard profil portrait compact 900x920 dengan diagram donat rasio skill dan background cover pemain.'
+  },
+  ';m': {
+    type: 'image',
+    src: 'assets/images/preview-mini.png',
+    simCmd: ';m mrekk 1',
+    titleEn: 'Mini Score Card Preview (mrekk)',
+    titleId: 'Pratinjau Kartu Mini Skor (mrekk)',
+    descEn: 'Ultra-fast mini widget highlighting avatar, combo badge, star rating, mods, and performance points.',
+    descId: 'Widget mini super cepat yang menonjolkan avatar, badge kombo, rating bintang, mods, dan PP.'
+  },
+  ';r': {
+    type: 'image',
+    src: 'assets/images/preview-score.png',
+    simCmd: ';r RyuK',
+    titleEn: 'Detailed Full Score Card Preview (RyuK)',
+    titleId: 'Pratinjau Kartu Skor Lengkap (RyuK)',
+    descEn: 'Comprehensive hit judgments (300/100/50/miss), modded difficulty calculation, and true fail completion progress.',
+    descId: 'Statistik penilaian hit lengkap (300/100/50/miss), kalkulasi kesulitan mod, dan persentase progres fail.'
+  },
+  ';t': {
+    type: 'image',
+    src: 'assets/images/preview-top.png',
+    simCmd: ';t BTMC 5',
+    titleEn: 'Top Plays Leaderboard Card Preview (BTMC)',
+    titleId: 'Pratinjau Kartu Top Plays Leaderboard (BTMC)',
+    descEn: 'Clean leaderboard table displaying top performance plays, beatmaps, mods, acc, and PP values.',
+    descId: 'Tabel papan peringkat bersih yang menampilkan daftar skor terbaik, beatmap, mods, acc, dan PP.'
+  },
+  ';b': {
+    type: 'image',
+    src: 'assets/images/preview-beatmap.png',
+    simCmd: ';b 129891 +HDHR',
+    titleEn: 'Beatmap Specifications Card Preview',
+    titleId: 'Pratinjau Kartu Spesifikasi Beatmap',
+    descEn: 'Modern beatmap summary with modded star rating, CS/AR/OD/HP attributes, and direct Beatconnect download link.',
+    descId: 'Ringkasan beatmap modern dengan rating bintang modifikasi, atribut CS/AR/OD/HP, dan link unduh Beatconnect.'
+  },
+  ';s': {
+    type: 'image',
+    src: 'assets/images/preview-score.png',
+    simCmd: ';s 7265198407',
+    titleEn: 'Scorecard from Score ID Preview',
+    titleId: 'Pratinjau Kartu Skor dari ID Skor',
+    descEn: 'Directly resolves an osu! score URL or numeric ID into a high-resolution visual card.',
+    descId: 'Mengubah URL skor osu! atau Score ID angka langsung menjadi kartu grafis beresolusi tinggi.'
+  },
+  ';c': {
+    type: 'image',
+    src: 'assets/images/preview-score.png',
+    simCmd: ';c (reply to score message)',
+    titleEn: 'Smart Reply Compare Preview',
+    titleId: 'Pratinjau Smart Compare via Reply',
+    descEn: 'Reply to any score message from any bot and type ;c to instantly check your personal best score on that map.',
+    descId: 'Cukup reply pesan skor dari bot apa pun dan ketik ;c untuk langsung mengecek top skor kamu pada map tersebut.'
+  },
+  ';link': {
+    type: 'embed',
+    simCmd: ';link BTMC',
+    titleEn: 'Account Linked Successfully',
+    titleId: 'Akun Berhasil Ditautkan',
+    descEn: '✅ Successfully linked osu! account **BTMC** (Rank: #306) to your Discord account! You can now use `;m`, `;r`, or `;p` without typing your username.',
+    descId: '✅ Berhasil menautkan akun osu! **BTMC** (Rank: #306) ke akun Discord kamu! Sekarang kamu bisa langsung ketik `;m`, `;r`, atau `;p` tanpa perlu mengisi nama pemain lagi.'
+  },
+  ';about': {
+    type: 'about_embed',
+    simCmd: ';about',
+    titleEn: 'Columbina Bot Information',
+    titleId: 'Informasi Columbina Bot'
+  },
+  ';github': {
+    type: 'embed',
+    simCmd: ';github',
+    titleEn: '🌸 Columbina Bot - GitHub Repository',
+    titleId: '🌸 Columbina Bot - Repositori GitHub',
+    descEn: 'Columbina Bot is an open-source, high-performance osu! visual card generator for Discord.\n\n⭐ **Repository URL:**\nhttps://github.com/noeltamba/osu-Beatmap-Card-Generator-Discord-Bot',
+    descId: 'Columbina Bot adalah bot Discord generator kartu visual osu! berkinerja tinggi dan open-source.\n\n⭐ **URL Repositori:**\nhttps://github.com/noeltamba/osu-Beatmap-Card-Generator-Discord-Bot'
   }
 };
 
@@ -163,11 +282,12 @@ const I18N_WEB = {
     hero_stat_3: '; Quick Prefix',
     hero_stat_3_sub: 'Instant Response',
     showcase_title: 'Interactive Visual Showcase',
-    showcase_subtitle: 'Explore the high-resolution cards generated live by Columbina Bot in your Discord server.',
-    tab_profile: '🎴 Portrait Profile',
-    tab_versus: '⚔️ Versus Duel',
-    tab_beatmap: '🗺️ Beatmap Card',
-    tab_mini: '📱 Mini Score',
+    showcase_subtitle: 'Explore live simulated screenshots generated by Columbina Bot in Discord for top players.',
+    tab_profile: '🎴 BTMC Profile',
+    tab_versus: '⚔️ mrekk vs Lifeline',
+    tab_mini: '📱 mrekk Mini Score',
+    tab_recent: '🎯 RyuK Full Score',
+    tab_beatmap: '🗺️ FREEDOM DiVE',
     feat_title: 'Crafted for Competitive & Casual Players',
     feat_subtitle: 'Engineered from the ground up with accuracy, aesthetics, and community engagement in mind.',
     feat_1_title: 'Pinpoint Fail Tracking',
@@ -183,7 +303,7 @@ const I18N_WEB = {
     feat_6_title: 'Bilingual Localization (EN & ID)',
     feat_6_desc: 'Full native support for both 🇬🇧 English and 🇮🇩 Bahasa Indonesia across all command embeds, button labels, error notices, and card generators.',
     cmd_title: 'Command Explorer & Cheat Sheet',
-    cmd_subtitle: 'Click any command pill to copy it instantly to your clipboard.',
+    cmd_subtitle: 'Click any command card below to open its simulated output preview on-demand.',
     cmd_search_ph: 'Search command... (e.g. recent, versus, profile, mini)',
     cmd_cat_all: 'All',
     cmd_cat_score: 'Scoring & Mini',
@@ -220,11 +340,12 @@ const I18N_WEB = {
     hero_stat_3: 'Prefix Cepat ;',
     hero_stat_3_sub: 'Respon Instan',
     showcase_title: 'Galeri Visual Interaktif',
-    showcase_subtitle: 'Jelajahi berbagai kartu visual beresolusi tinggi yang digenerate langsung oleh Columbina Bot di server Discord kamu.',
-    tab_profile: '🎴 Profil Portrait',
-    tab_versus: '⚔️ Duel Versus',
-    tab_beatmap: '🗺️ Kartu Beatmap',
-    tab_mini: '📱 Mini Skor',
+    showcase_subtitle: 'Jelajahi simulasi screenshot live kartu yang digenerate oleh Columbina Bot di Discord untuk pemain-pemain top.',
+    tab_profile: '🎴 Profil BTMC',
+    tab_versus: '⚔️ mrekk vs Lifeline',
+    tab_mini: '📱 Mini Skor mrekk',
+    tab_recent: '🎯 Skor Penuh RyuK',
+    tab_beatmap: '🗺️ FREEDOM DiVE',
     feat_title: 'Dirancang untuk Pemain Kasual & Kompetitif',
     feat_subtitle: 'Dibuat dengan fokus pada akurasi kalkulasi, estetika visual modern, dan kemudahan bagi komunitas.',
     feat_1_title: 'Deteksi Fail Presisi',
@@ -240,7 +361,7 @@ const I18N_WEB = {
     feat_6_title: 'Dukungan Dwibahasa (ID & EN)',
     feat_6_desc: 'Dukungan penuh untuk 🇮🇩 Bahasa Indonesia dan 🇬🇧 English di seluruh embed respon, tombol interaktif, pesan kesalahan, dan kartu grafis.',
     cmd_title: 'Katalog Perintah & Cheat Sheet',
-    cmd_subtitle: 'Klik tombol perintah apa pun untuk langsung menyalinnya ke clipboard.',
+    cmd_subtitle: 'Klik kartu perintah mana saja untuk membuka pratinjau contoh outputnya (dimuat secara on-demand/chunk).',
     cmd_search_ph: 'Cari perintah... (cth: recent, versus, profile, mini)',
     cmd_cat_all: 'Semua',
     cmd_cat_score: 'Skor & Mini',
@@ -313,6 +434,8 @@ function updateShowcaseTab(tabKey) {
   const badgeEl = document.getElementById('showcase-badge');
   const titleEl = document.getElementById('showcase-title');
   const descEl = document.getElementById('showcase-desc');
+  const simUserEl = document.getElementById('sim-user-name');
+  const simCmdEl = document.getElementById('sim-command-text');
 
   if (imgEl) {
     imgEl.style.opacity = '0';
@@ -322,6 +445,8 @@ function updateShowcaseTab(tabKey) {
     }, 150);
   }
 
+  if (simUserEl && data.simUser) simUserEl.textContent = data.simUser;
+  if (simCmdEl && data.simCmd) simCmdEl.textContent = data.simCmd;
   if (badgeEl) badgeEl.textContent = currentLang === 'id' ? data.badgeId : data.badgeEn;
   if (titleEl) titleEl.textContent = currentLang === 'id' ? data.titleId : data.titleEn;
   if (descEl) descEl.textContent = currentLang === 'id' ? data.descId : data.descEn;
@@ -361,14 +486,14 @@ function renderCommands() {
   }
 
   container.innerHTML = filtered.map(cmd => `
-    <div class="glass-panel glass-panel-hover p-5 rounded-2xl flex flex-col justify-between group">
+    <div onclick="openCommandPreview('${cmd.prefix}')" class="glass-panel glass-panel-hover p-5 rounded-2xl flex flex-col justify-between group cursor-pointer transition-all hover:scale-[1.01]" title="${isId ? 'Klik untuk pratinjau output' : 'Click to preview output'}">
       <div>
         <div class="flex items-center justify-between mb-3">
           <div class="flex items-center gap-2">
             <span class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-500/15 text-rose-300 border border-rose-500/30 font-mono">${cmd.prefix}</span>
             <span class="text-xs text-slate-400 font-mono">${cmd.slash}</span>
           </div>
-          <button onclick="copyToClipboard('${cmd.example}', this)" title="Copy example" class="p-1.5 rounded-lg bg-slate-800/80 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 transition-colors">
+          <button onclick="event.stopPropagation(); copyToClipboard('${cmd.example}', this)" title="Copy example" class="p-1.5 rounded-lg bg-slate-800/80 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 transition-colors">
             <svg class="w-4 h-4 copy-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
             <svg class="w-4 h-4 check-icon hidden text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
           </button>
@@ -377,10 +502,223 @@ function renderCommands() {
       </div>
       <div class="pt-3 border-t border-white/5 flex items-center justify-between text-xs text-slate-400">
         <span class="font-mono text-slate-500">Ex: <code class="text-slate-300">${cmd.example}</code></span>
-        ${cmd.aliases !== '-' ? `<span class="text-slate-500">Alias: <span class="text-slate-400">${cmd.aliases}</span></span>` : ''}
+        <span class="text-xs font-semibold text-rose-400 group-hover:text-rose-300 flex items-center gap-1 transition-colors">
+          <span>${isId ? 'Lihat Contoh' : 'Preview'}</span>
+          <span class="group-hover:translate-x-1 transition-transform">&rarr;</span>
+        </span>
       </div>
     </div>
   `).join('');
+}
+
+// -------------------------------------------------------------
+// CHUNK LAZY-LOAD METHOD FOR COMMAND PREVIEWS
+// Zero bytes loaded until a card is clicked!
+// -------------------------------------------------------------
+function openCommandPreview(prefix) {
+  const modal = document.getElementById('cmd-chunk-modal');
+  const body = document.getElementById('chunk-modal-body');
+  if (!modal || !body) return;
+
+  const isId = currentLang === 'id';
+  const chunk = COMMAND_CHUNKS[prefix];
+  if (!chunk) return;
+
+  // 1. Show modal with smooth loading spinner skeleton
+  modal.classList.remove('hidden');
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  body.innerHTML = `
+    <div class="py-14 text-center">
+      <div class="w-10 h-10 border-3 border-rose-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+      <p class="text-xs font-medium text-slate-400 font-mono tracking-wide">${isId ? 'Memuat pratinjau perintah on-demand...' : 'Loading command preview on-demand...'}</p>
+    </div>
+  `;
+
+  // 2. Load chunk based on type
+  if (chunk.type === 'image') {
+    // Dynamic on-demand Image fetch
+    const img = new Image();
+    img.src = chunk.src;
+    img.onload = () => {
+      body.innerHTML = `
+        <div class="animate-modal-in space-y-5">
+          <!-- Header info -->
+          <div class="flex items-center justify-between border-b border-white/10 pb-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-1 text-xs font-mono font-bold rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/30">${prefix}</span>
+                <h3 class="font-bold text-lg text-white">${isId ? chunk.titleId : chunk.titleEn}</h3>
+              </div>
+              <p class="text-xs text-slate-400 mt-1">${isId ? chunk.descId : chunk.descEn}</p>
+            </div>
+          </div>
+
+          <!-- Simulated Discord Message -->
+          <div class="discord-mockup p-4 sm:p-5 space-y-4">
+            <!-- Simulated User Input -->
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs shrink-0">🎮</div>
+              <div>
+                <div class="flex items-baseline gap-2">
+                  <span class="text-xs font-bold text-slate-200">osu! Player</span>
+                  <span class="text-[10px] text-slate-500">Today at 4:20 PM</span>
+                </div>
+                <code class="text-xs text-rose-300 font-mono bg-black/40 px-2 py-0.5 rounded mt-1 inline-block">${chunk.simCmd}</code>
+              </div>
+            </div>
+
+            <!-- Simulated Bot Output -->
+            <div class="flex items-start gap-3 pl-3 border-l-2 border-rose-500/40">
+              <img src="assets/images/logo.jpg" alt="Columbina" class="w-8 h-8 rounded-full object-cover shrink-0">
+              <div class="w-full">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-white">Columbina</span>
+                  <span class="px-1 py-0.2 text-[9px] font-bold rounded bg-[#5865F2] text-white">BOT</span>
+                  <span class="text-[10px] text-slate-500">Today at 4:20 PM</span>
+                </div>
+                <!-- The Loaded Image Chunk -->
+                <div class="mt-2.5">
+                  <img src="${chunk.src}" alt="${prefix} Output Preview" class="rounded-xl shadow-2xl max-h-[460px] w-auto object-contain border border-white/10 mx-auto">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-xs text-slate-400 pt-2">
+            <span class="font-mono text-slate-500">Example: <code class="text-slate-300">${chunk.simCmd}</code></span>
+            <button onclick="copyToClipboard('${chunk.simCmd}', this)" class="px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-semibold border border-rose-500/30 transition-colors">
+              ${isId ? 'Salin Perintah' : 'Copy Command'}
+            </button>
+          </div>
+        </div>
+      `;
+    };
+    img.onerror = () => {
+      body.innerHTML = `
+        <div class="py-8 text-center text-rose-400">
+          <p class="text-sm font-semibold">${isId ? 'Gagal memuat gambar pratinjau.' : 'Failed to load preview image.'}</p>
+        </div>
+      `;
+    };
+  } else if (chunk.type === 'about_embed') {
+    // Simulated rich embed for ;about
+    setTimeout(() => {
+      body.innerHTML = `
+        <div class="animate-modal-in space-y-5">
+          <div class="flex items-center justify-between border-b border-white/10 pb-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-1 text-xs font-mono font-bold rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/30">${prefix}</span>
+                <h3 class="font-bold text-lg text-white">${isId ? chunk.titleId : chunk.titleEn}</h3>
+              </div>
+              <p class="text-xs text-slate-400 mt-1">${isId ? 'Menampilkan ringkasan bot, panduan cepat, dan tautan resmi.' : 'Displays bot highlights, quick start guide, and official links.'}</p>
+            </div>
+          </div>
+
+          <div class="discord-mockup p-4 sm:p-5 space-y-4">
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs shrink-0">🎮</div>
+              <div>
+                <span class="text-xs font-bold text-slate-200">osu! Player</span>
+                <code class="text-xs text-rose-300 font-mono bg-black/40 px-2 py-0.5 rounded mt-1 block w-fit">${chunk.simCmd}</code>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-3 pl-3 border-l-2 border-rose-500/40">
+              <img src="assets/images/logo.jpg" alt="Columbina" class="w-8 h-8 rounded-full object-cover shrink-0">
+              <div class="w-full">
+                <span class="text-xs font-bold text-white">Columbina <span class="px-1 py-0.2 text-[9px] font-bold rounded bg-[#5865F2] text-white">BOT</span></span>
+                
+                <!-- Simulated Discord Embed Card -->
+                <div class="discord-embed-card p-4 mt-2 space-y-3">
+                  <div class="flex items-center gap-2 text-xs text-slate-400">
+                    <img src="assets/images/logo.jpg" class="w-4 h-4 rounded-full">
+                    <span>Columbina Bot • osu! Companion</span>
+                  </div>
+                  <h4 class="font-bold text-white text-sm">🌸 Columbina Bot (v1.4.2)</h4>
+                  <p class="text-xs text-slate-300 leading-relaxed">${isId ? 'Bot Discord visual osu! modern untuk pamer skor estetik, pantau profil skill, dan tanding 1v1.' : 'Modern osu! Discord companion for visual score cards, skill breakdowns, and 1v1 duels.'}</p>
+                  
+                  <div class="text-xs space-y-1.5 pt-2 border-t border-white/5">
+                    <div class="font-bold text-slate-200">🎮 ${isId ? 'Fitur Utama' : 'Core Features'}</div>
+                    <p class="text-slate-300 text-[11px] leading-relaxed">
+                      • <b>${isId ? 'Cek Skor & PP' : 'Score & PP Check'}</b> (<code>;m</code>, <code>;r</code>)<br>
+                      • <b>${isId ? 'Profil Skill' : 'Skill Profile'}</b> (<code>;p</code>)<br>
+                      • <b>${isId ? 'Versus Duel' : 'Versus Duel'}</b> (<code>;vs</code>)<br>
+                      • <b>${isId ? 'Smart Compare' : 'Smart Compare'}</b> (<code>;c</code>)
+                    </p>
+                  </div>
+
+                  <div class="text-xs space-y-1.5 pt-2 border-t border-white/5">
+                    <div class="font-bold text-slate-200">⚡ ${isId ? 'Cara Pakai Cepat' : 'Quick Start'}</div>
+                    <p class="text-slate-300 text-[11px] leading-relaxed font-mono">
+                      1. ;link &lt;username&gt;<br>
+                      2. ;m<br>
+                      3. ;p<br>
+                      4. ;vs &lt;player&gt;
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Simulated ActionRow Buttons -->
+                <div class="mt-3 flex flex-wrap gap-2 text-xs">
+                  <span class="px-3 py-1 rounded bg-[#2b2d31] text-white border border-white/5 font-semibold">📨 ${isId ? 'Undang Columbina' : 'Invite Columbina'}</span>
+                  <span class="px-3 py-1 rounded bg-[#2b2d31] text-white border border-white/5 font-semibold">🌐 ${isId ? 'Website Resmi' : 'Official Website'}</span>
+                  <span class="px-3 py-1 rounded bg-[#2b2d31] text-white border border-white/5 font-semibold">⭐ GitHub</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }, 100);
+  } else {
+    // Generic text/embed chunk
+    setTimeout(() => {
+      body.innerHTML = `
+        <div class="animate-modal-in space-y-5">
+          <div class="flex items-center justify-between border-b border-white/10 pb-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-1 text-xs font-mono font-bold rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/30">${prefix}</span>
+                <h3 class="font-bold text-lg text-white">${isId ? chunk.titleId : chunk.titleEn}</h3>
+              </div>
+            </div>
+          </div>
+
+          <div class="discord-mockup p-4 sm:p-5 space-y-4">
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs shrink-0">🎮</div>
+              <div>
+                <span class="text-xs font-bold text-slate-200">osu! Player</span>
+                <code class="text-xs text-rose-300 font-mono bg-black/40 px-2 py-0.5 rounded mt-1 block w-fit">${chunk.simCmd}</code>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-3 pl-3 border-l-2 border-emerald-500/40">
+              <img src="assets/images/logo.jpg" alt="Columbina" class="w-8 h-8 rounded-full object-cover shrink-0">
+              <div class="w-full">
+                <span class="text-xs font-bold text-white">Columbina <span class="px-1 py-0.2 text-[9px] font-bold rounded bg-[#5865F2] text-white">BOT</span></span>
+                <div class="p-3 mt-2 rounded-lg bg-slate-900 border border-white/5 text-xs text-slate-200 leading-relaxed font-mono">
+                  ${isId ? chunk.descId : chunk.descEn}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }, 100);
+  }
+}
+
+function closeCommandPreview() {
+  const modal = document.getElementById('cmd-chunk-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+  }
 }
 
 function copyToClipboard(text, btnElement) {
@@ -449,6 +787,19 @@ document.addEventListener('DOMContentLoaded', () => {
       mobileMenu.classList.toggle('hidden');
     });
   }
+
+  // 6. Close Modal Listeners
+  const closeModalBtn = document.getElementById('close-chunk-modal-btn');
+  const modalOverlay = document.getElementById('cmd-chunk-modal');
+  if (closeModalBtn) closeModalBtn.addEventListener('click', closeCommandPreview);
+  if (modalOverlay) {
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) closeCommandPreview();
+    });
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeCommandPreview();
+  });
 
   // Apply default language
   applyLanguage(currentLang);

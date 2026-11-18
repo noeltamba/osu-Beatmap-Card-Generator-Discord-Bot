@@ -83,3 +83,29 @@ code, pre, .font-mono {
   color: #fda4af;
   border-color: rgba(244, 63, 94, 0.4);
 }
+
+/* Discord Mockup Container */
+.discord-mockup {
+  background: #1e1f22;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+}
+
+.discord-embed-card {
+  background: #2b2d31;
+  border-left: 4px solid #f43f5e;
+  border-radius: 6px;
+}
+
+/* Chunk Modal Styles */
+#cmd-chunk-modal.active {
+  display: flex !important;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-modal-in {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

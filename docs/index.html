@@ -185,16 +185,19 @@
     <!-- Tabs Header -->
     <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-10">
       <button data-tab="profile" class="tab-btn active px-5 py-2.5 rounded-xl font-semibold text-sm glass-panel border transition-all" data-i18n="tab_profile">
-        🎴 Portrait Profile
+        🎴 BTMC Profile
       </button>
       <button data-tab="versus" class="tab-btn px-5 py-2.5 rounded-xl font-semibold text-sm glass-panel border transition-all" data-i18n="tab_versus">
-        ⚔️ Versus Duel
-      </button>
-      <button data-tab="beatmap" class="tab-btn px-5 py-2.5 rounded-xl font-semibold text-sm glass-panel border transition-all" data-i18n="tab_beatmap">
-        🗺️ Beatmap Card
+        ⚔️ mrekk vs Lifeline
       </button>
       <button data-tab="mini" class="tab-btn px-5 py-2.5 rounded-xl font-semibold text-sm glass-panel border transition-all" data-i18n="tab_mini">
-        📱 Mini Score
+        📱 mrekk Mini Score
+      </button>
+      <button data-tab="recent" class="tab-btn px-5 py-2.5 rounded-xl font-semibold text-sm glass-panel border transition-all" data-i18n="tab_recent">
+        🎯 RyuK Full Score
+      </button>
+      <button data-tab="beatmap" class="tab-btn px-5 py-2.5 rounded-xl font-semibold text-sm glass-panel border transition-all" data-i18n="tab_beatmap">
+        🗺️ FREEDOM DiVE
       </button>
     </div>
 
@@ -202,24 +205,69 @@
     <div class="glass-panel rounded-3xl p-6 sm:p-10 border border-white/10 shadow-2xl relative overflow-hidden">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
         
-        <!-- Left: Image Preview -->
+        <!-- Left: Discord Simulation Mockup & Card Preview -->
         <div class="lg:col-span-7 flex justify-center items-center">
-          <div class="relative group max-w-full">
-            <div class="absolute -inset-1 bg-gradient-to-r from-rose-500 to-sky-500 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-500"></div>
-            <img id="showcase-image" src="assets/images/preview-profile.png" alt="Showcase Preview" class="relative rounded-2xl shadow-2xl max-h-[560px] w-auto object-contain transition-opacity duration-200">
+          <div class="w-full discord-mockup p-4 sm:p-6 space-y-4">
+            
+            <!-- Window Bar / Channel Header -->
+            <div class="flex items-center justify-between border-b border-white/10 pb-3">
+              <div class="flex items-center gap-2 text-xs font-semibold text-slate-300">
+                <span class="text-slate-500">#</span>
+                <span>bot-showcase • Discord Simulation</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500/60 inline-block"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-yellow-500/60 inline-block"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500/60 inline-block"></span>
+              </div>
+            </div>
+
+            <!-- Simulated User Command Message -->
+            <div class="flex items-start gap-3">
+              <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-purple-600 to-rose-500 flex items-center justify-center text-sm font-bold text-white shadow-md shrink-0">
+                👤
+              </div>
+              <div>
+                <div class="flex items-baseline gap-2">
+                  <span id="sim-user-name" class="text-sm font-bold text-slate-200">BTMC Fan</span>
+                  <span class="text-[11px] text-slate-500">Today at 4:20 PM</span>
+                </div>
+                <div class="mt-1">
+                  <code id="sim-command-text" class="text-xs font-mono text-rose-300 bg-black/50 px-2.5 py-1 rounded-lg border border-white/5 inline-block">;p BTMC</code>
+                </div>
+              </div>
+            </div>
+
+            <!-- Simulated Bot Response Message with Card -->
+            <div class="flex items-start gap-3 pl-2 sm:pl-3 border-l-2 border-rose-500/50 pt-2">
+              <img src="assets/images/logo.jpg" alt="Columbina Logo" class="w-9 h-9 rounded-full object-cover ring-2 ring-rose-500/40 shrink-0">
+              <div class="w-full min-w-0">
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-sm font-bold text-white">Columbina</span>
+                  <span class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-[#5865F2] text-white">BOT</span>
+                  <span class="text-[11px] text-slate-500">Today at 4:20 PM</span>
+                </div>
+
+                <!-- Generated Graphic Card -->
+                <div class="relative group max-w-full overflow-hidden rounded-2xl border border-white/10 shadow-2xl bg-black/40">
+                  <img id="showcase-image" src="assets/images/preview-profile.png" alt="Showcase Preview" class="w-full max-h-[520px] object-contain transition-opacity duration-200 mx-auto block">
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
 
         <!-- Right: Description -->
         <div class="lg:col-span-5 text-left space-y-5">
           <span id="showcase-badge" class="inline-block px-3 py-1 text-xs font-bold rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/30">
-            Portrait Profile Dashboard (900 × 920 px)
+            BTMC (#306 Global • Aim Specialist)
           </span>
           <h3 id="showcase-title" class="text-2xl sm:text-3xl font-extrabold text-white leading-tight">
-            Circular Donut Skill Breakdown & Bancho Stats
+            Portrait Profile Dashboard (900 × 920 px)
           </h3>
           <p id="showcase-desc" class="text-slate-300 leading-relaxed text-sm sm:text-base">
-            Calculates weighted Aim, Speed, and Accuracy skill ratios from top plays using official rosu-pp decay algorithms. Features a hollow circular donut chart, level progress bar, medals showcase, and official Bancho grade counters.
+            Simulated profile inspection for BTMC. Shows hollow donut skill breakdown (Aim: 56%, Speed: 20%, Acc: 24%), Bancho performance cards, level progress bar, medals unlocked, and grade showcase.
           </p>
 
           <div class="pt-4 flex items-center gap-3">
@@ -402,6 +450,16 @@
       </div>
     </div>
   </footer>
+
+  <!-- On-Demand Chunk Modal for Command Explorer -->
+  <div id="cmd-chunk-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden transition-opacity duration-200">
+    <div class="glass-panel border border-white/15 rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      <button id="close-chunk-modal-btn" class="absolute top-5 right-5 p-2 rounded-xl bg-slate-800/80 hover:bg-rose-500/20 text-slate-400 hover:text-white transition-colors" title="Close">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+      <div id="chunk-modal-body"></div>
+    </div>
+  </div>
 
   <!-- Scripts -->
   <script src="assets/js/main.js"></script>
