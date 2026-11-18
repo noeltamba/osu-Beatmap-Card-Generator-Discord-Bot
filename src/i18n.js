@@ -74,7 +74,7 @@ const translations = {
     versus_neither_scores: 'ℹ️ Neither **{p1}** nor **{p2}** have a recorded score on **{beatmap}**.',
     versus_error: '❌ Failed to generate versus comparison: {message}',
 
-    about_embed_title: '<a:yuri:1572540573322322041> Columbina Bot (v1.4.1)',
+    about_embed_title: '<a:yuri:1572540573322322041> Columbina Bot (v1.4.2)',
     about_embed_desc: 'Modern osu! Discord companion for visual score cards, skill breakdowns, and 1v1 duels.',
     about_field_features_title: '🎮 Core Features',
     about_field_features_desc:
@@ -205,7 +205,7 @@ const translations = {
     versus_neither_scores: 'ℹ️ Baik **{p1}** maupun **{p2}** belum memiliki skor di beatmap **{beatmap}**.',
     versus_error: '❌ Gagal membuat perbandingan versus: {message}',
 
-    about_embed_title: '<a:yuri:1572540573322322041> Columbina Bot (v1.4.1)',
+    about_embed_title: '<a:yuri:1572540573322322041> Columbina Bot (v1.4.2)',
     about_embed_desc: 'Bot Discord visual osu! modern untuk pamer skor estetik, pantau profil skill, dan tanding 1v1.',
     about_field_features_title: '🎮 Fitur Utama',
     about_field_features_desc:

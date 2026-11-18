@@ -8,13 +8,32 @@
   [![Official Website](https://img.shields.io/badge/Official_Website-Visit_Here-f43f5e?style=for-the-badge&logo=googlechrome&logoColor=white)](https://noeltamba.github.io/osu-Beatmap-Card-Generator-Discord-Bot/)
 
 </div>
-# 🎮 osu! Beatmap Card Generator - Release v1.4.1
+# 🎮 osu! Beatmap Card Generator - Release v1.4.2
 
 A high-performance Discord bot generating visually stunning, frosted-glass score and beatmap cards. Featuring ultra-fast prefix commands (`;`), accurate osu! API v2 score modeling, and stream-ready mini widgets.
 
 ---
 
-### ✨ What's New in v1.4.1?
+### ✨ What's New in v1.4.2?
+
+* **🌐 Official Showcase Landing Webpage (`docs/`)**:
+  * Launched a modern, responsive showcase landing page deployed via **GitHub Pages** with zero build configuration (`.nojekyll`).
+  * **Interactive Visual Showcase**: Real-time tab switcher for Portrait Profile, Versus Duel, Beatmap Specs, and Mini Score cards.
+  * **Command Explorer & Live Search**: Instant command cheat sheet with category filters and 1-click clipboard copy.
+  * **Native Bilingual Toggle**: Seamless 1-click switching between 🇬🇧 English and 🇮🇩 Bahasa Indonesia.
+* **📋 Redesigned About Command (`/about`, `;about`, `;info`, `;botinfo`)**:
+  * Completely revamped to a clean, unique, and to-the-point Discord Embed Link with zero clutter.
+  * Features a 4-step Quick Start guide and interactive Action Row link buttons (Invite Bot, Official Website, GitHub).
+* **✨ Custom Discord Animated & Static Emojis**:
+  * **Animated Columbina** (`<a:yuri:1572540573322322041>`): Integrated into embed header and interactive invite button.
+  * **PP Check Icon** (`<:NOTWASHED4x:1572543127896588370>`): Embedded for score checks and quick start instructions.
+  * **Official osu! Logo** (`<:Osu4x:1572543237615386655>`): Added across beatmap cards and interactive Discord buttons (`btn_open_score`, `btn_open_on_osu`).
+* **🎴 Compact Portrait Profile Polish**:
+  * Further compacted the vertical profile dashboard to a crisp **900 × 920 px** layout with hollow donut skill ratios (Aim, Speed, Acc) and player cover art background.
+
+---
+
+### 🌟 Release v1.4.1 Highlights
 
 * **🎴 Portrait Profile Card Redesign (`/profile`, `/pcard`, `;p`, `;pcard`)**:
   * **Modern Portrait Dashboard (900 × 1320 px)**: Full visual overhaul transitioning from horizontal landscape to a clean, mobile-friendly vertical layout inspired by custom wireframe designs.

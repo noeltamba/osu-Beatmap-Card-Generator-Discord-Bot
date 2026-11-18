@@ -50,7 +50,7 @@ function createAboutMessage(lang = 'en', botId = null) {
       }
     )
     .setFooter({
-      text: lang === 'id' ? 'v1.4.1 • Dibuat oleh @noeltamba & @hyzity' : 'v1.4.1 • Created by @noeltamba & @hyzity',
+      text: lang === 'id' ? 'v1.4.2 • Dibuat oleh @noeltamba & @hyzity' : 'v1.4.2 • Created by @noeltamba & @hyzity',
       iconURL: 'https://i.imgur.com/WujKXUK.jpeg'
     });
 
