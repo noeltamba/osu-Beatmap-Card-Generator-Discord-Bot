@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Columbina Bot — Modern osu! Card Generator for Discord</title>
+  <meta name="description" content="A high-performance Discord bot generating visually stunning frosted-glass score summaries, portrait profile dashboards, 1v1 showdowns, and stream-ready mini widgets.">
+  <meta name="theme-color" content="#f43f5e">
+
+  <!-- Open Graph / Discord Embed Metadata -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Columbina Bot — Modern osu! Card Generator">
+  <meta property="og:description" content="Generate frosted-glass score summaries, portrait profile dashboards, 1v1 showdown duels, and stream-ready mini widgets.">
+  <meta property="og:image" content="https://i.imgur.com/WujKXUK.jpeg">
+
+  <link rel="icon" type="image/jpeg" href="assets/images/logo.jpg">
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            midnight: '#090d16',
+            darkslate: '#0f172a',
+            surface: '#161f36',
+            roseaccent: '#f43f5e'
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="assets/css/custom.css">
+</head>
+<body class="bg-[#090d16] text-slate-100 min-h-screen relative selection:bg-rose-500/30 selection:text-rose-200">
+
+  <!-- Ambient Background Glows -->
+  <div class="bg-mesh-glow w-[500px] h-[500px] bg-rose-600/20 top-[-100px] left-[-150px]"></div>
+  <div class="bg-mesh-glow w-[600px] h-[600px] bg-sky-500/15 top-[20%] right-[-200px]"></div>
+  <div class="bg-mesh-glow w-[500px] h-[500px] bg-purple-600/15 top-[60%] left-[-100px]"></div>
+
+  <!-- Sticky Navbar -->
+  <header class="sticky top-0 z-50 glass-panel border-b border-white/10 backdrop-blur-xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      
+      <!-- Brand Logo -->
+      <a href="#" class="flex items-center gap-3.5 group">
+        <div class="relative">
+          <img src="assets/images/logo.jpg" alt="Columbina Logo" class="w-11 h-11 rounded-full object-cover ring-2 ring-rose-500/60 group-hover:ring-rose-400 transition-all shadow-lg shadow-rose-500/20">
+          <span class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-[#090d16] rounded-full"></span>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-xl tracking-tight text-white group-hover:text-rose-300 transition-colors">Columbina</span>
+            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">v1.4.1</span>
+          </div>
+          <p class="text-xs text-slate-400 font-medium">osu! Discord Companion</p>
+        </div>
+      </a>
+
+      <!-- Desktop Nav Links -->
+      <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
+        <a href="#showcase" data-i18n="nav_showcase" class="hover:text-rose-400 transition-colors">Showcase</a>
+        <a href="#features" data-i18n="nav_features" class="hover:text-rose-400 transition-colors">Features</a>
+        <a href="#commands" data-i18n="nav_commands" class="hover:text-rose-400 transition-colors">Commands</a>
+        <a href="#guide" data-i18n="nav_guide" class="hover:text-rose-400 transition-colors">Quick Start</a>
+        <a href="https://github.com/noeltamba/osu-Beatmap-Card-Generator-Discord-Bot" target="_blank" rel="noreferrer" class="hover:text-white flex items-center gap-1.5 transition-colors">
+          <span>GitHub</span>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+        </a>
+      </nav>
+
+      <!-- Right CTAs: Language Toggle & Invite Button -->
+      <div class="flex items-center gap-3">
+        <!-- Language Switcher Pill -->
+        <div class="flex items-center p-1 rounded-xl bg-slate-900/80 border border-white/10 text-xs font-semibold">
+          <button data-lang="en" class="lang-toggle-btn px-2.5 py-1 rounded-lg border transition-all">EN</button>
+          <button data-lang="id" class="lang-toggle-btn px-2.5 py-1 rounded-lg border transition-all">ID</button>
+        </div>
+
+        <!-- Invite Button -->
+        <a href="https://discord.com/oauth2/authorize?client_id=1562307139274416178&permissions=274878286912&integration_type=0&scope=applications.commands+bot" target="_blank" rel="noreferrer" class="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-400 hover:to-rose-500 text-white shadow-lg shadow-rose-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]">
+          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+          <span data-i18n="nav_invite">Add to Discord</span>
+        </a>
+
+        <!-- Mobile Menu Button -->
+        <button id="mobile-menu-btn" class="md:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/5">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Mobile Dropdown Nav -->
+    <div id="mobile-menu" class="hidden md:hidden border-t border-white/10 px-4 pt-3 pb-5 space-y-2 glass-panel">
+      <a href="#showcase" data-i18n="nav_showcase" class="block px-3 py-2 rounded-lg text-slate-300 hover:bg-white/5 font-medium">Showcase</a>
+      <a href="#features" data-i18n="nav_features" class="block px-3 py-2 rounded-lg text-slate-300 hover:bg-white/5 font-medium">Features</a>
+      <a href="#commands" data-i18n="nav_commands" class="block px-3 py-2 rounded-lg text-slate-300 hover:bg-white/5 font-medium">Commands</a>
+      <a href="#guide" data-i18n="nav_guide" class="block px-3 py-2 rounded-lg text-slate-300 hover:bg-white/5 font-medium">Quick Start</a>
+      <a href="https://discord.com/oauth2/authorize?client_id=1562307139274416178&permissions=274878286912&integration_type=0&scope=applications.commands+bot" target="_blank" rel="noreferrer" class="block mt-3 w-full text-center px-4 py-2.5 rounded-xl font-bold bg-rose-500 text-white">
+        Add to Discord
+      </a>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="relative pt-20 pb-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center z-10">
+    
+    <!-- Top Announcement Pill -->
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-panel border border-rose-500/30 text-rose-300 text-xs sm:text-sm font-semibold mb-8 animate-pulse-glow shadow-lg shadow-rose-500/10">
+      <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+      <span data-i18n="hero_pill">✨ v1.4.1 Released — Modern Portrait Profile & Cozy Duel</span>
+    </div>
+
+    <!-- Main Title -->
+    <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight max-w-5xl mx-auto leading-[1.15]" data-i18n="hero_title">
+      Transform Your <span class="bg-gradient-to-r from-rose-400 via-purple-300 to-sky-400 bg-clip-text text-transparent">osu! Journey</span> Into Stunning Visuals
+    </h1>
+
+    <!-- Subtitle -->
+    <p class="mt-6 text-base sm:text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed" data-i18n="hero_desc">
+      A next-generation Discord bot crafted to turn raw osu! gameplay metrics into elegant frosted-glass score summaries, portrait profile dashboards, 1v1 showdown duels, and stream-ready mini widgets.
+    </p>
+
+    <!-- CTAs -->
+    <div class="mt-10 flex flex-wrap items-center justify-center gap-4">
+      <a href="https://discord.com/oauth2/authorize?client_id=1562307139274416178&permissions=274878286912&integration_type=0&scope=applications.commands+bot" target="_blank" rel="noreferrer" class="inline-flex items-center gap-3 px-8 py-4 rounded-2xl font-bold text-base bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-400 hover:to-rose-500 text-white shadow-xl shadow-rose-500/30 transition-all hover:scale-105 active:scale-95">
+        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+        <span data-i18n="hero_btn_invite">Add to Discord</span>
+      </a>
+
+      <a href="https://github.com/noeltamba/osu-Beatmap-Card-Generator-Discord-Bot" target="_blank" rel="noreferrer" class="inline-flex items-center gap-2.5 px-7 py-4 rounded-2xl font-semibold text-base glass-panel glass-panel-hover text-slate-200">
+        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+        <span data-i18n="hero_btn_github">View Repository</span>
+      </a>
+    </div>
+
+    <!-- Quick Highlights Badges -->
+    <div class="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-4xl mx-auto">
+      <div class="glass-panel p-5 rounded-2xl flex items-center justify-center gap-4">
+        <div class="p-3 rounded-xl bg-rose-500/10 text-rose-400">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+        <div class="text-left">
+          <h4 class="font-bold text-white text-base" data-i18n="hero_stat_1">osu! API v2</h4>
+          <p class="text-xs text-slate-400" data-i18n="hero_stat_1_sub">Accurate Modeling</p>
+        </div>
+      </div>
+
+      <div class="glass-panel p-5 rounded-2xl flex items-center justify-center gap-4">
+        <div class="p-3 rounded-xl bg-purple-500/10 text-purple-400">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+        </div>
+        <div class="text-left">
+          <h4 class="font-bold text-white text-base" data-i18n="hero_stat_2">Fail Tracking</h4>
+          <p class="text-xs text-slate-400" data-i18n="hero_stat_2_sub">Real Fail % Progress</p>
+        </div>
+      </div>
+
+      <div class="glass-panel p-5 rounded-2xl flex items-center justify-center gap-4">
+        <div class="p-3 rounded-xl bg-sky-500/10 text-sky-400">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+        <div class="text-left">
+          <h4 class="font-bold text-white text-base" data-i18n="hero_stat_3">; Quick Prefix</h4>
+          <p class="text-xs text-slate-400" data-i18n="hero_stat_3_sub">Instant Response</p>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- Showcase Section (Interactive Carousel / Tabs) -->
+  <section id="showcase" class="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto relative z-10 border-t border-white/5">
+    <div class="text-center max-w-3xl mx-auto mb-12">
+      <h2 class="text-3xl sm:text-4xl font-extrabold text-white" data-i18n="showcase_title">Interactive Visual Showcase</h2>
+      <p class="mt-3 text-slate-400 text-base" data-i18n="showcase_subtitle">Explore the high-resolution cards generated live by Columbina Bot in your Discord server.</p>
+    </div>
+
+    <!-- Tabs Header -->
+    <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-10">
+      <button data-tab="profile" class="tab-btn active px-5 py-2.5 rounded-xl font-semibold text-sm glass-panel border transition-all" data-i18n="tab_profile">
+        🎴 Portrait Profile
+      </button>
+      <button data-tab="versus" class="tab-btn px-5 py-2.5 rounded-xl font-semibold text-sm glass-panel border transition-all" data-i18n="tab_versus">
+        ⚔️ Versus Duel
+      </button>
+      <button data-tab="beatmap" class="tab-btn px-5 py-2.5 rounded-xl font-semibold text-sm glass-panel border transition-all" data-i18n="tab_beatmap">
+        🗺️ Beatmap Card
+      </button>
+      <button data-tab="mini" class="tab-btn px-5 py-2.5 rounded-xl font-semibold text-sm glass-panel border transition-all" data-i18n="tab_mini">
+        📱 Mini Score
+      </button>
+    </div>
+
+    <!-- Showcase Container -->
+    <div class="glass-panel rounded-3xl p-6 sm:p-10 border border-white/10 shadow-2xl relative overflow-hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        
+        <!-- Left: Image Preview -->
+        <div class="lg:col-span-7 flex justify-center items-center">
+          <div class="relative group max-w-full">
+            <div class="absolute -inset-1 bg-gradient-to-r from-rose-500 to-sky-500 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-500"></div>
+            <img id="showcase-image" src="assets/images/preview-profile.png" alt="Showcase Preview" class="relative rounded-2xl shadow-2xl max-h-[560px] w-auto object-contain transition-opacity duration-200">
+          </div>
+        </div>
+
+        <!-- Right: Description -->
+        <div class="lg:col-span-5 text-left space-y-5">
+          <span id="showcase-badge" class="inline-block px-3 py-1 text-xs font-bold rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/30">
+            Portrait Profile Dashboard (900 × 920 px)
+          </span>
+          <h3 id="showcase-title" class="text-2xl sm:text-3xl font-extrabold text-white leading-tight">
+            Circular Donut Skill Breakdown & Bancho Stats
+          </h3>
+          <p id="showcase-desc" class="text-slate-300 leading-relaxed text-sm sm:text-base">
+            Calculates weighted Aim, Speed, and Accuracy skill ratios from top plays using official rosu-pp decay algorithms. Features a hollow circular donut chart, level progress bar, medals showcase, and official Bancho grade counters.
+          </p>
+
+          <div class="pt-4 flex items-center gap-3">
+            <a href="https://discord.com/oauth2/authorize?client_id=1562307139274416178&permissions=274878286912&integration_type=0&scope=applications.commands+bot" target="_blank" rel="noreferrer" class="px-5 py-2.5 rounded-xl font-bold text-sm bg-rose-500 hover:bg-rose-400 text-white shadow-lg shadow-rose-500/20 transition-all">
+              Try in Your Server
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section id="features" class="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto relative z-10 border-t border-white/5">
+    <div class="text-center max-w-3xl mx-auto mb-16">
+      <h2 class="text-3xl sm:text-4xl font-extrabold text-white" data-i18n="feat_title">Crafted for Competitive & Casual Players</h2>
+      <p class="mt-3 text-slate-400 text-base" data-i18n="feat_subtitle">Engineered from the ground up with accuracy, aesthetics, and community engagement in mind.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      
+      <!-- Feature 1 -->
+      <div class="glass-panel glass-panel-hover p-7 rounded-3xl">
+        <div class="w-12 h-12 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center mb-5">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+        </div>
+        <h3 class="text-xl font-bold text-white mb-2" data-i18n="feat_1_title">Pinpoint Fail Tracking</h3>
+        <p class="text-sm text-slate-300 leading-relaxed" data-i18n="feat_1_desc">Accurately recognizes failed scores with passed: false in osu! API v2 / Lazer. Automatically computes song completion percentage (e.g. Fail 70%) and suppresses misleading full PP values.</p>
+      </div>
+
+      <!-- Feature 2 -->
+      <div class="glass-panel glass-panel-hover p-7 rounded-3xl">
+        <div class="w-12 h-12 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-400 flex items-center justify-center mb-5">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-width="2"></circle><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3a9 9 0 019 9"></path></svg>
+        </div>
+        <h3 class="text-xl font-bold text-white mb-2" data-i18n="feat_2_title">Bathbot-Inspired Skill Breakdown</h3>
+        <p class="text-sm text-slate-300 leading-relaxed" data-i18n="feat_2_desc">Applies weighted skill decay formulas ($0.95^n$) across Aim / Jump, Speed / Tapping, and Accuracy / Timing with a sleek hollow circular donut diagram and dynamic playstyle archetypes.</p>
+      </div>
+
+      <!-- Feature 3 -->
+      <div class="glass-panel glass-panel-hover p-7 rounded-3xl">
+        <div class="w-12 h-12 rounded-2xl bg-sky-500/15 border border-sky-500/30 text-sky-400 flex items-center justify-center mb-5">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+        <h3 class="text-xl font-bold text-white mb-2" data-i18n="feat_3_title">Head-to-Head Versus Duels</h3>
+        <p class="text-sm text-slate-300 leading-relaxed" data-i18n="feat_3_desc">Challenge any rival in 1v1 duels with cozy rose-red and sky-blue palettes. Compare personal bests on the same beatmap or compete across 7 Bancho profile metrics with 7-block round trackers.</p>
+      </div>
+
+      <!-- Feature 4 -->
+      <div class="glass-panel glass-panel-hover p-7 rounded-3xl">
+        <div class="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mb-5">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+        </div>
+        <h3 class="text-xl font-bold text-white mb-2" data-i18n="feat_4_title">Ultra-Fast Prefix Commands (;)</h3>
+        <p class="text-sm text-slate-300 leading-relaxed" data-i18n="feat_4_desc">Skip slash command lag with instant prefix triggers: ;m, ;r, ;vs, ;c, ;p, ;b. Slash commands (/) remain fully available with bilingual descriptions.</p>
+      </div>
+
+      <!-- Feature 5 -->
+      <div class="glass-panel glass-panel-hover p-7 rounded-3xl">
+        <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mb-5">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
+        </div>
+        <h3 class="text-xl font-bold text-white mb-2" data-i18n="feat_5_title">Smart Reply Compare (;c)</h3>
+        <p class="text-sm text-slate-300 leading-relaxed" data-i18n="feat_5_desc">Simply reply to any score message sent by any bot (Columbina, Bathbot, owo) and type ;c to instantly look up your personal best score on that beatmap.</p>
+      </div>
+
+      <!-- Feature 6 -->
+      <div class="glass-panel glass-panel-hover p-7 rounded-3xl">
+        <div class="w-12 h-12 rounded-2xl bg-teal-500/15 border border-teal-500/30 text-teal-400 flex items-center justify-center mb-5">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path></svg>
+        </div>
+        <h3 class="text-xl font-bold text-white mb-2" data-i18n="feat_6_title">Bilingual Localization (EN & ID)</h3>
+        <p class="text-sm text-slate-300 leading-relaxed" data-i18n="feat_6_desc">Full native support for both 🇬🇧 English and 🇮🇩 Bahasa Indonesia across all command embeds, button labels, error notices, and card generators.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Command Explorer & Cheat Sheet -->
+  <section id="commands" class="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto relative z-10 border-t border-white/5">
+    <div class="text-center max-w-3xl mx-auto mb-12">
+      <h2 class="text-3xl sm:text-4xl font-extrabold text-white" data-i18n="cmd_title">Command Explorer & Cheat Sheet</h2>
+      <p class="mt-3 text-slate-400 text-base" data-i18n="cmd_subtitle">Click any command pill to copy it instantly to your clipboard.</p>
+    </div>
+
+    <!-- Filter & Search Controls -->
+    <div class="glass-panel p-4 sm:p-5 rounded-2xl max-w-4xl mx-auto mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
+      
+      <!-- Category Pills -->
+      <div class="flex flex-wrap items-center gap-2">
+        <button data-cat="all" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/40 transition-all" data-i18n="cmd_cat_all">All</button>
+        <button data-cat="score" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900/60 text-slate-400 border border-white/5 hover:border-white/20 transition-all" data-i18n="cmd_cat_score">Scoring & Mini</button>
+        <button data-cat="profile" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900/60 text-slate-400 border border-white/5 hover:border-white/20 transition-all" data-i18n="cmd_cat_profile">Profile & Duels</button>
+        <button data-cat="beatmap" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900/60 text-slate-400 border border-white/5 hover:border-white/20 transition-all" data-i18n="cmd_cat_beatmap">Beatmaps</button>
+        <button data-cat="utility" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900/60 text-slate-400 border border-white/5 hover:border-white/20 transition-all" data-i18n="cmd_cat_utility">Utility & Settings</button>
+      </div>
+
+      <!-- Search Input -->
+      <div class="relative w-full md:w-72">
+        <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" stroke-width="2"></circle><path d="m21 21-4.35-4.35" stroke-width="2" stroke-linecap="round"></path></svg>
+        <input type="text" id="command-search" placeholder="Search command..." data-i18n-attr="placeholder:cmd_search_ph" class="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-rose-500 transition-colors">
+      </div>
+
+    </div>
+
+    <!-- Commands Dynamic Grid -->
+    <div id="commands-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 max-w-7xl mx-auto">
+      <!-- Populated by assets/js/main.js -->
+    </div>
+  </section>
+
+  <!-- Quick Start Guide -->
+  <section id="guide" class="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto relative z-10 border-t border-white/5">
+    <div class="text-center max-w-3xl mx-auto mb-16">
+      <h2 class="text-3xl sm:text-4xl font-extrabold text-white" data-i18n="guide_title">Get Started in Under 30 Seconds</h2>
+      <p class="mt-3 text-slate-400 text-base" data-i18n="guide_subtitle">Effortlessly bring modern osu! graphics to your Discord community.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+      
+      <div class="glass-panel p-8 rounded-3xl text-center relative">
+        <div class="w-14 h-14 mx-auto mb-6 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-xl font-extrabold border border-rose-500/30">
+          1
+        </div>
+        <h3 class="text-lg font-bold text-white mb-2" data-i18n="step_1_title">1. Invite Columbina</h3>
+        <p class="text-sm text-slate-300 leading-relaxed mb-6" data-i18n="step_1_desc">Click the invite button to add the bot to your Discord server with zero complex permissions.</p>
+        <a href="https://discord.com/oauth2/authorize?client_id=1562307139274416178&permissions=274878286912&integration_type=0&scope=applications.commands+bot" target="_blank" rel="noreferrer" class="inline-block px-4 py-2 text-xs font-bold rounded-xl bg-rose-500 hover:bg-rose-400 text-white transition-all">
+          Invite Bot
+        </a>
+      </div>
+
+      <div class="glass-panel p-8 rounded-3xl text-center relative">
+        <div class="w-14 h-14 mx-auto mb-6 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-xl font-extrabold border border-purple-500/30">
+          2
+        </div>
+        <h3 class="text-lg font-bold text-white mb-2" data-i18n="step_2_title">2. Link Your osu! Account</h3>
+        <p class="text-sm text-slate-300 leading-relaxed mb-6" data-i18n="step_2_desc">Type ;link &lt;username&gt; or /link username:&lt;name&gt; to remember your profile permanently.</p>
+        <code class="px-3 py-1.5 rounded-lg bg-slate-900 border border-white/10 text-xs font-mono text-purple-300">;link YourUsername</code>
+      </div>
+
+      <div class="glass-panel p-8 rounded-3xl text-center relative">
+        <div class="w-14 h-14 mx-auto mb-6 rounded-2xl bg-sky-500/20 text-sky-400 flex items-center justify-center text-xl font-extrabold border border-sky-500/30">
+          3
+        </div>
+        <h3 class="text-lg font-bold text-white mb-2" data-i18n="step_3_title">3. Flex & Showdown</h3>
+        <p class="text-sm text-slate-300 leading-relaxed mb-6" data-i18n="step_3_desc">Enjoy instant score cards (;m), check your skill profile (;p), or challenge rivals (;vs).</p>
+        <code class="px-3 py-1.5 rounded-lg bg-slate-900 border border-white/10 text-xs font-mono text-sky-300">;vs RivalPlayer</code>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-white/10 glass-panel py-12 relative z-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+        
+        <!-- Brand & Description -->
+        <div class="flex items-center gap-3.5">
+          <img src="assets/images/logo.jpg" alt="Columbina Logo" class="w-10 h-10 rounded-full object-cover ring-2 ring-rose-500/50">
+          <div>
+            <h4 class="font-extrabold text-white text-base">Columbina Bot</h4>
+            <p class="text-xs text-slate-400" data-i18n="footer_desc">An open-source, high-performance osu! visual card generator bot for Discord.</p>
+          </div>
+        </div>
+
+        <!-- Links -->
+        <div class="flex items-center gap-6 text-sm text-slate-400">
+          <a href="https://discord.com/oauth2/authorize?client_id=1562307139274416178&permissions=274878286912&integration_type=0&scope=applications.commands+bot" target="_blank" rel="noreferrer" class="hover:text-rose-400 transition-colors">Invite Bot</a>
+          <a href="https://github.com/noeltamba/osu-Beatmap-Card-Generator-Discord-Bot" target="_blank" rel="noreferrer" class="hover:text-white transition-colors">GitHub</a>
+          <a href="https://osu.ppy.sh" target="_blank" rel="noreferrer" class="hover:text-white transition-colors">osu! Web</a>
+        </div>
+
+      </div>
+
+      <div class="mt-8 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+        <p data-i18n="footer_dev">Crafted with ❤️ by @noeltamba & @hyzity.</p>
+        <p data-i18n="footer_disclaimer">Columbina Bot is an open-source community project and is not affiliated with or endorsed by ppy Pty Ltd or osu!.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

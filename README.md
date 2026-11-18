@@ -5,6 +5,7 @@
   <br>
 
   [![Invite Discord Bot](https://img.shields.io/badge/Invite_Bot-Click_Here-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/oauth2/authorize?client_id=1562307139274416178&permissions=274878286912&integration_type=0&scope=applications.commands+bot)
+  [![Official Website](https://img.shields.io/badge/Official_Website-Visit_Here-f43f5e?style=for-the-badge&logo=googlechrome&logoColor=white)](https://noeltamba.github.io/osu-Beatmap-Card-Generator-Discord-Bot/)
 
 </div>
 # 🎮 osu! Beatmap Card Generator - Release v1.4.1
