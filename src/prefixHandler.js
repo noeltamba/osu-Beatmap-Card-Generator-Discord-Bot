@@ -12,6 +12,7 @@ const { generateTopPlaysCard } = require('./topCardGenerator');
 const { generateMiniScoreCard } = require('./miniScoreCardGenerator');
 const { generateProfileCard } = require('./profileCardGenerator');
 const { generateVersusCard } = require('./versusCardGenerator');
+const { createAboutMessage } = require('./aboutEmbed');
 const {
   getLinkedUser,
   linkUser,
@@ -666,7 +667,13 @@ async function handlePrefixCommand(message, osuApi) {
     });
   }
 
-  // 10. Help: ;help, ;h, ;commands
+  // 10. About / Bot Info: ;about, ;info, ;botinfo
+  if (['about', 'info', 'botinfo'].includes(cmd)) {
+    const aboutData = createAboutMessage(lang, message.client.user?.id);
+    return message.reply(aboutData);
+  }
+
+  // 11. Help: ;help, ;h, ;commands
   if (['help', 'h', 'commands'].includes(cmd)) {
     const isId = lang === 'id';
     const embed = new EmbedBuilder()
@@ -697,10 +704,11 @@ async function handlePrefixCommand(message, osuApi) {
           inline: false
         },
         {
-          name: isId ? '🗺️ Beatmap & Profil' : '🗺️ Beatmap & Profile',
+          name: isId ? '🗺️ Beatmap, Profil & Info' : '🗺️ Beatmap, Profile & Info',
           value: '`;b <link/id> [+mods]` - ' + (isId ? 'Kartu informasi beatmap' : 'Beatmap info card with mods') + '\n' +
                  '`;link <username>` - ' + (isId ? 'Tautkan akun osu! kamu' : 'Link your osu! account') + '\n' +
                  '`;unlink` - ' + (isId ? 'Lepas tautan akun osu!' : 'Unlink your osu! account') + '\n' +
+                 '`;about` - ' + (isId ? 'Penjelasan & informasi lengkap Columbina Bot' : 'Detailed information & Columbina Bot guide') + '\n' +
                  '`;github` - ' + (isId ? 'Link repositori GitHub bot' : 'Official GitHub repository link'),
           inline: false
         }
@@ -713,6 +721,7 @@ async function handlePrefixCommand(message, osuApi) {
       if (err.code === 50013 || err.message?.includes('Missing Permissions')) {
         const plainHelp = isId
           ? `⚡ **Columbina Bot - Perintah Prefix (;)**\n\n` +
+            `• \`;about\` : Penjelasan & informasi lengkap Columbina Bot\n` +
             `• \`;vs <player> [player2]\` : Tanding skor/profil head-to-head (opsional reply beatmap)\n` +
             `• \`;c [player]\` : Bandingkan top skor di beatmap (reply pesan bot)\n` +
             `• \`;pcard [player]\` : Kartu Profil Modern (Aim, Speed, Acc Breakdown)\n` +
@@ -722,9 +731,11 @@ async function handlePrefixCommand(message, osuApi) {
             `• \`;b <link/id> [+mods]\` : Informasi Beatmap\n` +
             `• \`;s <link/id>\` : Kartu Skor dari link/ID\n` +
             `• \`;link <username>\` : Tautkan akun osu!\n` +
-            `• \`;unlink\` : Lepas tautan akun osu!\n\n` +
+            `• \`;unlink\` : Lepas tautan akun osu!\n` +
+            `• \`;github\` : Link repositori GitHub\n\n` +
             `💡 *Tip: Slash command (/) juga tetap aktif dan bisa digunakan kapan saja!*`
           : `⚡ **Columbina Bot - Prefix Commands (;)**\n\n` +
+            `• \`;about\` : Detailed information & Columbina Bot guide\n` +
             `• \`;vs <player> [player2]\` : Head-to-head showdown on beatmap/profile\n` +
             `• \`;c [player]\` : Compare personal best on beatmap (reply to bot message)\n` +
             `• \`;pcard [player]\` : Modern Profile Card (Aim, Speed, Acc Breakdown)\n` +
@@ -734,7 +745,8 @@ async function handlePrefixCommand(message, osuApi) {
             `• \`;b <link/id> [+mods]\` : Beatmap Info Card\n` +
             `• \`;s <link/id>\` : Full Score Card from link/ID\n` +
             `• \`;link <username>\` : Link your osu! account\n` +
-            `• \`;unlink\` : Unlink your osu! account\n\n` +
+            `• \`;unlink\` : Unlink your osu! account\n` +
+            `• \`;github\` : Official GitHub repository\n\n` +
             `💡 *Tip: Slash commands (/) are also available and can be used anytime!*`;
         return await message.reply({ content: plainHelp }).catch(() => {});
       }

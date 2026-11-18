@@ -22,6 +22,7 @@ const { generateTopPlaysCard } = require('./topCardGenerator');
 const { generateMiniScoreCard } = require('./miniScoreCardGenerator');
 const { generateProfileCard } = require('./profileCardGenerator');
 const { generateVersusCard } = require('./versusCardGenerator');
+const { createAboutMessage } = require('./aboutEmbed');
 const { handlePrefixCommand } = require('./prefixHandler');
 const {
   getLinkedUser,
@@ -412,6 +413,13 @@ const githubCommand = new SlashCommandBuilder()
     id: 'Dapatkan link repositori GitHub resmi Columbina Bot'
   });
 
+const aboutCommand = new SlashCommandBuilder()
+  .setName('about')
+  .setDescription('Display detailed information, features, and official links of Columbina Bot')
+  .setDescriptionLocalizations({
+    id: 'Tampilkan informasi lengkap, fitur unggulan, dan tautan resmi Columbina Bot'
+  });
+
 function createScoreButtons(score, originalInput = null, lang = 'en') {
   const row = new ActionRowBuilder();
   const beatmap = score.beatmap || {};
@@ -562,7 +570,7 @@ client.once(Events.ClientReady, async () => {
 
   // Register Global Slash Commands
   try {
-    console.log('Registering Slash Commands (/link, /unlink, /language, /recent, /top, /beatmap, /showcase, /scorecard, /miniscorecard, /profile, /pcard, /compare, /versus, /vs, /github)...');
+    console.log('Registering Slash Commands (/link, /unlink, /language, /recent, /top, /beatmap, /showcase, /scorecard, /miniscorecard, /profile, /pcard, /compare, /versus, /vs, /github, /about)...');
     await client.application.commands.set([
       linkCommand,
       unlinkCommand,
@@ -578,7 +586,8 @@ client.once(Events.ClientReady, async () => {
       compareCommand,
       versusCommand,
       vsCommand,
-      githubCommand
+      githubCommand,
+      aboutCommand
     ]);
     console.log('✅ All Slash Commands registered successfully!\n');
   } catch (err) {
@@ -1257,6 +1266,12 @@ client.on(Events.InteractionCreate, async interaction => {
       embeds: [embed],
       components: [row]
     });
+  }
+
+  // 14. Handle /about command
+  if (interaction.commandName === 'about') {
+    const aboutData = createAboutMessage(lang, interaction.client.user?.id);
+    return interaction.reply(aboutData);
   }
 });
 

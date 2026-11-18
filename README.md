@@ -118,6 +118,7 @@ A high-performance Discord bot generating visually stunning, frosted-glass score
 | **`/showcase`** | `link`, `[player]`, `[mods]` | Displays a dedicated beatmap showcase card for gameplay showcases with a golden crown badge. |
 | **`/link`** | `username` | Links your Discord account to your osu! profile for seamless usage without typing your username. |
 | **`/unlink`** | - | Unlinks your osu! account from your Discord profile. |
+| **`/about`** *(New!)* | - | Displays full bot explanation, core capabilities, version, and official links. |
 | **`/github`** | - | Displays official GitHub repository link with interactive button. |
 | **`/language`** | `[set]` | Configures your preferred bot language (🇬🇧 English / 🇮🇩 Bahasa Indonesia). |
 
@@ -138,6 +139,7 @@ You can also use the lightning-fast `;` prefix directly in chat without opening 
 | `;beatmap` | `;b`, `;map` | Beatmap info card with mods | `;b 129891 +HDDT` |
 | `;link` | - | Link Discord account to osu! user | `;link Utami` |
 | `;unlink` | - | Unlink osu! account | `;unlink` |
+| `;about` | `;info`, `;botinfo` | Displays full bot explanation and official links embed | `;about` |
 | `;github` | `;repo` | Official GitHub repository link | `;github` |
 | `;help` | `;h` | Display prefix commands help embed | `;help` |
 
