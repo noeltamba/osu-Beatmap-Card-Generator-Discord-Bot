@@ -24,6 +24,11 @@ function createAboutMessage(lang = 'en', botId = null) {
 
   const embed = new EmbedBuilder()
     .setColor('#f43f5e')
+    .setAuthor({
+      name: 'Columbina Bot • osu! Companion',
+      iconURL: 'https://i.imgur.com/WujKXUK.jpeg',
+      url: websiteUrl
+    })
     .setTitle(t(lang, 'about_embed_title'))
     .setDescription(t(lang, 'about_embed_desc'))
     .setThumbnail('https://i.imgur.com/WujKXUK.jpeg')
@@ -34,14 +39,9 @@ function createAboutMessage(lang = 'en', botId = null) {
         inline: false
       },
       {
-        name: t(lang, 'about_field_tech_title'),
-        value: t(lang, 'about_field_tech_desc'),
-        inline: true
-      },
-      {
-        name: t(lang, 'about_field_authors_title'),
-        value: t(lang, 'about_field_authors_desc'),
-        inline: true
+        name: t(lang, 'about_field_quickstart_title'),
+        value: t(lang, 'about_field_quickstart_desc'),
+        inline: false
       },
       {
         name: t(lang, 'about_field_links_title'),
@@ -50,7 +50,7 @@ function createAboutMessage(lang = 'en', botId = null) {
       }
     )
     .setFooter({
-      text: 'Columbina Bot • osu! Beatmap Card Generator • v1.4.1',
+      text: lang === 'id' ? 'v1.4.1 • Dibuat oleh @noeltamba & @hyzity' : 'v1.4.1 • Created by @noeltamba & @hyzity',
       iconURL: 'https://i.imgur.com/WujKXUK.jpeg'
     });
 
@@ -69,12 +69,7 @@ function createAboutMessage(lang = 'en', botId = null) {
       .setLabel(t(lang, 'btn_view_github'))
       .setStyle(ButtonStyle.Link)
       .setURL(githubUrl)
-      .setEmoji('⭐'),
-    new ButtonBuilder()
-      .setLabel(t(lang, 'btn_osu_web'))
-      .setStyle(ButtonStyle.Link)
-      .setURL('https://osu.ppy.sh')
-      .setEmoji('🎮')
+      .setEmoji('⭐')
   );
 
   return {

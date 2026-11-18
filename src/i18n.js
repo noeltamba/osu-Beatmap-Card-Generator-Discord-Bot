@@ -74,37 +74,26 @@ const translations = {
     versus_neither_scores: 'ℹ️ Neither **{p1}** nor **{p2}** have a recorded score on **{beatmap}**.',
     versus_error: '❌ Failed to generate versus comparison: {message}',
 
-    about_embed_title: '🌸 About Columbina Bot (v1.4.1)',
-    about_embed_desc: '✨ **Columbina Bot** is a modern, high-performance osu! visual generator for Discord. It seamlessly transforms your osu! gameplay and statistics into clean, frosted-glass graphic cards with pinpoint osu! API v2 accuracy and interactive duel features.',
-    about_field_features_title: '✨ Key Capabilities',
+    about_embed_title: '🌸 Columbina Bot (v1.4.1)',
+    about_embed_desc: 'Modern osu! Discord companion for visual score cards, skill breakdowns, and 1v1 duels.',
+    about_field_features_title: '🎮 Core Features',
     about_field_features_desc:
-      '• **🎴 Score & Mini Cards (`/recent`, `/scorecard`, `;m`)**\n' +
-      '  Stunning score cards with real API v2 fail detection, completion %, and modded difficulty rating.\n' +
-      '• **📊 Portrait Profile (`/profile`, `/pcard`, `;p`)**\n' +
-      '  Compact wireframe dashboard featuring donut skill breakdown (Aim, Speed, Acc), medals & Bancho stats.\n' +
-      '• **⚔️ Head-to-Head Versus Duel (`/versus`, `/vs`, `;vs`)**\n' +
-      '  1v1 showdown battle comparing beatmap scores or overall profiles with cozy red-blue style & 7-block round tracker.\n' +
-      '• **🔍 Smart Compare (`/compare`, `;c`)**\n' +
-      '  Quick personal best score lookup on any beatmap by simply replying to a message from any bot.\n' +
-      '• **🗺️ Beatmap Cards (`/beatmap`, `;b`)**\n' +
-      '  Instant beatmap stats with mods calculation and direct download links.',
-    about_field_tech_title: '⚙️ Bot Information',
-    about_field_tech_desc:
-      '• **Version:** `v1.4.1`\n' +
-      '• **Prefixes:** `;` and Slash Commands (`/`)\n' +
-      '• **Engine:** Node.js & Discord.js v14\n' +
-      '• **Renderer:** @napi-rs/canvas & Lucide Icons\n' +
-      '• **Difficulty Calc:** rosu-pp-js & osu! API v2',
-    about_field_authors_title: '👨‍💻 Authors & Credits',
-    about_field_authors_desc:
-      'Crafted with ❤️ by **@noeltamba** & **@hyzity**.\n' +
-      'Special thanks to the osu! community and Bathbot for inspiration.',
-    about_field_links_title: '🔗 Useful Links',
+      '• **Score & Mini Cards** (`/recent`, `;m`) — Sleek cards + real fail tracking\n' +
+      '• **Skill Profile** (`/profile`, `;p`) — Donut breakdown of Aim, Speed, & Acc\n' +
+      '• **Versus Duel** (`/versus`, `;vs`) — 1v1 showdown on maps or profiles\n' +
+      '• **Smart Compare** (`/compare`, `;c`) — Check beatmap PB by replying to scores\n' +
+      '• **Beatmap Cards** (`/beatmap`, `;b`) — Beatmap specs with mod calculations',
+    about_field_quickstart_title: '⚡ Quick Start',
+    about_field_quickstart_desc:
+      '`1.` **Link Account:** `;link <username>`\n' +
+      '`2.` **Recent Score:** `;m` *(mini)* or `;r` *(full)*\n' +
+      '`3.` **Player Profile:** `;p`\n' +
+      '`4.` **Challenge Rivals:** `;vs <player>`',
+    about_field_links_title: '🔗 Official Links',
     about_field_links_desc:
-      '• [Official Website & Showcase]({websiteUrl})\n' +
-      '• [Invite Columbina to Your Server]({inviteUrl})\n' +
-      '• [Official GitHub Repository]({githubUrl})\n' +
-      '• [osu! Official Site](https://osu.ppy.sh)',
+      '• 🌐 [Website & Showcase]({websiteUrl})\n' +
+      '• 📨 [Invite to Server]({inviteUrl})\n' +
+      '• ⭐ [GitHub Repository]({githubUrl})',
 
     github_embed_title: '🌸 Columbina Bot - GitHub Repository',
     github_embed_desc: 'Columbina Bot is an open-source, high-performance osu! visual card generator for Discord.\n\n⭐ **Repository URL:**\nhttps://github.com/noeltamba/osu-Beatmap-Card-Generator-Discord-Bot\n\nFeel free to star the repo, report issues, or contribute!',
@@ -216,37 +205,26 @@ const translations = {
     versus_neither_scores: 'ℹ️ Baik **{p1}** maupun **{p2}** belum memiliki skor di beatmap **{beatmap}**.',
     versus_error: '❌ Gagal membuat perbandingan versus: {message}',
 
-    about_embed_title: '🌸 Tentang Columbina Bot (v1.4.1)',
-    about_embed_desc: '✨ **Columbina Bot** adalah bot Discord generator visual osu! generasi baru berkinerja tinggi. Dirancang untuk mengubah statistik permainan osu! kamu menjadi kartu grafis berdesain modern dan elegan, akurasi kalkulasi API v2 yang presisi, serta fitur duel interaktif.',
-    about_field_features_title: '✨ Fitur & Kemampuan Unggulan',
+    about_embed_title: '🌸 Columbina Bot (v1.4.1)',
+    about_embed_desc: 'Bot Discord visual osu! modern untuk pamer skor estetik, pantau profil skill, dan tanding 1v1.',
+    about_field_features_title: '🎮 Fitur Utama',
     about_field_features_desc:
-      '• **🎴 Kartu Skor & Mini (`/recent`, `/scorecard`, `;m`)**\n' +
-      '  Kartu skor estetik dengan deteksi fail akurat, persentase fail, dan kalkulasi rating bintang ber-mod.\n' +
-      '• **📊 Profil Pemain Portrait (`/profile`, `/pcard`, `;p`)**\n' +
-      '  Dashboard vertikal ringkas dengan diagram donat rasio skill (Aim, Speed, Acc), medali, dan statistik Bancho.\n' +
-      '• **⚔️ Head-to-Head Versus Duel (`/versus`, `/vs`, `;vs`)**\n' +
-      '  Tanding duel 1v1 antar pemain pada beatmap atau profil secara langsung dengan gaya cozy merah-biru & 7-block round tracker.\n' +
-      '• **🔍 Smart Compare (`/compare`, `;c`)**\n' +
-      '  Cek skor terbaik pribadi di beatmap cukup dengan me-reply pesan dari bot mana pun.\n' +
-      '• **🗺️ Kartu Beatmap Instan (`/beatmap`, `;b`)**\n' +
-      '  Info beatmap instan dengan kalkulasi mod dan tombol download cepat (Beatconnect).',
-    about_field_tech_title: '⚙️ Informasi Bot',
-    about_field_tech_desc:
-      '• **Versi:** `v1.4.1`\n' +
-      '• **Prefix:** `;` dan Slash Commands (`/`)\n' +
-      '• **Engine:** Node.js & Discord.js v14\n' +
-      '• **Renderer:** @napi-rs/canvas & Lucide Icons\n' +
-      '• **Kalkulasi:** rosu-pp-js & osu! API v2',
-    about_field_authors_title: '👨‍💻 Pengembang & Kredit',
-    about_field_authors_desc:
-      'Dibuat dengan ❤️ oleh **@noeltamba** & **@hyzity**.\n' +
-      'Terima kasih banyak untuk komunitas osu! dan inspirasi Bathbot.',
+      '• **Skor & Mini** (`/recent`, `;m`) — Kartu skor estetik + deteksi fail akurat\n' +
+      '• **Profil Skill** (`/profile`, `;p`) — Diagram donat rasio Aim, Speed, & Acc\n' +
+      '• **Versus Duel** (`/versus`, `;vs`) — Adu skor beatmap / profil secara langsung\n' +
+      '• **Smart Compare** (`/compare`, `;c`) — Cek skor di beatmap (cukup reply pesan)\n' +
+      '• **Kartu Beatmap** (`/beatmap`, `;b`) — Info beatmap lengkap + kalkulasi mods',
+    about_field_quickstart_title: '⚡ Cara Pakai Cepat',
+    about_field_quickstart_desc:
+      '`1.` **Tautkan Akun:** `;link <username>`\n' +
+      '`2.` **Skor Terbaru:** `;m` *(mini)* atau `;r` *(lengkap)*\n' +
+      '`3.` **Profil Pemain:** `;p`\n' +
+      '`4.` **Ajak Duel:** `;vs <player>`',
     about_field_links_title: '🔗 Tautan Resmi',
     about_field_links_desc:
-      '• [Website Resmi & Showcase]({websiteUrl})\n' +
-      '• [Undang Bot ke Server Kamu]({inviteUrl})\n' +
-      '• [Repositori GitHub (Open Source)]({githubUrl})\n' +
-      '• [Website Resmi osu!](https://osu.ppy.sh)',
+      '• 🌐 [Website & Showcase]({websiteUrl})\n' +
+      '• 📨 [Undang ke Server]({inviteUrl})\n' +
+      '• ⭐ [Repositori GitHub]({githubUrl})',
 
     github_embed_title: '🌸 Columbina Bot - Repositori GitHub',
     github_embed_desc: 'Columbina Bot adalah bot Discord generator kartu visual osu! berkinerja tinggi dan open-source.\n\n⭐ **URL Repositori:**\nhttps://github.com/noeltamba/osu-Beatmap-Card-Generator-Discord-Bot\n\nJangan lupa beri bintang (star) di GitHub, laporkan saran/masalah, atau berkontribusi!',
