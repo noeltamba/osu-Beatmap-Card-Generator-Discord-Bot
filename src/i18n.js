@@ -74,25 +74,25 @@ const translations = {
     versus_neither_scores: 'ℹ️ Neither **{p1}** nor **{p2}** have a recorded score on **{beatmap}**.',
     versus_error: '❌ Failed to generate versus comparison: {message}',
 
-    about_embed_title: '🌸 Columbina Bot (v1.4.1)',
+    about_embed_title: '<a:yuri:1572540573322322041> Columbina Bot (v1.4.1)',
     about_embed_desc: 'Modern osu! Discord companion for visual score cards, skill breakdowns, and 1v1 duels.',
     about_field_features_title: '🎮 Core Features',
     about_field_features_desc:
-      '• **Score & Mini Cards** (`/recent`, `;m`) — Sleek cards + real fail tracking\n' +
-      '• **Skill Profile** (`/profile`, `;p`) — Donut breakdown of Aim, Speed, & Acc\n' +
-      '• **Versus Duel** (`/versus`, `;vs`) — 1v1 showdown on maps or profiles\n' +
-      '• **Smart Compare** (`/compare`, `;c`) — Check beatmap PB by replying to scores\n' +
-      '• **Beatmap Cards** (`/beatmap`, `;b`) — Beatmap specs with mod calculations',
+      '• <:NOTWASHED4x:1572543127896588370> **Score & PP Check** (`/recent`, `;m`) — Sleek cards + real fail tracking & accurate PP\n' +
+      '• 📊 **Skill Profile** (`/profile`, `;p`) — Donut breakdown of Aim, Speed, & Acc\n' +
+      '• ⚔️ **Versus Duel** (`/versus`, `;vs`) — 1v1 showdown on maps or profiles\n' +
+      '• 🔍 **Smart Compare** (`/compare`, `;c`) — Check beatmap PB by replying to scores\n' +
+      '• <:Osu4x:1572543237615386655> **Beatmap Cards** (`/beatmap`, `;b`) — Beatmap specs with mod calculations',
     about_field_quickstart_title: '⚡ Quick Start',
     about_field_quickstart_desc:
       '`1.` **Link Account:** `;link <username>`\n' +
-      '`2.` **Recent Score:** `;m` *(mini)* or `;r` *(full)*\n' +
+      '`2.` <:NOTWASHED4x:1572543127896588370> **Check Score & PP:** `;m` *(mini)* or `;r` *(full)*\n' +
       '`3.` **Player Profile:** `;p`\n' +
       '`4.` **Challenge Rivals:** `;vs <player>`',
     about_field_links_title: '🔗 Official Links',
     about_field_links_desc:
       '• 🌐 [Website & Showcase]({websiteUrl})\n' +
-      '• 📨 [Invite to Server]({inviteUrl})\n' +
+      '• <a:yuri:1572540573322322041> [Invite Columbina to Server]({inviteUrl})\n' +
       '• ⭐ [GitHub Repository]({githubUrl})',
 
     github_embed_title: '🌸 Columbina Bot - GitHub Repository',
@@ -205,25 +205,25 @@ const translations = {
     versus_neither_scores: 'ℹ️ Baik **{p1}** maupun **{p2}** belum memiliki skor di beatmap **{beatmap}**.',
     versus_error: '❌ Gagal membuat perbandingan versus: {message}',
 
-    about_embed_title: '🌸 Columbina Bot (v1.4.1)',
+    about_embed_title: '<a:yuri:1572540573322322041> Columbina Bot (v1.4.1)',
     about_embed_desc: 'Bot Discord visual osu! modern untuk pamer skor estetik, pantau profil skill, dan tanding 1v1.',
     about_field_features_title: '🎮 Fitur Utama',
     about_field_features_desc:
-      '• **Skor & Mini** (`/recent`, `;m`) — Kartu skor estetik + deteksi fail akurat\n' +
-      '• **Profil Skill** (`/profile`, `;p`) — Diagram donat rasio Aim, Speed, & Acc\n' +
-      '• **Versus Duel** (`/versus`, `;vs`) — Adu skor beatmap / profil secara langsung\n' +
-      '• **Smart Compare** (`/compare`, `;c`) — Cek skor di beatmap (cukup reply pesan)\n' +
-      '• **Kartu Beatmap** (`/beatmap`, `;b`) — Info beatmap lengkap + kalkulasi mods',
+      '• <:NOTWASHED4x:1572543127896588370> **Cek Skor & PP** (`/recent`, `;m`) — Kartu skor estetik + kalkulasi PP & deteksi fail akurat\n' +
+      '• 📊 **Profil Skill** (`/profile`, `;p`) — Diagram donat rasio Aim, Speed, & Acc\n' +
+      '• ⚔️ **Versus Duel** (`/versus`, `;vs`) — Adu skor beatmap / profil secara langsung\n' +
+      '• 🔍 **Smart Compare** (`/compare`, `;c`) — Cek skor di beatmap (cukup reply pesan)\n' +
+      '• <:Osu4x:1572543237615386655> **Kartu Beatmap** (`/beatmap`, `;b`) — Info beatmap lengkap + kalkulasi mods',
     about_field_quickstart_title: '⚡ Cara Pakai Cepat',
     about_field_quickstart_desc:
       '`1.` **Tautkan Akun:** `;link <username>`\n' +
-      '`2.` **Skor Terbaru:** `;m` *(mini)* atau `;r` *(lengkap)*\n' +
+      '`2.` <:NOTWASHED4x:1572543127896588370> **Cek Skor & PP:** `;m` *(mini)* atau `;r` *(lengkap)*\n' +
       '`3.` **Profil Pemain:** `;p`\n' +
       '`4.` **Ajak Duel:** `;vs <player>`',
     about_field_links_title: '🔗 Tautan Resmi',
     about_field_links_desc:
       '• 🌐 [Website & Showcase]({websiteUrl})\n' +
-      '• 📨 [Undang ke Server]({inviteUrl})\n' +
+      '• <a:yuri:1572540573322322041> [Undang ke Server]({inviteUrl})\n' +
       '• ⭐ [Repositori GitHub]({githubUrl})',
 
     github_embed_title: '🌸 Columbina Bot - Repositori GitHub',

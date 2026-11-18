@@ -44,6 +44,7 @@ function createScoreButtons(score, originalInput = null, lang = 'en') {
         .setLabel(t(lang, 'btn_open_score'))
         .setStyle(ButtonStyle.Link)
         .setURL(scoreUrl)
+        .setEmoji('1572543237615386655')
     );
   }
 
@@ -52,6 +53,7 @@ function createScoreButtons(score, originalInput = null, lang = 'en') {
       .setLabel(t(lang, 'btn_open_beatmap'))
       .setStyle(ButtonStyle.Link)
       .setURL(beatmapUrl)
+      .setEmoji('1572543237615386655')
   );
 
   if (setId) {
@@ -60,6 +62,7 @@ function createScoreButtons(score, originalInput = null, lang = 'en') {
         .setLabel(t(lang, 'btn_download'))
         .setStyle(ButtonStyle.Link)
         .setURL(`https://beatconnect.io/b/${setId}`)
+        .setEmoji('📥')
     );
   }
 
@@ -76,6 +79,7 @@ function createBeatmapButtons(beatmap, originalInput = null, lang = 'en') {
       .setLabel(t(lang, 'btn_open_on_osu'))
       .setStyle(ButtonStyle.Link)
       .setURL(beatmapUrl)
+      .setEmoji('1572543237615386655')
   );
 
   if (setId) {
@@ -84,6 +88,7 @@ function createBeatmapButtons(beatmap, originalInput = null, lang = 'en') {
         .setLabel(t(lang, 'btn_download'))
         .setStyle(ButtonStyle.Link)
         .setURL(`https://beatconnect.io/b/${setId}`)
+        .setEmoji('📥')
     );
   }
 

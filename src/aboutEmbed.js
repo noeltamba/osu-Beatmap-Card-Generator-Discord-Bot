@@ -59,7 +59,7 @@ function createAboutMessage(lang = 'en', botId = null) {
       .setLabel(t(lang, 'btn_invite_bot'))
       .setStyle(ButtonStyle.Link)
       .setURL(inviteUrl)
-      .setEmoji('📨'),
+      .setEmoji('1572540573322322041'),
     new ButtonBuilder()
       .setLabel(t(lang, 'btn_official_website'))
       .setStyle(ButtonStyle.Link)
