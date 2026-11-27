@@ -161,13 +161,14 @@ class OsuApi {
     throw new Error('Format beatmap tidak didukung.');
   }
 
-  async getUser(usernameOrId) {
+  async getUser(usernameOrId, mode = 'osu') {
     const token = await this.getAccessToken();
     const cleanUser = String(usernameOrId).trim();
     const isId = /^\d+$/.test(cleanUser);
     const query = isId ? '' : '?key=username';
+    const cleanMode = ['osu', 'taiko', 'fruits', 'mania'].includes(mode) ? mode : 'osu';
 
-    const response = await fetch(`https://osu.ppy.sh/api/v2/users/${encodeURIComponent(cleanUser)}/osu${query}`, {
+    const response = await fetch(`https://osu.ppy.sh/api/v2/users/${encodeURIComponent(cleanUser)}/${cleanMode}${query}`, {
       headers: this.getDefaultHeaders(token)
     });
 
@@ -182,10 +183,11 @@ class OsuApi {
     return await response.json();
   }
 
-  async getUserRecentScore(userId, limit = 1, includeFails = 1) {
+  async getUserRecentScore(userId, limit = 1, includeFails = 1, mode = null) {
     const token = await this.getAccessToken();
+    const modeQuery = mode && ['osu', 'taiko', 'fruits', 'mania'].includes(mode) ? `&mode=${mode}` : '';
 
-    const response = await fetch(`https://osu.ppy.sh/api/v2/users/${userId}/scores/recent?include_fails=${includeFails}&limit=${limit}`, {
+    const response = await fetch(`https://osu.ppy.sh/api/v2/users/${userId}/scores/recent?include_fails=${includeFails}&limit=${limit}${modeQuery}`, {
       headers: this.getDefaultHeaders(token)
     });
 

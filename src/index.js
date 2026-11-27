@@ -19,6 +19,12 @@ const OsuApi = require('./osuApi');
 const { generateBeatmapCard } = require('./cardGenerator');
 const { generateScoreCard } = require('./scoreCardGenerator');
 const { generateTopPlaysCard } = require('./topCardGenerator');
+const { generateRecentListCard } = require('./recentListCardGenerator');
+const {
+  normalizeRecentListOptions,
+  formatFilterSummaryTags,
+  fetchFilteredRecentScores
+} = require('./recentListFilter');
 const { generateMiniScoreCard } = require('./miniScoreCardGenerator');
 const { generateProfileCard } = require('./profileCardGenerator');
 const { generateVersusCard } = require('./versusCardGenerator');
@@ -200,6 +206,119 @@ const recentCommand = new SlashCommandBuilder()
         id: 'Nama pemain osu! (opsional jika sudah /link)'
       })
       .setRequired(false)
+  );
+
+const recentlistCommand = new SlashCommandBuilder()
+  .setName('recentlist')
+  .setDescription('Display recent plays list card (up to 15 plays) with flexible filters')
+  .setDescriptionLocalizations({
+    id: 'Tampilkan daftar kartu skor terbaru (maks 15 skor) dengan opsi filter lengkap'
+  })
+  .addStringOption(option =>
+    option
+      .setName('player')
+      .setDescription('osu! player username (optional if already linked)')
+      .setDescriptionLocalizations({
+        id: 'Nama pemain osu! (opsional jika sudah /link)'
+      })
+      .setRequired(false)
+  )
+  .addIntegerOption(option =>
+    option
+      .setName('count')
+      .setDescription('Number of recent plays to show (1 - 15, default: 15)')
+      .setDescriptionLocalizations({
+        id: 'Jumlah skor terbaru yang ditampilkan (1 - 15, default: 15)'
+      })
+      .setMinValue(1)
+      .setMaxValue(15)
+      .setRequired(false)
+  )
+  .addBooleanOption(option =>
+    option
+      .setName('pass')
+      .setDescription('Filter passed plays only (true) or failed plays only (false)')
+      .setDescriptionLocalizations({
+        id: 'Filter hanya skor yang lulus (true) atau gagal (false)'
+      })
+      .setRequired(false)
+  )
+  .addBooleanOption(option =>
+    option
+      .setName('fc')
+      .setDescription('Show Full Combo plays only')
+      .setDescriptionLocalizations({
+        id: 'Tampilkan hanya skor Full Combo (FC)'
+      })
+      .setRequired(false)
+  )
+  .addBooleanOption(option =>
+    option
+      .setName('choke')
+      .setDescription('Show choke plays only')
+      .setDescriptionLocalizations({
+        id: 'Tampilkan hanya skor nyaris FC (choke)'
+      })
+      .setRequired(false)
+  )
+  .addBooleanOption(option =>
+    option
+      .setName('ranked')
+      .setDescription('Filter ranked beatmaps only (true) or unranked only (false)')
+      .setDescriptionLocalizations({
+        id: 'Filter hanya beatmap Ranked (true) atau Unranked (false)'
+      })
+      .setRequired(false)
+  )
+  .addStringOption(option =>
+    option
+      .setName('sort')
+      .setDescription('Sort order of recent plays')
+      .setDescriptionLocalizations({
+        id: 'Urutkan daftar skor berdasarkan kriteria'
+      })
+      .setRequired(false)
+      .addChoices(
+        { name: 'Most Recent (Default)', value: 'recent' },
+        { name: 'Highest PP', value: 'pp' },
+        { name: 'Highest Accuracy', value: 'acc' },
+        { name: 'Highest Star Rating', value: 'sr' },
+        { name: 'Highest Combo', value: 'combo' },
+        { name: 'Lowest Misses', value: 'miss' }
+      )
+  )
+  .addStringOption(option =>
+    option
+      .setName('mods')
+      .setDescription('Filter by mods (e.g. HDDT, HR, NM)')
+      .setDescriptionLocalizations({
+        id: 'Filter berdasarkan mods (cth: HDDT, HR, NM)'
+      })
+      .setRequired(false)
+  )
+  .addStringOption(option =>
+    option
+      .setName('grade')
+      .setDescription('Filter by specific grade (SS, S, A, B, C, D, F)')
+      .setDescriptionLocalizations({
+        id: 'Filter berdasarkan grade tertentu (SS, S, A, B, C, D, F)'
+      })
+      .setRequired(false)
+  )
+  .addStringOption(option =>
+    option
+      .setName('mode')
+      .setDescription('osu! game mode')
+      .setDescriptionLocalizations({
+        id: 'Mode permainan osu!'
+      })
+      .setRequired(false)
+      .addChoices(
+        { name: 'osu!standard', value: 'osu' },
+        { name: 'osu!taiko', value: 'taiko' },
+        { name: 'osu!catch', value: 'fruits' },
+        { name: 'osu!mania', value: 'mania' }
+      )
   );
 
 const topCommand = new SlashCommandBuilder()
@@ -486,7 +605,34 @@ function createBeatmapButtons(beatmap, originalInput = null, lang = 'en') {
 
 const STATUS_STATE_FILE = path.join(__dirname, '..', 'data', 'status_state.json');
 const DEFAULT_PRESENCE = ';help | osu! Image Generator ✨';
-const UPDATE_PRESENCE = '✨ v1.4.2 Updated: Official Website & New ;about Showcase! | ;help';
+const UPDATE_PRESENCE = '✨ v1.5.0 Updated: New ;rl Recent List & Combo Filters! | ;help';
+const UPDATE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 1 minggu (7 hari)
+const MAX_TIMEOUT_MS = 2147483647; // Batas aman 32-bit signed integer untuk setTimeout (~24.8 hari)
+
+function schedulePresenceRevert(client, statusData) {
+  const remainingMs = (statusData.activeUntil || 0) - Date.now();
+  if (remainingMs <= 0) {
+    try {
+      client.user.setPresence({
+        activities: [{
+          name: 'custom',
+          type: ActivityType.Custom,
+          state: statusData.defaultStatus || DEFAULT_PRESENCE
+        }],
+        status: 'online'
+      });
+      console.log(`🔄 7-Day update status window selesai. Status bot kembali ke default: "${statusData.defaultStatus || DEFAULT_PRESENCE}"\n`);
+      statusData.activeUntil = null;
+      fs.writeFileSync(STATUS_STATE_FILE, JSON.stringify(statusData, null, 2), 'utf-8');
+    } catch (err) {
+      console.error('Failed to revert bot presence:', err.message);
+    }
+    return;
+  }
+
+  const delay = Math.min(remainingMs, MAX_TIMEOUT_MS);
+  setTimeout(() => schedulePresenceRevert(client, statusData), delay);
+}
 
 function setupBotPresence(client) {
   let statusData = null;
@@ -494,12 +640,12 @@ function setupBotPresence(client) {
     if (fs.existsSync(STATUS_STATE_FILE)) {
       statusData = JSON.parse(fs.readFileSync(STATUS_STATE_FILE, 'utf-8'));
     }
-  } catch (_) {}
+  } catch (_) { }
 
-  // Inisialisasi jendela update status 24 jam jika belum ada, sudah usang, atau status update berubah
+  // Inisialisasi jendela update status 1 minggu (7 hari) jika belum ada, sudah usang, atau status update berubah
   if (!statusData || !statusData.activeUntil || statusData.updateStatus !== UPDATE_PRESENCE) {
     statusData = {
-      activeUntil: Date.now() + (24 * 60 * 60 * 1000), // 24 jam dari sekarang
+      activeUntil: Date.now() + UPDATE_WINDOW_MS, // 7 hari dari sekarang
       updateStatus: UPDATE_PRESENCE,
       defaultStatus: DEFAULT_PRESENCE
     };
@@ -507,13 +653,13 @@ function setupBotPresence(client) {
       const dataDir = path.dirname(STATUS_STATE_FILE);
       if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
       fs.writeFileSync(STATUS_STATE_FILE, JSON.stringify(statusData, null, 2), 'utf-8');
-    } catch (_) {}
+    } catch (_) { }
   }
 
   const now = Date.now();
   if (statusData.activeUntil && now < statusData.activeUntil) {
     const remainingMs = statusData.activeUntil - now;
-    const remainingHours = (remainingMs / (1000 * 60 * 60)).toFixed(1);
+    const remainingDays = (remainingMs / (1000 * 60 * 60 * 24)).toFixed(1);
 
     try {
       client.user.setPresence({
@@ -524,29 +670,13 @@ function setupBotPresence(client) {
         }],
         status: 'online'
       });
-      console.log(`✨ Bot presence set to UPDATE STATUS: "${statusData.updateStatus || UPDATE_PRESENCE}" (Aktif selama ~${remainingHours} jam ke depan)\n`);
+      console.log(`✨ Bot presence set to UPDATE STATUS: "${statusData.updateStatus || UPDATE_PRESENCE}" (Aktif selama ~${remainingDays} hari ke depan)\n`);
     } catch (err) {
       console.error('Failed to set bot presence:', err.message);
     }
 
-    // Jadwalkan pengembalian otomatis ke default status setelah 24 jam selesai
-    setTimeout(() => {
-      try {
-        client.user.setPresence({
-          activities: [{
-            name: 'custom',
-            type: ActivityType.Custom,
-            state: statusData.defaultStatus || DEFAULT_PRESENCE
-          }],
-          status: 'online'
-        });
-        console.log(`🔄 24-Hour update status window selesai. Status bot kembali ke default: "${statusData.defaultStatus || DEFAULT_PRESENCE}"\n`);
-        statusData.activeUntil = null;
-        fs.writeFileSync(STATUS_STATE_FILE, JSON.stringify(statusData, null, 2), 'utf-8');
-      } catch (err) {
-        console.error('Failed to revert bot presence:', err.message);
-      }
-    }, remainingMs);
+    // Jadwalkan pengembalian otomatis ke default status setelah 1 minggu selesai
+    schedulePresenceRevert(client, statusData);
   } else {
     try {
       client.user.setPresence({
@@ -575,12 +705,13 @@ client.once(Events.ClientReady, async () => {
 
   // Register Global Slash Commands
   try {
-    console.log('Registering Slash Commands (/link, /unlink, /language, /recent, /top, /beatmap, /showcase, /scorecard, /miniscorecard, /profile, /pcard, /compare, /versus, /vs, /github, /about)...');
+    console.log('Registering Slash Commands (/link, /unlink, /language, /recent, /recentlist, /top, /beatmap, /showcase, /scorecard, /miniscorecard, /profile, /pcard, /compare, /versus, /vs, /github, /about)...');
     await client.application.commands.set([
       linkCommand,
       unlinkCommand,
       languageCommand,
       recentCommand,
+      recentlistCommand,
       topCommand,
       beatmapCommand,
       showcaseCommand,
@@ -742,6 +873,82 @@ client.on(Events.InteractionCreate, async interaction => {
     return;
   }
 
+  // 3a-2. Command /recentlist (Recent Plays List Generator - up to 15)
+  if (interaction.commandName === 'recentlist') {
+    let targetPlayer = interaction.options.getString('player');
+    const rlOpts = normalizeRecentListOptions({
+      player: targetPlayer,
+      count: interaction.options.getInteger('count') || 15,
+      pass: interaction.options.getBoolean('pass'),
+      fc: interaction.options.getBoolean('fc'),
+      choke: interaction.options.getBoolean('choke'),
+      ranked: interaction.options.getBoolean('ranked'),
+      sort: interaction.options.getString('sort') || 'recent',
+      mods: interaction.options.getString('mods'),
+      grade: interaction.options.getString('grade'),
+      mode: interaction.options.getString('mode')
+    });
+
+    if (!targetPlayer) {
+      const linked = getLinkedUser(interaction.user.id);
+      if (!linked) {
+        return interaction.reply({
+          content: t(lang, 'recent_not_linked'),
+          ephemeral: true
+        });
+      }
+      targetPlayer = linked.osuUsername;
+    }
+
+    await interaction.deferReply();
+
+    try {
+      const user = await osuApi.getUser(targetPlayer, rlOpts.mode || 'osu');
+      const { rawCount, scores } = await fetchFilteredRecentScores(osuApi, user.id, rlOpts);
+      const filterTags = formatFilterSummaryTags(rlOpts, lang);
+
+      if (rawCount === 0) {
+        return interaction.editReply({
+          content: t(lang, 'recent_no_scores', { username: user.username })
+        });
+      }
+
+      if (!scores || scores.length === 0) {
+        return interaction.editReply({
+          content: t(lang, 'recent_no_filtered_scores', {
+            username: user.username,
+            filters: filterTags.join(', ') || 'filter'
+          })
+        });
+      }
+
+      const imageBuffer = await generateRecentListCard(user, scores, {
+        lang,
+        filterTags,
+        mode: rlOpts.mode
+      });
+      const attachment = new AttachmentBuilder(imageBuffer, { name: `recentlist_${user.username}.png` });
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel(t(lang, 'btn_open_profile'))
+          .setStyle(ButtonStyle.Link)
+          .setURL(`https://osu.ppy.sh/users/${user.id}`)
+      );
+
+      await interaction.editReply({
+        files: [attachment],
+        components: [row]
+      });
+    } catch (err) {
+      console.error('Error in /recentlist command:', err);
+      await interaction.editReply({
+        content: t(lang, 'recent_error', { message: err.message })
+      });
+    }
+    return;
+  }
+
   // 3b. Command /top (Top Best Plays List Generator)
   if (interaction.commandName === 'top') {
     let targetPlayer = interaction.options.getString('player');
@@ -835,7 +1042,7 @@ client.on(Events.InteractionCreate, async interaction => {
           if (attrs?.star_rating) {
             beatmap.modded_difficulty_rating = attrs.star_rating;
           }
-        } catch (_) {}
+        } catch (_) { }
       }
 
       const imageBuffer = await generateBeatmapCard(beatmap, {
@@ -937,7 +1144,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 topRank = matchIdx + 1;
               }
             }
-          } catch (_) {}
+          } catch (_) { }
         }
 
         const imageBuffer = await generateMiniScoreCard(score, user, { lang, topRank });
@@ -1018,7 +1225,7 @@ client.on(Events.InteractionCreate, async interaction => {
             topRank = matchIdx + 1;
           }
         }
-      } catch (_) {}
+      } catch (_) { }
 
       const imageBuffer = await generateMiniScoreCard(score, user, { lang, topRank });
       const attachment = new AttachmentBuilder(imageBuffer, { name: `miniscore_${user.username}_bm${score.beatmap?.id || ''}_${score.id || 'recent'}.png` });
@@ -1284,7 +1491,7 @@ client.on(Events.InteractionCreate, async interaction => {
 client.on(Events.MessageCreate, async message => {
   if (message.author.bot) return;
 
-  // 0. Check prefix commands starting with ';' (e.g. ;m, ;r, ;t, ;b, ;c, ;help)
+  // 0. Check prefix commands starting with ';' (e.g. ;m, ;r, ;rl, ;t, ;b, ;c, ;help)
   if (message.content.startsWith(';')) {
     try {
       const handled = await handlePrefixCommand(message, osuApi);
@@ -1311,7 +1518,7 @@ client.on(Events.MessageCreate, async message => {
     const scoreMode = typeof parsedScore === 'object' ? parsedScore.mode : null;
 
     try {
-      await message.channel.sendTyping().catch(() => {});
+      await message.channel.sendTyping().catch(() => { });
 
       const score = await osuApi.getScore(scoreId, scoreMode);
       await osuApi.enrichScoreWithBeatmapAndMods(score);
@@ -1342,7 +1549,7 @@ client.on(Events.MessageCreate, async message => {
   const detectedMods = extractModsFromText(message.content);
 
   try {
-    await message.channel.sendTyping().catch(() => {});
+    await message.channel.sendTyping().catch(() => { });
 
     const beatmap = await osuApi.resolveBeatmap(parsed);
 
@@ -1352,7 +1559,7 @@ client.on(Events.MessageCreate, async message => {
         if (attrs?.star_rating) {
           beatmap.modded_difficulty_rating = attrs.star_rating;
         }
-      } catch (_) {}
+      } catch (_) { }
     }
 
     const imageBuffer = await generateBeatmapCard(beatmap, { mods: detectedMods, lang });

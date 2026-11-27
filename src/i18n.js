@@ -18,6 +18,9 @@ const translations = {
     cmd_unlink_desc: 'Unlink your osu! account from your Discord profile',
     cmd_recent_desc: 'Display recent score card for an osu! player',
     cmd_recent_player: 'osu! player username (optional if already linked)',
+    cmd_recentlist_desc: 'Display recent plays list card (up to 15 plays) for an osu! player',
+    cmd_recentlist_player: 'osu! player username (optional if already linked)',
+    cmd_recentlist_count: 'Number of recent plays to show (1 - 15, default: 15)',
     cmd_top_desc: 'Display top performance plays leaderboard card for an osu! player',
     cmd_top_player: 'osu! player username (optional if already linked)',
     cmd_top_count: 'Number of plays to show (1 - 10, default: 10)',
@@ -55,6 +58,7 @@ const translations = {
 
     recent_not_linked: '❌ You have not linked your osu! account yet.\nUse `/link username:<name>` first, or specify a player using `/recent player:<name>`.',
     recent_no_scores: 'ℹ️ No recent plays found for **{username}** in the last 24 hours.',
+    recent_no_filtered_scores: 'ℹ️ Found recent plays for **{username}**, but none matched your filter criteria (`{filters}`).',
     recent_error: '❌ Failed to fetch score: {message}',
 
     top_not_linked: '❌ You have not linked your osu! account yet.\nUse `/link username:<name>` first, or specify a player using `/top player:<name>`.',
@@ -74,11 +78,11 @@ const translations = {
     versus_neither_scores: 'ℹ️ Neither **{p1}** nor **{p2}** have a recorded score on **{beatmap}**.',
     versus_error: '❌ Failed to generate versus comparison: {message}',
 
-    about_embed_title: '<a:yuri:1572540573322322041> Columbina Bot (v1.4.2)',
+    about_embed_title: '<a:yuri:1572540573322322041> Columbina Bot (v1.5.0)',
     about_embed_desc: 'Modern osu! Discord companion for visual score cards, skill breakdowns, and 1v1 duels.',
     about_field_features_title: '🎮 Core Features',
     about_field_features_desc:
-      '• <:NOTWASHED4x:1572543127896588370> **Score & PP Check** (`/recent`, `;m`) — Sleek cards + real fail tracking & accurate PP\n' +
+      '• <:NOTWASHED4x:1572543127896588370> **Score & Recent List** (`/recent`, `;rl`, `;m`) — Sleek cards + 15-play filtered session list\n' +
       '• 📊 **Skill Profile** (`/profile`, `;p`) — Donut breakdown of Aim, Speed, & Acc\n' +
       '• ⚔️ **Versus Duel** (`/versus`, `;vs`) — 1v1 showdown on maps or profiles\n' +
       '• 🔍 **Smart Compare** (`/compare`, `;c`) — Check beatmap PB by replying to scores\n' +
@@ -149,6 +153,9 @@ const translations = {
     cmd_unlink_desc: 'Lepas tautan akun osu! dari akun Discord kamu',
     cmd_recent_desc: 'Tampilkan kartu skor terbaru (recent score) dari pemain osu!',
     cmd_recent_player: 'Nama pemain osu! (opsional jika sudah /link)',
+    cmd_recentlist_desc: 'Tampilkan daftar kartu skor terbaru (maks 15 skor) dari pemain osu!',
+    cmd_recentlist_player: 'Nama pemain osu! (opsional jika sudah /link)',
+    cmd_recentlist_count: 'Jumlah skor terbaru yang ditampilkan (1 - 15, default: 15)',
     cmd_top_desc: 'Tampilkan daftar kartu skor terbaik (Top Plays) dari pemain osu!',
     cmd_top_player: 'Nama pemain osu! (opsional jika sudah /link)',
     cmd_top_count: 'Jumlah skor yang ditampilkan (1 - 10, default: 10)',
@@ -186,6 +193,7 @@ const translations = {
 
     recent_not_linked: '❌ Kamu belum menautkan akun osu!\nGunakan `/link username:<nama_osu>` terlebih dahulu, atau masukkan nama pemain dengan opsi `/recent player:<nama>`.',
     recent_no_scores: 'ℹ️ Tidak ada permainan / skor terbaru yang ditemukan untuk pemain **{username}** dalam 24 jam terakhir.',
+    recent_no_filtered_scores: 'ℹ️ Ditemukan skor terbaru untuk **{username}**, tetapi tidak ada yang cocok dengan filter kamu (`{filters}`).',
     recent_error: '❌ Gagal mengambil score: {message}',
 
     top_not_linked: '❌ Kamu belum menautkan akun osu!\nGunakan `/link username:<nama_osu>` terlebih dahulu, atau masukkan nama pemain dengan opsi `/top player:<nama>`.',
@@ -205,11 +213,11 @@ const translations = {
     versus_neither_scores: 'ℹ️ Baik **{p1}** maupun **{p2}** belum memiliki skor di beatmap **{beatmap}**.',
     versus_error: '❌ Gagal membuat perbandingan versus: {message}',
 
-    about_embed_title: '<a:yuri:1572540573322322041> Columbina Bot (v1.4.2)',
+    about_embed_title: '<a:yuri:1572540573322322041> Columbina Bot (v1.5.0)',
     about_embed_desc: 'Bot Discord visual osu! modern untuk pamer skor estetik, pantau profil skill, dan tanding 1v1.',
     about_field_features_title: '🎮 Fitur Utama',
     about_field_features_desc:
-      '• <:NOTWASHED4x:1572543127896588370> **Cek Skor & PP** (`/recent`, `;m`) — Kartu skor estetik + kalkulasi PP & deteksi fail akurat\n' +
+      '• <:NOTWASHED4x:1572543127896588370> **Skor & Recent List** (`/recent`, `;rl`, `;m`) — Kartu skor estetik + daftar 15 skor dengan filter combo\n' +
       '• 📊 **Profil Skill** (`/profile`, `;p`) — Diagram donat rasio Aim, Speed, & Acc\n' +
       '• ⚔️ **Versus Duel** (`/versus`, `;vs`) — Adu skor beatmap / profil secara langsung\n' +
       '• 🔍 **Smart Compare** (`/compare`, `;c`) — Cek skor di beatmap (cukup reply pesan)\n' +

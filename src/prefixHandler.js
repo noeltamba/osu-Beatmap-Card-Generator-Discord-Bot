@@ -9,6 +9,12 @@ const {
 const { generateBeatmapCard } = require('./cardGenerator');
 const { generateScoreCard } = require('./scoreCardGenerator');
 const { generateTopPlaysCard } = require('./topCardGenerator');
+const { generateRecentListCard } = require('./recentListCardGenerator');
+const {
+  parseRecentListArgs,
+  formatFilterSummaryTags,
+  fetchFilteredRecentScores
+} = require('./recentListFilter');
 const { generateMiniScoreCard } = require('./miniScoreCardGenerator');
 const { generateProfileCard } = require('./profileCardGenerator');
 const { generateVersusCard } = require('./versusCardGenerator');
@@ -151,7 +157,7 @@ async function handlePrefixCommand(message, osuApi) {
         const scoreId = typeof parsed === 'object' ? parsed.id : parsed;
         const scoreMode = typeof parsed === 'object' ? parsed.mode : null;
 
-        await message.channel.sendTyping().catch(() => {});
+        await message.channel.sendTyping().catch(() => { });
         const score = await osuApi.getScore(scoreId, scoreMode);
         await osuApi.enrichScoreWithBeatmapAndMods(score);
         const user = score.user || (score.user_id ? await osuApi.getUser(score.user_id) : {});
@@ -164,7 +170,7 @@ async function handlePrefixCommand(message, osuApi) {
               const matchIdx = topScores.findIndex(s => String(s.id) === String(score.id));
               if (matchIdx !== -1) topRank = matchIdx + 1;
             }
-          } catch (_) {}
+          } catch (_) { }
         }
 
         const imageBuffer = await generateMiniScoreCard(score, user, { lang, topRank });
@@ -180,7 +186,7 @@ async function handlePrefixCommand(message, osuApi) {
         player = linked.osuUsername;
       }
 
-      await message.channel.sendTyping().catch(() => {});
+      await message.channel.sendTyping().catch(() => { });
       const user = await osuApi.getUser(player);
 
       // Case B: Top play specified
@@ -213,7 +219,7 @@ async function handlePrefixCommand(message, osuApi) {
           const matchIdx = topScores.findIndex(s => String(s.id) === String(score.id));
           if (matchIdx !== -1) topRank = matchIdx + 1;
         }
-      } catch (_) {}
+      } catch (_) { }
 
       const imageBuffer = await generateMiniScoreCard(score, user, { lang, topRank });
       const attachment = new AttachmentBuilder(imageBuffer, { name: `miniscore_${user.username}_bm${score.beatmap?.id || ''}_${score.id || 'recent'}.png` });
@@ -221,7 +227,7 @@ async function handlePrefixCommand(message, osuApi) {
       return message.reply({ files: [attachment], components: [row] });
     } catch (err) {
       console.error(`Error in ;${cmd}:`, err.message);
-      return message.reply({ content: t(lang, 'recent_error', { message: err.message }) }).catch(() => {});
+      return message.reply({ content: t(lang, 'recent_error', { message: err.message }) }).catch(() => { });
     }
   }
 
@@ -235,7 +241,7 @@ async function handlePrefixCommand(message, osuApi) {
     }
 
     try {
-      await message.channel.sendTyping().catch(() => {});
+      await message.channel.sendTyping().catch(() => { });
       const user = await osuApi.getUser(player);
       const scores = await osuApi.getUserRecentScore(user.id, 1, 1);
       if (!scores || scores.length === 0) {
@@ -249,7 +255,140 @@ async function handlePrefixCommand(message, osuApi) {
       return message.reply({ files: [attachment], components: [row] });
     } catch (err) {
       console.error(`Error in ;${cmd}:`, err.message);
-      return message.reply({ content: t(lang, 'recent_error', { message: err.message }) }).catch(() => {});
+      return message.reply({ content: t(lang, 'recent_error', { message: err.message }) }).catch(() => { });
+    }
+  }
+
+  // 2b. Recent List (15 Plays Card with combo filters): ;rl, ;recentlist
+  if (['rl', 'recentlist', 'rslist'].includes(cmd)) {
+    // Subcommand: ;rl help / ;rl -h / ;rl ?
+    if (args.length === 1 && ['help', 'h', '-h', '--help', '?'].includes(args[0].toLowerCase())) {
+      const isId = lang === 'id';
+      const rlHelpEmbed = new EmbedBuilder()
+        .setColor('#38bdf8')
+        .setTitle(isId ? '📋 Panduan Perintah `;rl` (Recent List)' : '📋 `;rl` (Recent List) Command Guide')
+        .setDescription(
+          isId
+            ? 'Menampilkan daftar hingga **15 skor terbaru** dalam bentuk kartu visual modern.\nSemua opsi di bawah dapat **dikombinasikan bebas** dalam urutan apa pun!\n\n**Format Dasar:** `;rl [player] [jumlah 1-15] [opsi=nilai ...]`'
+            : 'Displays up to **15 recent plays** in a sleek visual card.\nAll options below can be **freely combined** in any order!\n\n**Base Format:** `;rl [player] [count 1-15] [option=value ...]`'
+        )
+        .addFields(
+          {
+            name: isId ? '🎯 Filter Status Skor & Combo' : '🎯 Score & Combo Filters',
+            value:
+              '`pass=true` / `pass=false` — ' + (isId ? 'Hanya skor lulus / hanya gagal' : 'Passed plays only / failed only') + '\n' +
+              '`fail=true` — ' + (isId ? 'Hanya skor gagal (`F`)' : 'Failed plays (`F`) only') + '\n' +
+              '`fc=true` — ' + (isId ? 'Hanya skor Full Combo' : 'Full Combo plays only') + '\n' +
+              '`choke=true` — ' + (isId ? 'Hanya skor nyaris FC (miss sedikit / sliderbreak)' : 'Choke plays only (low miss / sliderbreak)'),
+            inline: false
+          },
+          {
+            name: isId ? '🔃 Pengurutan (`sort=`)' : '🔃 Sorting (`sort=`)',
+            value:
+              '`sort=pp` — ' + (isId ? 'PP tertinggi di sesi ini' : 'Highest PP in session') + '\n' +
+              '`sort=acc` — ' + (isId ? 'Akurasi tertinggi' : 'Highest accuracy') + '\n' +
+              '`sort=sr` — ' + (isId ? 'Star Rating tertinggi' : 'Highest Star Rating') + '\n' +
+              '`sort=combo` | `sort=score` | `sort=miss`',
+            inline: false
+          },
+          {
+            name: isId ? '🛠️ Filter Mods, Beatmap, Grade & Mode' : '🛠️ Mods, Beatmap, Grade & Mode',
+            value:
+              '`mods=HDDT` / `+HDDT` — ' + (isId ? 'Mengandung mod tersebut (`!`: harus persis, cth `+HDDT!`)' : 'Includes mods (`!`: exact match, e.g. `+HDDT!`)') + '\n' +
+              '`mods=NM` / `+NM` — ' + (isId ? 'Khusus NoMod' : 'NoMod only') + '\n' +
+              '`ranked=true` / `ranked=false` — ' + (isId ? 'Khusus map Ranked / Unranked' : 'Ranked / Unranked maps only') + '\n' +
+              '`status=loved` — ' + (isId ? 'Status spesifik (`ranked`, `loved`, `qualified`, `graveyard`)' : 'Specific map status (`ranked`, `loved`, `qualified`, `graveyard`)') + '\n' +
+              '`grade=S` / `min_grade=A` — ' + (isId ? 'Filter grade spesifik atau minimal grade' : 'Specific grade or minimum grade (`SS`, `S`, `A`, `B`, `C`, `D`, `F`)') + '\n' +
+              '`mode=osu` — ' + (isId ? 'Pilih mode (`osu`, `taiko`, `catch`, `mania`)' : 'Game mode (`osu`, `taiko`, `catch`, `mania`)'),
+            inline: false
+          },
+          {
+            name: isId ? '💡 Contoh Kombinasi' : '💡 Combo Examples',
+            value:
+              '• `;rl pass=true`\n' +
+              '• `;rl fc=true ranked=true`\n' +
+              '• `;rl mrekk pass=true sort=pp +HDDT`\n' +
+              '• `;rl WhiteCat choke=true 10`\n' +
+              '• `;rl mode=mania min_grade=S`',
+            inline: false
+          }
+        )
+        .setFooter({
+          text: isId
+            ? 'Tip: Gunakan /recentlist jika ingin memakai menu slash command!'
+            : 'Tip: You can also use /recentlist via Discord slash commands!'
+        });
+
+      try {
+        return await message.reply({ embeds: [rlHelpEmbed] });
+      } catch (err) {
+        if (err.code === 50013 || err.message?.includes('Missing Permissions')) {
+          const plainRlHelp = isId
+            ? `📋 **Panduan \`;rl\` (Recent List - Maks 15 Skor)**\n` +
+              `Format: \`;rl [player] [1-15] [opsi...]\`\n\n` +
+              `• **Filter Skor:** \`pass=true\`, \`fail=true\`, \`fc=true\`, \`choke=true\`\n` +
+              `• **Urutan:** \`sort=pp\`, \`sort=acc\`, \`sort=sr\`, \`sort=combo\`, \`sort=miss\`\n` +
+              `• **Mods:** \`mods=HDDT\` / \`+HDDT\`, \`+HDDT!\` (persis), \`+NM\`\n` +
+              `• **Map & Grade:** \`ranked=true\`, \`status=loved\`, \`grade=S\`, \`min_grade=A\`\n` +
+              `• **Mode:** \`mode=osu\`, \`mode=taiko\`, \`mode=catch\`, \`mode=mania\`\n\n` +
+              `💡 *Contoh: \`;rl mrekk pass=true sort=pp +HDDT\`*`
+            : `📋 **\`;rl\` Guide (Recent List - Up to 15 Plays)**\n` +
+              `Format: \`;rl [player] [1-15] [options...]\`\n\n` +
+              `• **Score Filters:** \`pass=true\`, \`fail=true\`, \`fc=true\`, \`choke=true\`\n` +
+              `• **Sorting:** \`sort=pp\`, \`sort=acc\`, \`sort=sr\`, \`sort=combo\`, \`sort=miss\`\n` +
+              `• **Mods:** \`mods=HDDT\` / \`+HDDT\`, \`+HDDT!\` (exact), \`+NM\`\n` +
+              `• **Map & Grade:** \`ranked=true\`, \`status=loved\`, \`grade=S\`, \`min_grade=A\`\n` +
+              `• **Mode:** \`mode=osu\`, \`mode=taiko\`, \`mode=catch\`, \`mode=mania\`\n\n` +
+              `💡 *Example: \`;rl mrekk pass=true sort=pp +HDDT\`*`;
+          return await message.reply({ content: plainRlHelp }).catch(() => { });
+        }
+        throw err;
+      }
+    }
+
+    const rlOpts = parseRecentListArgs(args);
+    let player = rlOpts.player;
+
+    if (!player) {
+      const linked = getLinkedUser(message.author.id);
+      if (!linked) return message.reply({ content: t(lang, 'recent_not_linked') });
+      player = linked.osuUsername;
+    }
+
+    try {
+      await message.channel.sendTyping().catch(() => { });
+      const user = await osuApi.getUser(player, rlOpts.mode || 'osu');
+      const { rawCount, scores } = await fetchFilteredRecentScores(osuApi, user.id, rlOpts);
+      const filterTags = formatFilterSummaryTags(rlOpts, lang);
+
+      if (rawCount === 0) {
+        return message.reply({ content: t(lang, 'recent_no_scores', { username: user.username }) });
+      }
+      if (!scores || scores.length === 0) {
+        return message.reply({
+          content: t(lang, 'recent_no_filtered_scores', {
+            username: user.username,
+            filters: filterTags.join(', ') || 'filter'
+          })
+        });
+      }
+
+      const imageBuffer = await generateRecentListCard(user, scores, {
+        lang,
+        filterTags,
+        mode: rlOpts.mode
+      });
+      const attachment = new AttachmentBuilder(imageBuffer, { name: `recentlist_${user.username}.png` });
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel(t(lang, 'btn_open_profile'))
+          .setStyle(ButtonStyle.Link)
+          .setURL(`https://osu.ppy.sh/users/${user.id}`)
+      );
+      return message.reply({ files: [attachment], components: [row] });
+    } catch (err) {
+      console.error(`Error in ;${cmd}:`, err.message);
+      return message.reply({ content: t(lang, 'recent_error', { message: err.message }) }).catch(() => { });
     }
   }
 
@@ -285,7 +424,7 @@ async function handlePrefixCommand(message, osuApi) {
     }
 
     try {
-      await message.channel.sendTyping().catch(() => {});
+      await message.channel.sendTyping().catch(() => { });
       const user = await osuApi.getUser(player);
       const scores = await osuApi.getUserBestScore(user.id, count);
       if (!scores || scores.length === 0) {
@@ -307,7 +446,7 @@ async function handlePrefixCommand(message, osuApi) {
       return message.reply({ files: [attachment], components: [row] });
     } catch (err) {
       console.error(`Error in ;${cmd}:`, err.message);
-      return message.reply({ content: t(lang, 'top_error', { message: err.message }) }).catch(() => {});
+      return message.reply({ content: t(lang, 'top_error', { message: err.message }) }).catch(() => { });
     }
   }
 
@@ -323,7 +462,7 @@ async function handlePrefixCommand(message, osuApi) {
     const scoreMode = typeof parsed === 'object' ? parsed.mode : null;
 
     try {
-      await message.channel.sendTyping().catch(() => {});
+      await message.channel.sendTyping().catch(() => { });
       const score = await osuApi.getScore(scoreId, scoreMode);
       await osuApi.enrichScoreWithBeatmapAndMods(score);
       const user = score.user || (score.user_id ? await osuApi.getUser(score.user_id) : {});
@@ -333,7 +472,7 @@ async function handlePrefixCommand(message, osuApi) {
       return message.reply({ files: [attachment], components: [row] });
     } catch (err) {
       console.error(`Error in ;${cmd}:`, err.message);
-      return message.reply({ content: t(lang, 'scorecard_error', { message: err.message }) }).catch(() => {});
+      return message.reply({ content: t(lang, 'scorecard_error', { message: err.message }) }).catch(() => { });
     }
   }
 
@@ -347,7 +486,7 @@ async function handlePrefixCommand(message, osuApi) {
     }
 
     try {
-      await message.channel.sendTyping().catch(() => {});
+      await message.channel.sendTyping().catch(() => { });
       const user = await osuApi.getUser(player);
       const topScores = await osuApi.getUserBestScore(user.id, 25).catch(() => []);
 
@@ -362,7 +501,7 @@ async function handlePrefixCommand(message, osuApi) {
       return message.reply({ files: [attachment], components: [row] });
     } catch (err) {
       console.error(`Error in ;${cmd}:`, err.message);
-      return message.reply({ content: t(lang, 'profile_error', { message: err.message }) }).catch(() => {});
+      return message.reply({ content: t(lang, 'profile_error', { message: err.message }) }).catch(() => { });
     }
   }
 
@@ -402,7 +541,7 @@ async function handlePrefixCommand(message, osuApi) {
       try {
         const resolved = await osuApi.resolveBeatmap(specifiedBeatmap);
         if (resolved?.id) beatmapId = resolved.id;
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // Try to find target message (reply reference)
@@ -434,7 +573,7 @@ async function handlePrefixCommand(message, osuApi) {
     }
 
     try {
-      await message.channel.sendTyping().catch(() => {});
+      await message.channel.sendTyping().catch(() => { });
       const user = await osuApi.getUser(playerQuery);
       const score = await osuApi.getUserBeatmapScore(beatmapId, user.id);
 
@@ -461,7 +600,7 @@ async function handlePrefixCommand(message, osuApi) {
       return message.reply({ files: [attachment], components: [row] });
     } catch (err) {
       console.error(`Error in ;${cmd}:`, err.message);
-      return message.reply({ content: t(lang, 'compare_error', { message: err.message }) }).catch(() => {});
+      return message.reply({ content: t(lang, 'compare_error', { message: err.message }) }).catch(() => { });
     }
   }
 
@@ -484,7 +623,7 @@ async function handlePrefixCommand(message, osuApi) {
       try {
         const resolved = await osuApi.resolveBeatmap(specifiedBeatmap);
         if (resolved?.id) beatmapId = resolved.id;
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // If no beatmap in args, check if this message is a reply to a message containing a beatmap
@@ -515,7 +654,7 @@ async function handlePrefixCommand(message, osuApi) {
     }
 
     try {
-      await message.channel.sendTyping().catch(() => {});
+      await message.channel.sendTyping().catch(() => { });
 
       const [u1, u2] = await Promise.all([
         osuApi.getUser(p1),
@@ -592,7 +731,7 @@ async function handlePrefixCommand(message, osuApi) {
       return message.reply({ files: [attachment] });
     } catch (err) {
       console.error(`Error in ;${cmd}:`, err.message);
-      return message.reply({ content: t(lang, 'versus_error', { message: err.message }) }).catch(() => {});
+      return message.reply({ content: t(lang, 'versus_error', { message: err.message }) }).catch(() => { });
     }
   }
 
@@ -609,13 +748,13 @@ async function handlePrefixCommand(message, osuApi) {
     const cleanMods = extractModsFromText(rawMods).length > 0 ? extractModsFromText(rawMods) : parseMods(rawMods);
 
     try {
-      await message.channel.sendTyping().catch(() => {});
+      await message.channel.sendTyping().catch(() => { });
       const beatmap = await osuApi.resolveBeatmap(parsed);
       if (cleanMods.length > 0 && beatmap.id) {
         try {
           const attrs = await osuApi.getBeatmapAttributes(beatmap.id, cleanMods, beatmap.mode);
           if (attrs?.star_rating) beatmap.modded_difficulty_rating = attrs.star_rating;
-        } catch (_) {}
+        } catch (_) { }
       }
       const imageBuffer = await generateBeatmapCard(beatmap, { mods: cleanMods, lang });
       const attachment = new AttachmentBuilder(imageBuffer, { name: `beatmap_${beatmap.id}.png` });
@@ -623,7 +762,7 @@ async function handlePrefixCommand(message, osuApi) {
       return message.reply({ files: [attachment], components: [row] });
     } catch (err) {
       console.error(`Error in ;${cmd}:`, err.message);
-      return message.reply({ content: t(lang, 'beatmap_error', { message: err.message }) }).catch(() => {});
+      return message.reply({ content: t(lang, 'beatmap_error', { message: err.message }) }).catch(() => { });
     }
   }
 
@@ -634,13 +773,13 @@ async function handlePrefixCommand(message, osuApi) {
     }
     const username = args.join(' ');
     try {
-      await message.channel.sendTyping().catch(() => {});
+      await message.channel.sendTyping().catch(() => { });
       const user = await osuApi.getUser(username);
       linkUser(message.author.id, user.id, user.username);
       const rankStr = user.statistics?.global_rank ? ` (Rank: #${user.statistics.global_rank.toLocaleString()})` : '';
       return message.reply({ content: t(lang, 'link_success', { username: user.username, rank: rankStr }) });
     } catch (err) {
-      return message.reply({ content: t(lang, 'link_error', { message: err.message }) }).catch(() => {});
+      return message.reply({ content: t(lang, 'link_error', { message: err.message }) }).catch(() => { });
     }
   }
 
@@ -693,28 +832,29 @@ async function handlePrefixCommand(message, osuApi) {
         {
           name: isId ? '🎴 Kartu Mini Skor' : '🎴 Mini Score Card',
           value: '`;m` - ' + (isId ? 'Skor mini terbaru kamu' : 'Your recent mini score') + '\n' +
-                 '`;m <player>` - ' + (isId ? 'Skor mini terbaru pemain' : 'Player\'s recent mini score') + '\n' +
-                 '`;m 1` atau `;m <player> 1` - ' + (isId ? 'Top play #1' : 'Top play #1') + '\n' +
-                 '`;m <link_skor>` - ' + (isId ? 'Kartu mini dari link skor' : 'Mini card from score link'),
+            '`;m <player>` - ' + (isId ? 'Skor mini terbaru pemain' : 'Player\'s recent mini score') + '\n' +
+            '`;m 1` atau `;m <player> 1` - ' + (isId ? 'Top play #1' : 'Top play #1') + '\n' +
+            '`;m <link_skor>` - ' + (isId ? 'Kartu mini dari link skor' : 'Mini card from score link'),
           inline: false
         },
         {
           name: isId ? '📊 Skor Penuh, Profil & Leaderboard' : '📊 Full Score, Profile & Leaderboard',
           value: '`;vs <player>` - ' + (isId ? 'Tanding skor / profil head-to-head (opsional: reply beatmap)' : 'Head-to-head showdown on beatmap / profile') + '\n' +
-                 '`;c [player]` - ' + (isId ? 'Bandingkan / cek skor di beatmap (reply pesan bot apa pun)' : 'Compare / check best score on map (reply to any bot message)') + '\n' +
-                 '`;pcard [player]` - ' + (isId ? 'Kartu profil modern & breakdown skill (Aim, Speed, Acc)' : 'Modern profile card with Aim/Speed/Acc breakdown') + '\n' +
-                 '`;r [player]` - ' + (isId ? 'Kartu skor terbaru detail penuh' : 'Detailed recent score card') + '\n' +
-                 '`;t [player] [jumlah]` - ' + (isId ? 'Top plays pemain (1-10)' : 'Top performance plays (1-10)') + '\n' +
-                 '`;s <link_skor>` - ' + (isId ? 'Kartu skor dari link/ID' : 'Full score card from link/ID'),
+            '`;c [player]` - ' + (isId ? 'Bandingkan / cek skor di beatmap (reply pesan bot apa pun)' : 'Compare / check best score on map (reply to any bot message)') + '\n' +
+            '`;pcard [player]` - ' + (isId ? 'Kartu profil modern & breakdown skill (Aim, Speed, Acc)' : 'Modern profile card with Aim/Speed/Acc breakdown') + '\n' +
+            '`;r [player]` - ' + (isId ? 'Kartu skor terbaru detail penuh' : 'Detailed recent score card') + '\n' +
+            '`;rl [player] [opsi]` - ' + (isId ? 'Recent list 15 skor (ketik `;rl help` untuk daftar filter combo lengkap)' : 'Recent 15 plays list (type `;rl help` for full combo filter guide)') + '\n' +
+            '`;t [player] [jumlah]` - ' + (isId ? 'Top plays pemain (1-10)' : 'Top performance plays (1-10)') + '\n' +
+            '`;s <link_skor>` - ' + (isId ? 'Kartu skor dari link/ID' : 'Full score card from link/ID'),
           inline: false
         },
         {
           name: isId ? '🗺️ Beatmap, Profil & Info' : '🗺️ Beatmap, Profile & Info',
           value: '`;b <link/id> [+mods]` - ' + (isId ? 'Kartu informasi beatmap' : 'Beatmap info card with mods') + '\n' +
-                 '`;link <username>` - ' + (isId ? 'Tautkan akun osu! kamu' : 'Link your osu! account') + '\n' +
-                 '`;unlink` - ' + (isId ? 'Lepas tautan akun osu!' : 'Unlink your osu! account') + '\n' +
-                 '`;about` - ' + (isId ? 'Penjelasan & informasi lengkap Columbina Bot' : 'Detailed information & Columbina Bot guide') + '\n' +
-                 '`;github` - ' + (isId ? 'Link repositori GitHub bot' : 'Official GitHub repository link'),
+            '`;link <username>` - ' + (isId ? 'Tautkan akun osu! kamu' : 'Link your osu! account') + '\n' +
+            '`;unlink` - ' + (isId ? 'Lepas tautan akun osu!' : 'Unlink your osu! account') + '\n' +
+            '`;about` - ' + (isId ? 'Penjelasan & informasi lengkap Columbina Bot' : 'Detailed information & Columbina Bot guide') + '\n' +
+            '`;github` - ' + (isId ? 'Link repositori GitHub bot' : 'Official GitHub repository link'),
           inline: false
         }
       )
@@ -726,34 +866,36 @@ async function handlePrefixCommand(message, osuApi) {
       if (err.code === 50013 || err.message?.includes('Missing Permissions')) {
         const plainHelp = isId
           ? `⚡ **Columbina Bot - Perintah Prefix (;)**\n\n` +
-            `• \`;about\` : Penjelasan & informasi lengkap Columbina Bot\n` +
-            `• \`;vs <player> [player2]\` : Tanding skor/profil head-to-head (opsional reply beatmap)\n` +
-            `• \`;c [player]\` : Bandingkan top skor di beatmap (reply pesan bot)\n` +
-            `• \`;pcard [player]\` : Kartu Profil Modern (Aim, Speed, Acc Breakdown)\n` +
-            `• \`;m [player] [top#]\` : Kartu Mini Skor (cth: \`;m\`, \`;m Utami 1\`)\n` +
-            `• \`;r [player]\` : Kartu Skor Terbaru Lengkap\n` +
-            `• \`;t [player] [1-10]\` : Top Plays Leaderboard\n` +
-            `• \`;b <link/id> [+mods]\` : Informasi Beatmap\n` +
-            `• \`;s <link/id>\` : Kartu Skor dari link/ID\n` +
-            `• \`;link <username>\` : Tautkan akun osu!\n` +
-            `• \`;unlink\` : Lepas tautan akun osu!\n` +
-            `• \`;github\` : Link repositori GitHub\n\n` +
-            `💡 *Tip: Slash command (/) juga tetap aktif dan bisa digunakan kapan saja!*`
+          `• \`;about\` : Penjelasan & informasi lengkap Columbina Bot\n` +
+          `• \`;vs <player> [player2]\` : Tanding skor/profil head-to-head (opsional reply beatmap)\n` +
+          `• \`;c [player]\` : Bandingkan top skor di beatmap (reply pesan bot)\n` +
+          `• \`;pcard [player]\` : Kartu Profil Modern (Aim, Speed, Acc Breakdown)\n` +
+          `• \`;m [player] [top#]\` : Kartu Mini Skor (cth: \`;m\`, \`;m Utami 1\`)\n` +
+          `• \`;r [player]\` : Kartu Skor Terbaru Lengkap\n` +
+          `• \`;rl [player] [opsi]\` : Recent List 15 Skor (lihat \`;rl help\`)\n` +
+          `• \`;t [player] [1-10]\` : Top Plays Leaderboard\n` +
+          `• \`;b <link/id> [+mods]\` : Informasi Beatmap\n` +
+          `• \`;s <link/id>\` : Kartu Skor dari link/ID\n` +
+          `• \`;link <username>\` : Tautkan akun osu!\n` +
+          `• \`;unlink\` : Lepas tautan akun osu!\n` +
+          `• \`;github\` : Link repositori GitHub\n\n` +
+          `💡 *Tip: Slash command (/) juga tetap aktif dan bisa digunakan kapan saja!*`
           : `⚡ **Columbina Bot - Prefix Commands (;)**\n\n` +
-            `• \`;about\` : Detailed information & Columbina Bot guide\n` +
-            `• \`;vs <player> [player2]\` : Head-to-head showdown on beatmap/profile\n` +
-            `• \`;c [player]\` : Compare personal best on beatmap (reply to bot message)\n` +
-            `• \`;pcard [player]\` : Modern Profile Card (Aim, Speed, Acc Breakdown)\n` +
-            `• \`;m [player] [top#]\` : Mini Score Card (e.g. \`;m\`, \`;m Utami 1\`)\n` +
-            `• \`;r [player]\` : Detailed Recent Score Card\n` +
-            `• \`;t [player] [1-10]\` : Top Performance Plays\n` +
-            `• \`;b <link/id> [+mods]\` : Beatmap Info Card\n` +
-            `• \`;s <link/id>\` : Full Score Card from link/ID\n` +
-            `• \`;link <username>\` : Link your osu! account\n` +
-            `• \`;unlink\` : Unlink your osu! account\n` +
-            `• \`;github\` : Official GitHub repository\n\n` +
-            `💡 *Tip: Slash commands (/) are also available and can be used anytime!*`;
-        return await message.reply({ content: plainHelp }).catch(() => {});
+          `• \`;about\` : Detailed information & Columbina Bot guide\n` +
+          `• \`;vs <player> [player2]\` : Head-to-head showdown on beatmap/profile\n` +
+          `• \`;c [player]\` : Compare personal best on beatmap (reply to bot message)\n` +
+          `• \`;pcard [player]\` : Modern Profile Card (Aim, Speed, Acc Breakdown)\n` +
+          `• \`;m [player] [top#]\` : Mini Score Card (e.g. \`;m\`, \`;m Utami 1\`)\n` +
+          `• \`;r [player]\` : Detailed Recent Score Card\n` +
+          `• \`;rl [player] [options]\` : Recent 15 Plays List (see \`;rl help\`)\n` +
+          `• \`;t [player] [1-10]\` : Top Performance Plays\n` +
+          `• \`;b <link/id> [+mods]\` : Beatmap Info Card\n` +
+          `• \`;s <link/id>\` : Full Score Card from link/ID\n` +
+          `• \`;link <username>\` : Link your osu! account\n` +
+          `• \`;unlink\` : Unlink your osu! account\n` +
+          `• \`;github\` : Official GitHub repository\n\n` +
+          `💡 *Tip: Slash commands (/) are also available and can be used anytime!*`;
+        return await message.reply({ content: plainHelp }).catch(() => { });
       }
       throw err;
     }

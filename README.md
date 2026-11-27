@@ -8,13 +8,30 @@
   [![Official Website](https://img.shields.io/badge/Official_Website-Visit_Here-f43f5e?style=for-the-badge&logo=googlechrome&logoColor=white)](https://noeltamba.github.io/osu-Beatmap-Card-Generator-Discord-Bot/)
 
 </div>
-# 🎮 osu! Beatmap Card Generator - Release v1.4.2
+# 🎮 osu! Beatmap Card Generator - Release v1.5.0
 
 A high-performance Discord bot generating visually stunning, frosted-glass score and beatmap cards. Featuring ultra-fast prefix commands (`;`), accurate osu! API v2 score modeling, and stream-ready mini widgets.
 
 ---
 
-### ✨ What's New in v1.4.2?
+### ✨ What's New in v1.5.0?
+
+* **📋 Visual Recent Plays List Card (`/recentlist`, `;rl`, `;recentlist`)**:
+  * Generates a frosted-glass session dashboard displaying up to **15 recent plays** from the last 24 hours in a single crisp card.
+  * **Session Pass / Fail Counter & Active Filter Pills**: Displays total passes vs fails alongside dynamic header badges indicating active query filters.
+  * **Rich Row Breakdown**: Shows `#1 - #15` index, letter Grade (`SS` to `F`), Beatmap Title + Modded Star Rating + Non-Ranked status badges (`LOVED`, `GRAVEYARD`, etc.), Lazer-styled Mod pills, Accuracy, Combo + Miss counter, PP (with `~FC` estimates or `FAIL (xx%)` progress), and relative play time.
+* **🎛️ Flexible Combo Filter & Sorting Engine (`;rl [player] [options...]`)**:
+  * Freely combine any filter and sort options directly on the `;rl` base command in any order:
+  * **Score & Combo Filters**: `pass=true` / `pass=false`, `fail=true`, `fc=true`, `choke=true`.
+  * **Session Sorting**: `sort=pp`, `sort=acc`, `sort=sr`, `sort=combo`, `sort=score`, `sort=miss`.
+  * **Mods, Map Status, Grade & Ruleset**: `mods=HDDT` / `+HDDT` (`+HDDT!` for exact match, `+NM` for NoMod), `ranked=true`, `status=loved`, `grade=S`, `min_grade=A`, and `mode=osu|taiko|catch|mania`.
+  * **Built-in Interactive Guide (`;rl help`)**: Quick bilingual reference card detailing all supported `;rl` combo flags and examples.
+* **🔄 7-Day Update Presence Window**:
+  * Broadcasts the new v1.5.0 update status on the bot's Discord presence for 1 full week before automatically reverting to the default status.
+
+---
+
+### 🌟 Release v1.4.2 Highlights
 
 * **🌐 Official Showcase Landing Webpage (`docs/`)**:
   * Launched a modern, responsive showcase landing page deployed via **GitHub Pages** with zero build configuration (`.nojekyll`).
@@ -127,9 +144,10 @@ A high-performance Discord bot generating visually stunning, frosted-glass score
 
 | Command | Arguments | Description |
 | :--- | :--- | :--- |
-| **`/versus`** *(New!)* | `player2`, `[player1]`, `[beatmap]` | Displays a split-screen head-to-head versus card comparing scores on a beatmap or profiles. |
-| **`/profile`** *(New!)* | `[player]` | Displays a modern visual profile card with skill breakdown and Bancho stats. |
-| **`/compare`** *(New!)* | `beatmap`, `[player]` | Displays a player's personal best score on a beatmap. |
+| **`/recentlist`** *(New!)* | `[player]`, `[count]`, `[pass]`, `[fc]`, `[choke]`, `[ranked]`, `[sort]`, `[mods]`, `[grade]`, `[mode]` | Displays a visual recent plays list card (up to 15 plays) with flexible filtering and sorting. |
+| **`/versus`** | `player2`, `[player1]`, `[beatmap]` | Displays a split-screen head-to-head versus card comparing scores on a beatmap or profiles. |
+| **`/profile`** | `[player]` | Displays a modern visual profile card with skill breakdown and Bancho stats. |
+| **`/compare`** | `beatmap`, `[player]` | Displays a player's personal best score on a beatmap. |
 | **`/miniscorecard`** | `[player]`, `[link]`, `[top]` | Displays a compact, aesthetic mini score card widget with combo badge, star rating, PP, avatar with flag, and mod chips. |
 | **`/recent`** | `[player]` | Displays a comprehensive visual score card with full hit judgments (300/100/50/miss), PP breakdown, and modded map stats. |
 | **`/scorecard`** | `link` | Displays a full detailed score card from an osu! score URL or numeric Score ID. |
@@ -149,6 +167,7 @@ You can also use the lightning-fast `;` prefix directly in chat without opening 
 
 | Prefix Command | Aliases | Description | Example Usage |
 | :--- | :--- | :--- | :--- |
+| `;rl` *(New!)* | `;recentlist`, `;rslist` | Recent 15 plays visual list with combo filters (`;rl help` for full guide) | `;rl` • `;rl pass=true sort=pp` • `;rl fc=true` |
 | `;vs` | `;versus` | Head-to-head duel on beatmap or profile (supports map replies) | `;vs BTMC` • `;vs BTMC mrekk` |
 | `;c` | `;compare` | Compare/check personal best score on map (reply to any bot) | `;c` • `;c Utami` |
 | `;pcard` | `;profile`, `;p`, `;user` | Modern profile card with skill breakdown | `;pcard` • `;pcard Utami` |
